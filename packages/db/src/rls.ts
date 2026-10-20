@@ -33,3 +33,15 @@ export async function withRls<T>(db: Db, claims: Claims, fn: (tx: Tx) => Promise
 export function mfaEnforcementOff(): boolean {
   return process.env.MFA_ENFORCEMENT === "off" && process.env.NODE_ENV !== "production";
 }
+
+/**
+ * For the few public pages (the board share link). Runs as Postgres's `anon` role with no
+ * user claims, so only functions granted to anon work and RLS hides every table.
+ */
+export async function withPublic<T>(db: Db, fn: (tx: Tx) => Promise<T>): Promise<T> {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select set_config('request.jwt.claims', '{"role":"anon"}', true)`);
+    await tx.execute(sql`set local role anon`);
+    return fn(tx);
+  });
+}

@@ -29,6 +29,6 @@ export default defineConfig({
     url: "http://localhost:3000/api/v1/health",
     reuseExistingServer: !ci,
     timeout: 120_000,
-    env: { MFA_ENFORCEMENT: "off" },
+    env: { MFA_ENFORCEMENT: "off", SMTP_URL: process.env.SMTP_URL ?? "smtp://127.0.0.1:54325" },
   },
 });

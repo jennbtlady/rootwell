@@ -20,3 +20,9 @@ export async function errorMessage(res: Response, fallback = "Something went wro
     return fallback;
   }
 }
+
+/** The current access token, for downloads that cannot use the typed client. */
+export async function accessToken(): Promise<string | null> {
+  const { data } = await createSupabaseBrowser().auth.getSession();
+  return data.session?.access_token ?? null;
+}

@@ -42,6 +42,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.4.2",
+    "pdfjs-dist": "^6.4.299",
     "postgres": "^3.4.9",
     "tailwindcss": "^4",
     "typescript": "^5",

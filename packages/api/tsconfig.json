@@ -1,4 +1,14 @@
 {
   "extends": "@maple/config/tsconfig.base.json",
-  "include": ["src", "test"]
+  "include": [
+    "src",
+    "test"
+  ],
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "lib": [
+      "ES2022",
+      "DOM"
+    ]
+  }
 }

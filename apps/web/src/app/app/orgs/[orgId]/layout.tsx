@@ -23,7 +23,7 @@ export default async function OrgLayout({ params, children }: LayoutProps<"/app/
         </Link>
         {org.isSample && <Badge variant="new">Sample</Badge>}
       </div>
-      <OrgNav orgId={orgId} canManage={canManage} />
+      <OrgNav orgId={orgId} canManage={canManage} boardOnly={org.role === "board_viewer"} />
       <div>{children}</div>
     </div>
   );

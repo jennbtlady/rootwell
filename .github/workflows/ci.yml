@@ -83,6 +83,7 @@ jobs:
         env:
           CI: "1"
           MFA_ENFORCEMENT: "off"
+          SMTP_URL: smtp://127.0.0.1:54325
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

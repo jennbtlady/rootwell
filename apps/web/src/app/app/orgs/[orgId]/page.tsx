@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getOrg, listBatches, listConstituents } from "@maple/core/services";
 import { requireSession, withSession } from "@/lib/session";
 import { formatDate, formatMoney } from "@/lib/format";
@@ -21,6 +21,7 @@ export default async function OrgPage({ params }: PageProps<"/app/orgs/[orgId]">
   });
   if (!data) notFound();
   const { org } = data;
+  if (org.role === "board_viewer") redirect(`/app/orgs/${orgId}/dashboard`);
   const base = `/app/orgs/${orgId}`;
 
   return (

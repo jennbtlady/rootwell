@@ -21,6 +21,8 @@ export const duplicateStatus = pgEnum("duplicate_status", ["open", "merged", "no
 export const importKind = pgEnum("import_kind", ["constituents", "constituents_gifts"]);
 export const importStatus = pgEnum("import_status", ["uploading", "ready", "committed", "rolled_back"]);
 export const importRowAction = pgEnum("import_row_action", ["create", "match", "review", "skip", "error"]);
+export const ackChannel = pgEnum("ack_channel", ["letter", "email", "phone", "in_person"]);
+export const ackStatus = pgEnum("ack_status", ["sent", "marked", "failed"]);
 
 /**
  * Columns every tenant-scoped table carries. created_by/updated_by are filled by the

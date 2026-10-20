@@ -10,6 +10,7 @@ export function SettingsNav({ orgId }: { orgId: string }) {
   const items = [
     { href: `${base}/coding`, label: "Funds, campaigns, appeals" },
     { href: `${base}/gift-standards`, label: "Gift entry standards" },
+    { href: `${base}/board`, label: "Board sharing" },
     { href: `/app/orgs/${orgId}/imports`, label: "Imports" },
   ];
   return (

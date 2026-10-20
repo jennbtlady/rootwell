@@ -108,5 +108,11 @@ begin
   insert into gifts (org_id, constituent_id, batch_id, amount, gift_date, fund_id, campaign_id, payment_method, check_number)
   values (p_org, v_ids[3], v_batch, 250, current_date, v_general, v_spring, 'check', '4471'), (p_org, v_ids[8], v_batch, 100, current_date, v_food, v_spring, 'cash', null);
 
+  -- History is thanked, the way a working office would have it; the last few weeks are not.
+  update gifts set acknowledged_at = (gift_date + 3)::timestamptz, acknowledgment_method = case when amount >= 250 then 'letter' else 'email' end
+   where org_id = p_org and posted_at is not null and gift_date < current_date - 20;
+  -- Give the sample an EIN and address so letters and statements look finished.
+  update organizations set ein = coalesce(ein, '00-0000000'), address = case when address = '{}'::jsonb then '{"line1":"100 Main St","city":"Springfield","state":"IL","postalCode":"62701"}'::jsonb else address end where id = p_org;
+
   perform set_config('request.jwt.claims', v_claims::text, true);
 end $$;

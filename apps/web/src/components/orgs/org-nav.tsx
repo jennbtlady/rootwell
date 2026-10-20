@@ -4,17 +4,21 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
 
-export function OrgNav({ orgId, canManage }: { orgId: string; canManage: boolean }) {
+export function OrgNav({ orgId, canManage, boardOnly = false }: { orgId: string; canManage: boolean; boardOnly?: boolean }) {
   const path = usePathname();
   const base = `/app/orgs/${orgId}`;
-  const items = [
+  const all = [
     { href: base, label: "Overview", exact: true },
+    { href: `${base}/dashboard`, label: "Dashboard" },
     { href: `${base}/constituents`, label: "Constituents" },
     { href: `${base}/batches`, label: "Gifts", prefix: `${base}/batches` },
+    { href: `${base}/acknowledgments`, label: "Thank-yous", prefix: `${base}/acknowledgments` },
+    { href: `${base}/reports`, label: "Reports", prefix: `${base}/reports` },
     { href: `${base}/health`, label: "Data health", prefix: `${base}/health` },
     { href: `${base}/members`, label: "Team" },
     ...(canManage ? [{ href: `${base}/settings/coding`, label: "Settings", prefix: `${base}/settings` }] : []),
   ];
+  const items = boardOnly ? all.filter((i) => i.label === "Dashboard") : all;
   return (
     <nav aria-label="Organization sections" className="-mx-4 overflow-x-auto px-4">
       <ul className="flex gap-1 border-b border-border-weak">
