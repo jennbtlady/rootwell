@@ -38,7 +38,7 @@ export async function proxy(request: NextRequest) {
     return r;
   };
 
-  if (!signedIn && (path.startsWith("/app") || path.startsWith("/mfa"))) return redirectWithCookies("/sign-in");
+  if (!signedIn && (path.startsWith("/app") || path.startsWith("/mfa") || path.startsWith("/account"))) return redirectWithCookies("/sign-in");
   if (signedIn && (path === "/sign-in" || path === "/sign-up")) return redirectWithCookies("/app");
   return response;
 }

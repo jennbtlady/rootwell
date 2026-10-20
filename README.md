@@ -37,6 +37,10 @@ docs/           Brief, build plan, one page per phase
 
 Homebrew is not required for anything in this repo.
 
+## Email templates
+
+Auth emails (invitations, sign-in links, confirmations) use the templates in `supabase/templates/`. They link to `/auth/callback` with a token hash. After changing a template or `supabase/config.toml`, restart with `pnpm db:stop` then `pnpm db:start`. A hosted Supabase project needs the same templates pasted into its dashboard.
+
 ## Docker note
 
 The Supabase CLI talks to Docker through a socket. If `pnpm db:start` says it cannot reach Docker, open Docker Desktop, go to Settings, Advanced, and turn on "Allow the default Docker socket location" (it asks for your Mac password once). Until then, run commands with the user socket instead:

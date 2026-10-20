@@ -413,3 +413,26 @@ enabled = true
 # formatted with uppercase keywords, indent 2, max width 180, trailing commas,
 # and column/key alignment. Set to "null" to emit raw, unformatted SQL.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":180,\"commaStyle\":\"trailing\"}"
+
+# Email links go to our server-side callback with a token hash, which works for
+# invitations sent by the server as well as links a browser asked for. Production
+# must use the same templates (Auth > Email Templates in the Supabase dashboard).
+[auth.email.template.invite]
+subject = "You have been invited to Maple Ledger"
+content_path = "./supabase/templates/invite.html"
+
+[auth.email.template.magic_link]
+subject = "Your Maple Ledger sign-in link"
+content_path = "./supabase/templates/magic_link.html"
+
+[auth.email.template.confirmation]
+subject = "Confirm your Maple Ledger email"
+content_path = "./supabase/templates/confirmation.html"
+
+[auth.email.template.recovery]
+subject = "Reset your Maple Ledger password"
+content_path = "./supabase/templates/recovery.html"
+
+[auth.email.template.email_change]
+subject = "Confirm your new email for Maple Ledger"
+content_path = "./supabase/templates/email_change.html"

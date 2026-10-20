@@ -19,14 +19,17 @@ export async function getMe(tx: Tx, userId: string): Promise<Me | null> {
 }
 
 /**
- * True when this person holds owner or admin in any organization. Those roles must
+ * True when this person holds owner or admin in a real organization. Those roles must
  * complete MFA enrollment before using the app. The database also enforces aal2 on
  * their sensitive writes, so this is the friendly gate, not the only one.
+ * The sample organization does not count: exploring demo data should not demand setup.
  */
 export async function mfaRequiredFor(tx: Tx, userId: string): Promise<boolean> {
   const rows = await tx.execute(sql`
-    select 1 from org_memberships
-     where user_id = ${userId} and status = 'active' and role in ('owner', 'admin')
+    select 1 from org_memberships m
+      join organizations o on o.id = m.org_id
+     where m.user_id = ${userId} and m.status = 'active' and m.role in ('owner', 'admin')
+       and not o.sample_org_enabled
      limit 1
   `);
   return rows.length > 0;

@@ -15,6 +15,15 @@ export const inviteMemberInput = z.object({
 });
 export type InviteMemberInput = z.infer<typeof inviteMemberInput>;
 
+export const setMemberRoleInput = z.object({ role: grantableRole });
+export type SetMemberRoleInput = z.infer<typeof setMemberRoleInput>;
+
+export const transferOwnershipInput = z.object({
+  toUserId: z.string().uuid(),
+  reason: z.string().trim().max(500).optional(),
+});
+export type TransferOwnershipInput = z.infer<typeof transferOwnershipInput>;
+
 /** Which roles may do what. The database enforces the same matrix in RLS. */
 export const ROLE_CAN = {
   readConstituents: ["owner", "admin", "staff"],

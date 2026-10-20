@@ -15,6 +15,13 @@
       "when": 1792515054391,
       "tag": "0001_user_refs_set_null",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792527622116,
+      "tag": "0002_sample_org_default",
+      "breakpoints": true
     }
   ]
 }

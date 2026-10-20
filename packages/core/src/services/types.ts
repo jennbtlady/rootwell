@@ -1,4 +1,5 @@
 import type { RlsTx } from "@maple/db";
+import type { OrgRole } from "../schemas/membership";
 
 /** Every service takes the RLS-scoped transaction first. Nothing here opens its own. */
 export type Tx = RlsTx;
@@ -18,7 +19,8 @@ export type OrgSummary = {
   fiscalYearStartMonth: number;
   timezone: string;
   subscriptionStatus: string;
-  role: string;
+  isSample: boolean;
+  role: OrgRole;
 };
 
 export type OrgDetail = {
@@ -28,7 +30,8 @@ export type OrgDetail = {
   fiscalYearStartMonth: number;
   timezone: string;
   hideBoardNames: boolean;
-  sampleOrgEnabled: boolean;
+  isSample: boolean;
   subscriptionStatus: string;
   trialEndsAt: string | null;
+  role: OrgRole;
 };

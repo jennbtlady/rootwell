@@ -1,0 +1,1 @@
+ALTER TABLE "organizations" ALTER COLUMN "sample_org_enabled" SET DEFAULT false;

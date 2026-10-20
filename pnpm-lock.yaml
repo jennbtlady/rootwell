@@ -275,6 +275,9 @@ importers:
       '@maple/db':
         specifier: workspace:*
         version: link:../db
+      '@supabase/supabase-js':
+        specifier: ^2.118.0
+        version: 2.118.0
       drizzle-orm:
         specifier: ^0.45.4
         version: 0.45.4(postgres@3.4.9)

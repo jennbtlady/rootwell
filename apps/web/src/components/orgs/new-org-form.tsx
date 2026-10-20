@@ -2,8 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { createApiClient } from "@maple/api/client";
-import { createSupabaseBrowser } from "@/lib/supabase/browser";
+import { api, errorMessage } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,13 +18,6 @@ const TIMEZONES = [
   "America/Anchorage",
   "Pacific/Honolulu",
 ];
-
-function api() {
-  return createApiClient(window.location.origin, async () => {
-    const { data } = await createSupabaseBrowser().auth.getSession();
-    return data.session?.access_token ?? null;
-  });
-}
 
 export function NewOrgForm() {
   const router = useRouter();
@@ -48,11 +40,7 @@ export function NewOrgForm() {
       router.refresh();
       return;
     }
-    if (res.status === 400) {
-      const body = (await res.json()) as { issues?: { message: string }[] };
-      return setError(body.issues?.[0]?.message ?? "Please check the form and try again.");
-    }
-    setError("Something went wrong. Please try again.");
+    setError(await errorMessage(res));
   }
 
   const zones = TIMEZONES.includes(timezone) ? TIMEZONES : [timezone, ...TIMEZONES];

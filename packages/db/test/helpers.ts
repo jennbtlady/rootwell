@@ -20,9 +20,9 @@ export function makeDb(): Db {
 }
 
 /** Creates a confirmed auth user directly in auth.users, the way Supabase's own tests do. */
-export async function createAuthUser(db: Db, label: string): Promise<TestUser> {
+export async function createAuthUser(db: Db, label: string, emailOverride?: string): Promise<TestUser> {
   const id = randomUUID();
-  const email = `${label}-${id.slice(0, 8)}@test.invalid`;
+  const email = emailOverride ?? `${label}-${id.slice(0, 8)}@test.invalid`;
   await db.execute(sql`
     insert into auth.users (id, instance_id, aud, role, email, encrypted_password,
       email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)

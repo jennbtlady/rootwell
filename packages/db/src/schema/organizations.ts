@@ -31,7 +31,8 @@ export const organizations = pgTable("organizations", {
   logoPath: text("logo_path"),
   giftEntryStandards: jsonb("gift_entry_standards").$type<GiftEntryStandards>().notNull().default({}),
   hideBoardNames: boolean("hide_board_names").notNull().default(true),
-  sampleOrgEnabled: boolean("sample_org_enabled").notNull().default(true),
+  // True only for the demo organization every account can add and remove.
+  sampleOrgEnabled: boolean("sample_org_enabled").notNull().default(false),
 
   // Billing. Subscription state is mirrored from Stripe webhooks; Stripe is the source of truth.
   stripeCustomerId: text("stripe_customer_id").unique(),
