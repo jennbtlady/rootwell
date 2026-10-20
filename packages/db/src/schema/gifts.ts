@@ -1,0 +1,123 @@
+import { index, integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { batchStatus, day, externalSource, giftType, money, paymentMethod, pledgeStatus, recurringFrequency, recurringStatus, rowMeta, uuidPk } from "./_shared";
+import { appeals, campaigns, funds } from "./coding";
+import { constituents } from "./constituents";
+import { organizations } from "./organizations";
+
+/** Gifts are entered into a dated batch. An admin posts the batch, which locks its gifts. */
+export const batches = pgTable(
+  "batches",
+  {
+    id: uuidPk(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    batchDate: day("batch_date").notNull(),
+    description: text("description"),
+    status: batchStatus("status").notNull().default("open"),
+    /** What the deposit slip says. Posting compares it to the gifts. */
+    expectedTotal: money("expected_total"),
+    expectedCount: integer("expected_count"),
+    postedAt: timestamp("posted_at", { withTimezone: true }),
+    postedBy: uuid("posted_by"),
+    notes: text("notes"),
+    ...rowMeta,
+  },
+  (t) => [index("batches_org_status_date_idx").on(t.orgId, t.status, t.batchDate)],
+);
+
+export const recurringPlans = pgTable(
+  "recurring_plans",
+  {
+    id: uuidPk(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    constituentId: uuid("constituent_id")
+      .notNull()
+      .references(() => constituents.id, { onDelete: "cascade" }),
+    amount: money("amount").notNull(),
+    frequency: recurringFrequency("frequency").notNull().default("monthly"),
+    startsOn: day("starts_on").notNull(),
+    endsOn: day("ends_on"),
+    status: recurringStatus("status").notNull().default("active"),
+    fundId: uuid("fund_id").references(() => funds.id, { onDelete: "set null" }),
+    campaignId: uuid("campaign_id").references(() => campaigns.id, { onDelete: "set null" }),
+    externalSource: externalSource("external_source").notNull().default("manual"),
+    externalId: text("external_id"),
+    ...rowMeta,
+  },
+  (t) => [index("recurring_plans_constituent_idx").on(t.constituentId)],
+);
+
+export const pledges = pgTable(
+  "pledges",
+  {
+    id: uuidPk(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    constituentId: uuid("constituent_id")
+      .notNull()
+      .references(() => constituents.id, { onDelete: "cascade" }),
+    totalAmount: money("total_amount").notNull(),
+    pledgedOn: day("pledged_on").notNull(),
+    installments: integer("installments").notNull().default(1),
+    frequency: recurringFrequency("frequency"),
+    status: pledgeStatus("status").notNull().default("open"),
+    fundId: uuid("fund_id").references(() => funds.id, { onDelete: "set null" }),
+    campaignId: uuid("campaign_id").references(() => campaigns.id, { onDelete: "set null" }),
+    appealId: uuid("appeal_id").references(() => appeals.id, { onDelete: "set null" }),
+    notes: text("notes"),
+    ...rowMeta,
+  },
+  (t) => [index("pledges_constituent_idx").on(t.constituentId)],
+);
+
+export const gifts = pgTable(
+  "gifts",
+  {
+    id: uuidPk(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    // "no action" (checked at statement end) rather than "restrict": a constituent or
+    // fund with gifts still cannot be deleted, but deleting the whole organization can
+    // cascade through everything in one statement.
+    constituentId: uuid("constituent_id")
+      .notNull()
+      .references(() => constituents.id, { onDelete: "no action" }),
+    batchId: uuid("batch_id").references(() => batches.id, { onDelete: "set null" }),
+    amount: money("amount").notNull(),
+    giftDate: day("gift_date").notNull(),
+    fundId: uuid("fund_id").references(() => funds.id, { onDelete: "no action" }),
+    campaignId: uuid("campaign_id").references(() => campaigns.id, { onDelete: "set null" }),
+    appealId: uuid("appeal_id").references(() => appeals.id, { onDelete: "set null" }),
+    paymentMethod: paymentMethod("payment_method").notNull().default("check"),
+    giftType: giftType("gift_type").notNull().default("one_time"),
+    checkNumber: text("check_number"),
+    reference: text("reference"),
+    externalSource: externalSource("external_source").notNull().default("manual"),
+    externalId: text("external_id"),
+    fairMarketValue: money("fair_market_value"),
+    /** Defaults to amount less fair market value. Used on statements. */
+    deductibleAmount: money("deductible_amount"),
+    acknowledgedAt: timestamp("acknowledged_at", { withTimezone: true }),
+    acknowledgmentMethod: text("acknowledgment_method"),
+    notes: text("notes"),
+    recurringPlanId: uuid("recurring_plan_id").references(() => recurringPlans.id, { onDelete: "set null" }),
+    pledgeId: uuid("pledge_id").references(() => pledges.id, { onDelete: "set null" }),
+    /** For soft credits: the real gift this credit points at. */
+    softCreditOfGiftId: uuid("soft_credit_of_gift_id"),
+    postedAt: timestamp("posted_at", { withTimezone: true }),
+    postedBy: uuid("posted_by"),
+    ...rowMeta,
+  },
+  (t) => [
+    index("gifts_org_date_idx").on(t.orgId, t.giftDate),
+    index("gifts_constituent_date_idx").on(t.constituentId, t.giftDate),
+    index("gifts_batch_idx").on(t.batchId),
+    index("gifts_fund_idx").on(t.fundId),
+    index("gifts_org_external_idx").on(t.orgId, t.externalSource, t.externalId),
+  ],
+);

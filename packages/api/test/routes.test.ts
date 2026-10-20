@@ -85,10 +85,23 @@ describe.skipIf(!DATABASE_URL)("api routes against the database", () => {
       ["DELETE", `/api/v1/orgs/${orgB}/members/${randomUUID()}`, undefined],
       ["POST", `/api/v1/orgs/${orgB}/transfer-ownership`, { toUserId: ownerA.id }],
       ["DELETE", `/api/v1/orgs/${orgB}`, undefined],
+      ["GET", `/api/v1/orgs/${orgB}/constituents?q=a`, undefined],
+      ["POST", `/api/v1/orgs/${orgB}/constituents`, { lastName: "Intruder" }],
+      ["GET", `/api/v1/orgs/${orgB}/constituents/${randomUUID()}`, undefined],
+      ["GET", `/api/v1/orgs/${orgB}/coding/funds`, undefined],
+      ["POST", `/api/v1/orgs/${orgB}/coding/funds`, { name: "Sneaky" }],
+      ["GET", `/api/v1/orgs/${orgB}/batches`, undefined],
+      ["POST", `/api/v1/orgs/${orgB}/batches`, { batchDate: "2026-01-01" }],
+      ["POST", `/api/v1/orgs/${orgB}/gifts`, { constituentId: randomUUID(), amount: "5", giftDate: "2026-01-01", paymentMethod: "cash" }],
+      ["GET", `/api/v1/orgs/${orgB}/gift-standards`, undefined],
+      ["PUT", `/api/v1/orgs/${orgB}/gift-standards`, { requiredFields: [] }],
     ] as const) {
       const res = await app.request(path, { method, headers: { ...auth(ownerA), ...json }, body: body ? JSON.stringify(body) : undefined });
-      expect([403, 404], `${method} ${path} -> ${res.status}`).toContain(res.status);
+      // Reads of a foreign org are empty or not found, never a leak; writes are refused.
+      const allowed = method === "GET" && (path.includes("/constituents?") || path.includes("/coding/") || path.endsWith("/batches")) ? [200, 403, 404] : [403, 404];
+      expect(allowed, `${method} ${path} -> ${res.status}`).toContain(res.status);
       const text = await res.text();
+      if (res.status === 200) expect(text).toMatch(/"items":\[\]|"total":0/);
       expect(text).not.toContain(orgB);
       expect(text).not.toContain("Route Org B");
     }
@@ -143,6 +156,74 @@ describe.skipIf(!DATABASE_URL)("api routes against the database", () => {
     const row = await withRls(db, userClaims(ownerA.id, "aal2"), async (tx) => (await tx.execute(sql`select id from org_memberships where org_id = ${orgA} and user_id = ${staffA.id}`))[0] as { id: string });
     const reset = await app.request(`/api/v1/orgs/${orgA}/members/${row.id}`, { method: "PATCH", headers: { ...auth(ownerA), ...json }, body: JSON.stringify({ role: "staff" }) });
     expect(reset.status).toBe(200);
+  });
+
+  it("staff enters a batch of gifts against the standards and an admin posts it", async () => {
+    const h = (u: U, aal: "aal1" | "aal2" = "aal2") => ({ ...auth(u, aal), ...json });
+    const post = async (u: U, path: string, body: unknown, aal: "aal1" | "aal2" = "aal2") =>
+      app.request(path, { method: "POST", headers: h(u, aal), body: JSON.stringify(body) });
+
+    // Standards: campaign required, check numbers required for checks.
+    const std = await app.request(`/api/v1/orgs/${orgA}/gift-standards`, { method: "PUT", headers: h(ownerA), body: JSON.stringify({ requiredFields: ["campaignId"], fieldInstructions: { campaignId: "Pick the mailing this came from." } }) });
+    expect(std.status).toBe(200);
+    const stdByStaff = await app.request(`/api/v1/orgs/${orgA}/gift-standards`, { method: "PUT", headers: h(staffA), body: JSON.stringify({ requiredFields: [] }) });
+    expect(stdByStaff.status).toBe(403);
+
+    const fund = ((await (await post(staffA, `/api/v1/orgs/${orgA}/coding/funds`, { name: "General", code: "GEN" })).json()) as { id: string }).id;
+    const campaign = ((await (await post(staffA, `/api/v1/orgs/${orgA}/coding/campaigns`, { name: "Spring appeal", goalAmount: "5000" })).json()) as { id: string }).id;
+
+    const donorRes = await post(staffA, `/api/v1/orgs/${orgA}/constituents`, {
+      firstName: "Dana", lastName: "Rivera", emails: [{ email: "Dana@Example.org", isPrimary: true }], phones: [{ phone: "555-010-2233" }],
+      addresses: [{ line1: "12 Elm St", city: "Springfield", state: "IL", postalCode: "62701" }],
+    });
+    expect(donorRes.status).toBe(201);
+    const donor = ((await donorRes.json()) as { id: string }).id;
+
+    const dup = await app.request(`/api/v1/orgs/${orgA}/constituents/duplicates?firstName=D&lastName=Rivera&email=dana@example.org`, { headers: auth(staffA) });
+    const { candidates } = (await dup.json()) as { candidates: { id: string; reasons: string[] }[] };
+    expect(candidates[0]?.id).toBe(donor);
+    expect(candidates[0]?.reasons).toContain("same email");
+
+    const detail = (await (await app.request(`/api/v1/orgs/${orgA}/constituents/${donor}`, { headers: auth(staffA) })).json()) as { displayName: string; emails: { email: string; isPrimary: boolean }[] };
+    expect(detail.displayName).toBe("Dana Rivera");
+    expect(detail.emails[0]?.email).toBe("dana@example.org");
+
+    const batch = ((await (await post(staffA, `/api/v1/orgs/${orgA}/batches`, { batchDate: "2026-03-02", description: "Monday deposit", expectedTotal: "300", expectedCount: 3 })).json()) as { id: string }).id;
+
+    // A check without a number, and a gift without the required campaign, are refused with field issues.
+    const bad = await post(staffA, `/api/v1/orgs/${orgA}/gifts`, { constituentId: donor, batchId: batch, amount: "100", giftDate: "2026-03-02", fundId: fund, paymentMethod: "check" });
+    expect(bad.status).toBe(400);
+    const issues = ((await bad.json()) as { issues: { path: string }[] }).issues.map((i) => i.path).sort();
+    expect(issues).toEqual(["campaignId", "checkNumber"]);
+
+    for (const n of [1, 2, 3]) {
+      const ok = await post(staffA, `/api/v1/orgs/${orgA}/gifts`, { constituentId: donor, batchId: batch, amount: "100", giftDate: "2026-03-02", fundId: fund, campaignId: campaign, paymentMethod: "check", checkNumber: `20${n}` });
+      expect(ok.status).toBe(201);
+    }
+
+    const staffPost = await post(staffA, `/api/v1/orgs/${orgA}/batches/${batch}/post`, {});
+    expect(staffPost.status).toBe(403);
+    const noMfa = await post(ownerA, `/api/v1/orgs/${orgA}/batches/${batch}/post`, {}, "aal1");
+    expect(noMfa.status).toBe(403);
+    const posted = await post(ownerA, `/api/v1/orgs/${orgA}/batches/${batch}/post`, {});
+    expect(posted.status).toBe(200);
+    expect(await posted.json()).toEqual({ postedCount: 3, postedTotal: "300.00" });
+
+    const after = (await (await app.request(`/api/v1/orgs/${orgA}/batches/${batch}`, { headers: auth(staffA) })).json()) as { status: string; gifts: { postedAt: string | null }[] };
+    expect(after.status).toBe(posted ? "posted" : "open");
+    expect(after.gifts.every((g) => g.postedAt)).toBe(true);
+
+    const audit = (await (await app.request(`/api/v1/orgs/${orgA}/constituents/${donor}/audit`, { headers: auth(staffA) })).json()) as { items: { action: string }[] };
+    expect(audit.items.map((a) => a.action)).toEqual(["insert"]);
+    const giftAudit = (await (await app.request(`/api/v1/orgs/${orgA}/gifts/${(after as unknown as { gifts: { id: string }[] }).gifts[0]!.id}/audit`, { headers: auth(staffA) })).json()) as { items: { action: string; actorName: string | null }[] };
+    expect(giftAudit.items.map((a) => a.action)).toEqual(["update", "insert"]);
+
+    // Mismatched totals explain themselves.
+    const batch2 = ((await (await post(staffA, `/api/v1/orgs/${orgA}/batches`, { batchDate: "2026-03-03", expectedTotal: "50" })).json()) as { id: string }).id;
+    await post(staffA, `/api/v1/orgs/${orgA}/gifts`, { constituentId: donor, batchId: batch2, amount: "40", giftDate: "2026-03-03", fundId: fund, campaignId: campaign, paymentMethod: "cash" });
+    const mismatch = await post(ownerA, `/api/v1/orgs/${orgA}/batches/${batch2}/post`, {});
+    expect(mismatch.status).toBe(400);
+    expect(((await mismatch.json()) as { error: string }).error).toMatch(/does not match/);
   });
 
   it("creates one sample org per person and removes it", async () => {

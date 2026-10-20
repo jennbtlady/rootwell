@@ -22,6 +22,20 @@
       "when": 1792527622116,
       "tag": "0002_sample_org_default",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792529290175,
+      "tag": "0003_phase1_constituents_gifts",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792529633073,
+      "tag": "0004_gifts_fk_no_action",
+      "breakpoints": true
     }
   ]
 }

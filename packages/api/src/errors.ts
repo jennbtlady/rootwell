@@ -18,9 +18,16 @@ export function handleApiError(err: Error, c: Context) {
       return c.json({ error: "You do not have permission to do that." }, 403);
     case "23505":
       return c.json({ error: "That person is already a member or has a pending invitation." }, 409);
-    case "22023":
     case "23503":
+      return c.json({ error: "That cannot be removed because other records still point to it." }, 409);
+    case "23514": {
+      // Check violations carry a sentence we wrote ourselves (batch totals, names). Show it.
+      const msg = (err as { cause?: { message?: string } }).cause?.message ?? err.message;
+      return c.json({ error: msg || "That does not add up." }, 400);
+    }
+    case "22023":
     case "22P02":
+    case "P0002":
       return c.json({ error: "That request is not valid." }, 400);
   }
   // Never echo error details: they can carry row data. Sentry gets the scrubbed event.

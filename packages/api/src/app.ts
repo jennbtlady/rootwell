@@ -3,6 +3,9 @@ import type { ApiEnv } from "./env";
 import { requireUser } from "./auth";
 import { me } from "./routes/me";
 import { orgs } from "./routes/orgs";
+import { coding } from "./routes/coding";
+import { constituents } from "./routes/constituents";
+import { giftRoutes } from "./routes/gifts";
 import { handleApiError } from "./errors";
 
 /**
@@ -16,6 +19,9 @@ export const app = new Hono<ApiEnv>()
   .use("*", requireUser)
   .route("/me", me)
   .route("/orgs", orgs)
+  .route("/orgs", coding)
+  .route("/orgs", constituents)
+  .route("/orgs", giftRoutes)
   .onError(handleApiError);
 
 export type AppType = typeof app;
