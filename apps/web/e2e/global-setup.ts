@@ -37,11 +37,13 @@ export default async function globalSetup() {
 
   const sql = postgres(dbUrl, { max: 1 });
   const orgName = `E2E Pantry ${run}`;
-  const [{ id: orgId }] = await sql.begin(async (tx: postgres.TransactionSql) => {
+  const created = await sql.begin(async (tx: postgres.TransactionSql) => {
     await tx`select set_config('request.jwt.claims', ${JSON.stringify({ sub: owner.id, role: "authenticated", aal: "aal2", actor: "user" })}, true)`;
     await tx`set local role authenticated`;
     return tx<{ id: string }[]>`select app.create_organization(${orgName}) as id`;
   });
+  const orgId = created[0]?.id;
+  if (!orgId) throw new Error("could not create the e2e organization");
   await sql`insert into org_memberships (org_id, user_id, role, status, accepted_at) values (${orgId}, ${staff.id}, 'staff', 'active', now())`;
   await sql.end();
 
