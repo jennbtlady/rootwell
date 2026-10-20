@@ -1,5 +1,5 @@
 import * as React from "react";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 
 /**
  * Table after Paste's Table: 1px weaker borders, semibold header on the weak

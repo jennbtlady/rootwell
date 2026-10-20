@@ -1,4 +1,4 @@
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 
 /** Placeholder block after Paste's SkeletonLoader. Give it the size of the content it stands in for. */
 export function Skeleton({ className, ...props }: React.ComponentPropsWithRef<"div">) {

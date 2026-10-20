@@ -1,5 +1,5 @@
 import * as React from "react";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 
 /**
  * Label, after Paste's Label. Required fields get a small red dot, not an asterisk,

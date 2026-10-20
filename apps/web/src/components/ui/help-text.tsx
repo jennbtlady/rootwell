@@ -1,6 +1,6 @@
 import * as React from "react";
 import { CircleAlert, CircleCheck, TriangleAlert } from "lucide-react";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 
 /** Help text under a field, after Paste's HelpText. Error text names the fix, not just the fault. */
 export type HelpTextProps = React.ComponentPropsWithRef<"div"> & {

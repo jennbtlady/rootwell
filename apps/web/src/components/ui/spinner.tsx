@@ -1,4 +1,4 @@
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 
 /** Paste-style loading indicator. Decorative by default; pass a label to announce it. */
 export function Spinner({ className, label }: { className?: string; label?: string }) {

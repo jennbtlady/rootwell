@@ -6,7 +6,8 @@
   "exports": {
     "./tokens.css": "./tokens.css",
     "./theme.css": "./theme.css",
-    "./overrides.css": "./overrides.css"
+    "./overrides.css": "./overrides.css",
+    "./theme.json": "./theme.json"
   },
   "scripts": {
     "build:tokens": "node scripts/build-tokens.mjs"

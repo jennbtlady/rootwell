@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 
 export function OrgNav({ orgId, canManage }: { orgId: string; canManage: boolean }) {
   const path = usePathname();

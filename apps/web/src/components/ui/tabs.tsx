@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Tabs as BaseTabs } from "@base-ui/react/tabs";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 
 /** Tabs after Paste's Tabs, on Base UI for keyboard behavior. Horizontal, scrolls on phones. */
 export function Tabs({ className, ...props }: React.ComponentProps<typeof BaseTabs.Root>) {

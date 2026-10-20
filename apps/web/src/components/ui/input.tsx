@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 
 /**
  * Input, after Paste's Input and InputBox. A wrapper draws the border as a box

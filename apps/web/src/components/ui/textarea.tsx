@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 import { fieldBoxClass, fieldControlClass } from "./input";
 
 export type TextareaProps = React.ComponentPropsWithRef<"textarea"> & { hasError?: boolean };

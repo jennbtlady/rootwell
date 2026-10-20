@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Combobox as Base } from "@base-ui/react/combobox";
 import { Check, ChevronDown } from "lucide-react";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 import { fieldBoxClass, fieldControlClass } from "./input";
 
 export type ComboboxItem = { id: string; label: string; detail?: string | null };
@@ -23,9 +23,11 @@ export function Combobox({
   hasError,
   disabled,
   footer,
+  inputRef,
   ...aria
 }: {
   id: string;
+  inputRef?: React.Ref<HTMLInputElement>;
   items: ComboboxItem[];
   value: ComboboxItem | null;
   onChange: (item: ComboboxItem | null) => void;
@@ -53,6 +55,7 @@ export function Combobox({
         if (onSearch && reason !== "item-press") onSearch(text);
       }}
       disabled={disabled}
+      inputRef={inputRef}
     >
       <div className={cn(fieldBoxClass({ hasError, disabled }), "relative")}>
         <Base.Input id={id} className={cn(fieldControlClass, "pr-9")} placeholder={placeholder} autoComplete="off" aria-describedby={aria["aria-describedby"]} aria-invalid={aria["aria-invalid"]} />

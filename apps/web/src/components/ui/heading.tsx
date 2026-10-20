@@ -1,5 +1,5 @@
 import * as React from "react";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 
 /** Headings after Paste's Heading: six visual sizes, each with a default element. */
 export type HeadingVariant = "heading10" | "heading20" | "heading30" | "heading40" | "heading50" | "heading60";

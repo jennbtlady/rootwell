@@ -52,3 +52,41 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
       - if: always()
         run: supabase stop
+
+  e2e:
+    name: Browser flows
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector
+      - name: Collect local Supabase keys
+        run: |
+          supabase status -o env > supabase.env
+          echo "NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321" >> $GITHUB_ENV
+          grep PUBLISHABLE_KEY supabase.env | sed 's/^PUBLISHABLE_KEY=/NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=/' | tr -d '"' >> $GITHUB_ENV
+          grep SECRET_KEY supabase.env | sed 's/^SECRET_KEY=/SUPABASE_SECRET_KEY=/' | tr -d '"' >> $GITHUB_ENV
+          echo "DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_APP_URL=http://localhost:3000" >> $GITHUB_ENV
+      - run: pnpm db:migrate
+      - run: pnpm --filter @maple/web build
+      - run: pnpm --filter @maple/web exec playwright install --with-deps chromium
+      - run: pnpm --filter @maple/web e2e
+        env:
+          CI: "1"
+          MFA_ENFORCEMENT: "off"
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces
+          path: apps/web/test-results
+      - if: always()
+        run: supabase stop

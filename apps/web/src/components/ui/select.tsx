@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { ChevronDown } from "lucide-react";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 import { fieldBoxClass, fieldControlClass } from "./input";
 
 /** Native select styled like Input, after Paste's Select. Options are plain <option>s. */

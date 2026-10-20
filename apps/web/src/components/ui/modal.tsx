@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Dialog } from "@base-ui/react/dialog";
 import { X } from "lucide-react";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 import { Heading } from "./heading";
 
 /**

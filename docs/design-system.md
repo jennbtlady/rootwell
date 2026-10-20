@@ -64,6 +64,14 @@ Menu, Combobox, Toast, Date picker, Checkbox, Radio, Switch, Skeleton, Empty sta
 Base UI (`@base-ui/react`, already installed) for keyboard and focus behavior of menus,
 dialogs and comboboxes, with Paste's look on top.
 
+## Merging classes
+
+Use `cn()` from `@/lib/cn`, never a generic helper. It is tailwind-merge taught the Paste
+theme from `packages/design/theme.json`, which the token generator writes. A generic
+tailwind-merge reads `text-text-inverse` as a font size and silently drops it next to
+`text-30`, which once left every primary button with dark text on blue. A unit test in
+`apps/web/test/cn.test.ts` guards this.
+
 ## Rules
 
 1. Use the components. Reach for raw Tailwind only for layout (flex, grid, gaps).

@@ -7,7 +7,7 @@ import { GIFT_FIELD_LABEL, GIFT_TYPES, GIFT_TYPE_LABEL, PAYMENT_METHODS, PAYMENT
 import type { Batch, CodingRow, Gift } from "@maple/core/services";
 import { api, errorMessage } from "@/lib/api";
 import { formatDate, formatMoney } from "@/lib/format";
-import { Alert, AlertDescription, AlertTitle, Button, Combobox, EmptyState, FormField, Input, Select, Table, TBody, TD, Textarea, TH, THead, TR, type ComboboxItem } from "@/components/ui";
+import { Alert, AlertDescription, AlertTitle, Button, Combobox, EmptyState, FormField, Input, Select, Table, TBody, TD, Textarea, TH, THead, TR, useToast, type ComboboxItem } from "@/components/ui";
 import { anchorClass } from "@/components/ui/text";
 
 type Props = {
@@ -23,6 +23,7 @@ type Props = {
 
 export function BatchWorkspace({ orgId, batch, standards, funds, campaigns, appeals, canPost, preselected }: Props) {
   const router = useRouter();
+  const toast = useToast();
   const open = batch.status === "open";
   const [posting, setPosting] = useState(false);
   const [postError, setPostError] = useState<string | null>(null);
@@ -35,13 +36,18 @@ export function BatchWorkspace({ orgId, batch, standards, funds, campaigns, appe
     const res = await api().api.v1.orgs[":orgId"].batches[":id"].post.$post({ param: { orgId, id: batch.id } });
     setPosting(false);
     if (!res.ok) return setPostError(await errorMessage(res));
+    const { postedCount, postedTotal } = (await res.json()) as { postedCount: number; postedTotal: string };
+    toast({ type: "success", title: "Batch posted", description: `${postedCount} gifts totaling ${formatMoney(postedTotal)} are now locked.` });
     router.refresh();
   }
 
   async function removeGift(g: Gift) {
     if (!window.confirm(`Remove the ${formatMoney(g.amount)} gift from ${g.constituentName}?`)) return;
     const res = await api().api.v1.orgs[":orgId"].gifts[":id"].$delete({ param: { orgId, id: g.id } });
-    if (res.status === 204) router.refresh();
+    if (res.status === 204) {
+      toast({ title: "Gift removed", description: `${formatMoney(g.amount)} from ${g.constituentName}.` });
+      router.refresh();
+    } else toast({ type: "error", title: "Could not remove the gift", description: await errorMessage(res) });
   }
 
   return (
@@ -133,6 +139,7 @@ function GiftEntryForm({ orgId, batch, standards, funds, campaigns, appeals, pre
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [lastSaved, setLastSaved] = useState<string | null>(null);
   const amountRef = useRef<HTMLInputElement>(null);
+  const donorRef = useRef<HTMLInputElement>(null);
   const searchSeq = useRef(0);
 
   useEffect(() => {
@@ -181,6 +188,7 @@ function GiftEntryForm({ orgId, batch, standards, funds, campaigns, appeals, pre
     setFmv("");
     setNotes("");
     setResults([]);
+    donorRef.current?.focus();
     router.refresh();
   }
 
@@ -204,6 +212,7 @@ function GiftEntryForm({ orgId, batch, standards, funds, campaigns, appeals, pre
           {(f) => (
             <Combobox
               id={f.id}
+              inputRef={donorRef}
               items={results}
               value={donor}
               onChange={setDonor}

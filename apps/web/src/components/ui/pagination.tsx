@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 
 /** Pagination after Paste's Pagination. Page numbers are links styled like text; the current page is highlighted. */
 export function Pagination({ page, pageCount, onPage, label = "Pagination" }: { page: number; pageCount: number; onPage: (p: number) => void; label?: string }) {

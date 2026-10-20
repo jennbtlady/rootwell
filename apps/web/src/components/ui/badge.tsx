@@ -1,6 +1,6 @@
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 
 /** Badge after Paste's Badge: short status words, never a button. */
 export const badgeVariants = cva("inline-flex max-w-max items-center gap-1 rounded-20 px-2 py-1 text-20 font-semibold leading-4", {

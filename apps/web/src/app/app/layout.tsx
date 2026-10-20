@@ -4,7 +4,7 @@ import { mfaEnforcementOff } from "@maple/db";
 import { mfaRequiredFor } from "@maple/core/services";
 import { requireSession, withSession } from "@/lib/session";
 import { createSupabaseServer } from "@/lib/supabase/server";
-import { Button } from "@/components/ui";
+import { Button, ToastHost } from "@/components/ui";
 
 /**
  * Every signed-in page lives under /app. This layout is where MFA is enforced:
@@ -25,6 +25,7 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
   }
 
   return (
+    <ToastHost>
     <div className="flex min-h-full flex-1 flex-col">
       <header className="border-b border-border-weaker bg-background-body">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 px-4 py-3">
@@ -43,5 +44,6 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
       </header>
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">{children}</main>
     </div>
+    </ToastHost>
   );
 }

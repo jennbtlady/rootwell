@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 
 /** Radio after Paste's Radio. Group them with <RadioGroup legend="...">. */
 export type RadioProps = Omit<React.ComponentPropsWithRef<"input">, "type"> & { label: React.ReactNode; help?: React.ReactNode };

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 
 export function SettingsNav({ orgId }: { orgId: string }) {
   const path = usePathname();

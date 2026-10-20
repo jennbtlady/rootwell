@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Check } from "lucide-react";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 
 /**
  * Checkbox after Paste's Checkbox: a 20px box with a 1px border, primary fill when

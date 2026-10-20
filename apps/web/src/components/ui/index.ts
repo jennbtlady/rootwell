@@ -20,3 +20,4 @@ export * from "./radio";
 export * from "./modal";
 export * from "./tabs";
 export * from "./combobox";
+export * from "./toast";

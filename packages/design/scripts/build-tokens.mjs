@@ -59,4 +59,17 @@ for (const [k] of light) {
 }
 writeFileSync(new URL("../theme.css", import.meta.url), `${header}\n@theme inline {\n${theme.join("\n")}\n}\n`);
 
+// theme.json: the same names, for tailwind-merge. Without it, tailwind-merge treats an
+// unknown text-* value as a font size and drops text colors that sit next to text-30.
+const names = { color: [], text: [], leading: [], radius: [], shadow: [] };
+for (const [k] of light) {
+  if (k.startsWith("color-")) names.color.push(k.slice(6));
+  else if (k === "shadow") names.shadow.push("paste");
+  else if (k.startsWith("shadow-")) names.shadow.push(k.slice(7));
+  else if (k.startsWith("border-radius-")) names.radius.push(k.slice(14));
+  else if (k.startsWith("font-size-") && k !== "font-size-base") names.text.push(k.slice(10));
+  else if (k.startsWith("line-height-")) names.leading.push(k.slice(12));
+}
+writeFileSync(new URL("../theme.json", import.meta.url), JSON.stringify(names));
+
 console.log(`tokens.css (${light.length} tokens) and theme.css (${theme.length} entries) written from design-tokens ${version}`);

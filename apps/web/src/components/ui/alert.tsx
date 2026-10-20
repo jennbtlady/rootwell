@@ -1,6 +1,6 @@
 import * as React from "react";
 import { CircleAlert, Info, TriangleAlert, X } from "lucide-react";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 
 /**
  * Alert after Paste's Alert. Neutral announces politely (status); error and warning

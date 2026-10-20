@@ -1,5 +1,5 @@
 import * as React from "react";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 
 /** Body copy after Paste's Paragraph: 14px on a 24px line, with a paragraph margin. */
 export function Paragraph({ className, noMargin, ...props }: React.ComponentPropsWithRef<"p"> & { noMargin?: boolean }) {

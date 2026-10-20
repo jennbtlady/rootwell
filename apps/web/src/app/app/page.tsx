@@ -42,7 +42,6 @@ export default async function AppHome() {
           <li key={o.id}>
             <Link
               href={`/app/orgs/${o.id}`}
-              aria-label={`${o.name}, ${ROLE_LABEL[o.role]}${o.isSample ? ", sample" : ""}`}
               className="block rounded-30 border border-border-weaker bg-background-weakest p-4 outline-none transition-[box-shadow] hover:shadow-border-primary focus-visible:shadow-focus"
             >
               <div className="flex items-center gap-2 text-30 font-semibold leading-5">

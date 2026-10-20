@@ -2,9 +2,16 @@
 
 Status: in progress. Started 2026-10-20 on branch `phase-1/constituents-and-gifts`.
 
-Done: tasks 1, 2, 3 and 6, the components in task 4 that the screens needed (Table, Tabs,
-Modal, Combobox, Checkbox, Radio, Pagination, Skeleton, Empty state), and the screens in
-task 5. Open: Toast, Playwright (task 7), and polish from use.
+Done: every task. Components: Table, Tabs, Modal, Combobox, Checkbox, Radio, Pagination,
+Skeleton, Empty state, Toast. Playwright runs the acceptance flow end to end with WCAG 2.1
+AA scans (axe) on each screen, on desktop and at phone width: `pnpm --filter @maple/web e2e`
+against a running dev server, or the CI job, which builds and starts the app itself.
+What is left is polish from real use.
+
+## Testing while signed in without an authenticator
+
+`MFA_ENFORCEMENT=off` in `apps/web/.env.local` (see the README) turns off two-step
+enforcement locally. Playwright sets it for the server it starts.
 
 ## Verified by hand on 2026-10-20
 
