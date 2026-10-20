@@ -1,7 +1,7 @@
 import { createMiddleware } from "hono/factory";
 import { HTTPException } from "hono/http-exception";
 import { createRemoteJWKSet, decodeProtectedHeader, jwtVerify, type JWTPayload } from "jose";
-import { userClaims } from "@maple/core";
+import { userClaims } from "@maple/db";
 import type { ApiEnv } from "./env";
 
 type Verifier = (token: string) => Promise<JWTPayload>;

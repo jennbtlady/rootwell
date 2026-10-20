@@ -1,8 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import postgres from "postgres";
-import { systemClaims, userClaims, type Aal, type Claims } from "@maple/core";
-import { createDb, withRls, type Db, type RlsTx } from "../src";
+import { createDb, systemClaims, userClaims, withRls, type Aal, type Claims, type Db, type RlsTx } from "../src";
 
 export const DATABASE_URL = process.env.DATABASE_URL;
 export const hasDb = Boolean(DATABASE_URL);

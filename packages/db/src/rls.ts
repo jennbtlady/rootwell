@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import type { Claims } from "@maple/core";
+import type { Claims } from "./claims";
 import type { Db } from "./client";
 
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];

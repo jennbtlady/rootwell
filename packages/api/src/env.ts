@@ -1,6 +1,6 @@
 export type ApiEnv = {
   Variables: {
-    claims: import("@maple/core").UserClaims;
+    claims: import("@maple/db").UserClaims;
   };
   Bindings: Record<string, never>;
 };

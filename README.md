@@ -21,7 +21,7 @@ docs/           Brief, build plan, one page per phase
 3. `pnpm install`
 4. `pnpm db:start` from the repo root, then copy the printed values into `apps/web/.env.local` and `packages/db/.env` using `.env.example` as the template.
 5. `pnpm db:migrate` to apply migrations to the local database.
-6. `pnpm dev` and open http://localhost:3000.
+6. `pnpm dev` and open http://localhost:3000. Emails sent locally (sign-in links, invites) show up at http://127.0.0.1:54324 instead of a real inbox.
 
 ## Commands
 
