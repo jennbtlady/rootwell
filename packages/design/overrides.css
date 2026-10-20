@@ -1,0 +1,16 @@
+/*
+ * Maple Ledger design overrides. This is the one place to change the look.
+ *
+ * Every token from Paste is a --paste-* custom property (see tokens.css). Redefine any
+ * of them here and every component follows, in light and dark. Examples:
+ *
+ *   :root {
+ *     --paste-color-background-primary: rgb(122, 59, 46);
+ *     --paste-color-text-link: rgb(122, 59, 46);
+ *     --paste-shadow-focus: 0 0 0 4px rgba(122, 59, 46, 0.6);
+ *   }
+ *
+ * Keep overrides to tokens. Do not style components here.
+ */
+:root {
+}

@@ -31,6 +31,10 @@ Package scope is `@maple/*`. The product name is not final. Renaming the scope i
 9. Commit small. One PR per phase milestone with a checklist against the acceptance criteria in the brief.
 10. Writing in the UI and docs: plain language, short sentences, no jargon a volunteer treasurer would not know. No em dashes anywhere, including code comments.
 
+## Design system
+
+Read `docs/design-system.md` before touching UI. It is short and it is the whole contract: build screens from `@/components/ui`, use Paste token names (`bg-background-primary`, `text-text-weak`, `text-30`, `rounded-30`, `shadow-focus`), never Tailwind palette colors or `text-sm`. Design changes go in `packages/design/overrides.css`, not in components. New components are ported from Paste's source using the mapping table in that doc. Check `/design` in the browser when you add or change one.
+
 ## Next.js note
 
 `apps/web` is on Next.js 16. Its conventions differ from older versions. Read `apps/web/node_modules/next/dist/docs/` before writing Next-specific code, as `apps/web/AGENTS.md` says.

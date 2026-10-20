@@ -3,10 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { api, errorMessage } from "@/lib/api";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, Button, FormField, Input, Select } from "@/components/ui";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const TIMEZONES = [
@@ -47,41 +44,42 @@ export function NewOrgForm() {
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="name">Organization name</Label>
-        <Input id="name" name="name" required autoComplete="organization" value={name} onChange={(e) => setName(e.target.value)} />
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="month">Fiscal year starts in</Label>
-        <select id="month" name="month" className="h-9 rounded-md border bg-background px-3 text-sm" value={month} onChange={(e) => setMonth(Number(e.target.value))}>
-          {MONTHS.map((m, i) => (
-            <option key={m} value={i + 1}>
-              {m}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="timezone">Time zone</Label>
-        <select id="timezone" name="timezone" className="h-9 rounded-md border bg-background px-3 text-sm" value={timezone} onChange={(e) => setTimezone(e.target.value)}>
-          {zones.map((z) => (
-            <option key={z} value={z}>
-              {z.replace("_", " ")}
-            </option>
-          ))}
-        </select>
-      </div>
+      <FormField id="name" label="Organization name" required>
+        {(f) => <Input {...f} name="name" required autoComplete="organization" value={name} onChange={(e) => setName(e.target.value)} />}
+      </FormField>
+      <FormField id="month" label="Fiscal year starts in" help="Many nonprofits start in July. If you are not sure, leave January.">
+        {(f) => (
+          <Select {...f} name="month" value={month} onChange={(e) => setMonth(Number(e.target.value))}>
+            {MONTHS.map((m, i) => (
+              <option key={m} value={i + 1}>
+                {m}
+              </option>
+            ))}
+          </Select>
+        )}
+      </FormField>
+      <FormField id="timezone" label="Time zone">
+        {(f) => (
+          <Select {...f} name="timezone" value={timezone} onChange={(e) => setTimezone(e.target.value)}>
+            {zones.map((z) => (
+              <option key={z} value={z}>
+                {z.replace("_", " ")}
+              </option>
+            ))}
+          </Select>
+        )}
+      </FormField>
 
       <div aria-live="polite">
         {error && (
-          <Alert variant="destructive">
+          <Alert variant="error">
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
       </div>
 
-      <Button type="submit" disabled={pending || name.trim().length < 2}>
-        {pending ? "Creating..." : "Create organization"}
+      <Button type="submit" loading={pending} disabled={name.trim().length < 2}>
+        Create organization
       </Button>
     </form>
   );

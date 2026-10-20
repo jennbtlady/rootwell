@@ -5,11 +5,7 @@ import { useRouter } from "next/navigation";
 import type { OrgRole } from "@maple/core";
 import type { Member } from "@maple/core/services";
 import { api, errorMessage } from "@/lib/api";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription, Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, FormField, Input, Select } from "@/components/ui";
 import { ROLE_HELP, ROLE_LABEL } from "./role-labels";
 
 type GrantableRole = Exclude<OrgRole, "owner">;
@@ -71,20 +67,21 @@ function MemberList({ orgId, myUserId, canManage, members }: { orgId: string; my
         <CardDescription>Everyone with access to this organization.</CardDescription>
       </CardHeader>
       <CardContent>
-        <ul className="divide-y">
+        <ul className="divide-y divide-border-weaker">
           {members.map((m) => {
             const isSelf = m.userId === myUserId;
             const editable = canManage && m.role !== "owner" && !isSelf;
             return (
               <li key={m.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
-                  <div className="truncate font-medium">
-                    {m.fullName ?? m.email}
-                    {isSelf && <span className="ml-2 text-xs text-muted-foreground">(you)</span>}
+                  <div className="flex items-center gap-2 truncate text-30 font-medium leading-5">
+                    <span className="truncate">{m.fullName ?? m.email}</span>
+                    {isSelf && <span className="text-20 text-text-weak">(you)</span>}
+                    {m.status === "invited" && <Badge variant="warning">Invitation sent</Badge>}
                   </div>
-                  <div className="truncate text-sm text-muted-foreground">
+                  <div className="truncate text-30 leading-5 text-text-weak">
                     {m.fullName ? `${m.email} · ` : ""}
-                    {m.status === "invited" ? "Invitation sent" : ROLE_LABEL[m.role]}
+                    {ROLE_LABEL[m.role]}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -93,30 +90,24 @@ function MemberList({ orgId, myUserId, canManage, members }: { orgId: string; my
                       <label className="sr-only" htmlFor={`role-${m.id}`}>
                         Role for {m.email}
                       </label>
-                      <select
-                        id={`role-${m.id}`}
-                        className="h-8 rounded-md border bg-background px-2 text-sm"
-                        value={m.role}
-                        disabled={busy === m.id}
-                        onChange={(e) => changeRole(m, e.target.value as GrantableRole)}
-                      >
+                      <Select id={`role-${m.id}`} className="w-auto" value={m.role} disabled={busy === m.id} onChange={(e) => changeRole(m, e.target.value as GrantableRole)}>
                         {GRANTABLE.map((r) => (
                           <option key={r} value={r}>
                             {ROLE_LABEL[r]}
                           </option>
                         ))}
-                      </select>
+                      </Select>
                       {m.status === "invited" && (
-                        <Button type="button" variant="ghost" size="sm" disabled={busy === m.id} onClick={() => resend(m)}>
+                        <Button type="button" variant="link" size="small" disabled={busy === m.id} onClick={() => resend(m)}>
                           Resend
                         </Button>
                       )}
-                      <Button type="button" variant="ghost" size="sm" disabled={busy === m.id} onClick={() => remove(m)}>
+                      <Button type="button" variant="destructive_link" size="small" disabled={busy === m.id} onClick={() => remove(m)}>
                         {m.status === "invited" ? "Cancel invite" : "Remove"}
                       </Button>
                     </>
                   ) : (
-                    <span className="text-sm text-muted-foreground">{ROLE_LABEL[m.role]}</span>
+                    <Badge>{ROLE_LABEL[m.role]}</Badge>
                   )}
                 </div>
               </li>
@@ -125,7 +116,7 @@ function MemberList({ orgId, myUserId, canManage, members }: { orgId: string; my
         </ul>
         <div aria-live="polite" className="mt-2">
           {error && (
-            <Alert variant="destructive">
+            <Alert variant="error">
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
@@ -170,26 +161,23 @@ function InviteForm({ orgId }: { orgId: string }) {
       </CardHeader>
       <CardContent>
         <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="invite-email">Email</Label>
-            <Input id="invite-email" type="email" autoComplete="off" required value={email} onChange={(e) => setEmail(e.target.value)} />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="invite-role">Role</Label>
-            <select id="invite-role" className="h-9 rounded-md border bg-background px-3 text-sm" value={role} aria-describedby="invite-role-help" onChange={(e) => setRole(e.target.value as GrantableRole)}>
-              {GRANTABLE.map((r) => (
-                <option key={r} value={r}>
-                  {ROLE_LABEL[r]}
-                </option>
-              ))}
-            </select>
-            <p id="invite-role-help" className="text-xs text-muted-foreground">
-              {ROLE_HELP[role]}
-            </p>
-          </div>
+          <FormField id="invite-email" label="Email" required>
+            {(f) => <Input {...f} type="email" autoComplete="off" required value={email} onChange={(e) => setEmail(e.target.value)} />}
+          </FormField>
+          <FormField id="invite-role" label="Role" help={ROLE_HELP[role]}>
+            {(f) => (
+              <Select {...f} value={role} onChange={(e) => setRole(e.target.value as GrantableRole)}>
+                {GRANTABLE.map((r) => (
+                  <option key={r} value={r}>
+                    {ROLE_LABEL[r]}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </FormField>
           <div aria-live="polite">
             {error && (
-              <Alert variant="destructive">
+              <Alert variant="error">
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
@@ -199,8 +187,8 @@ function InviteForm({ orgId }: { orgId: string }) {
               </Alert>
             )}
           </div>
-          <Button type="submit" disabled={pending || !email}>
-            {pending ? "Sending..." : "Send invitation"}
+          <Button type="submit" loading={pending} disabled={!email}>
+            Send invitation
           </Button>
         </form>
       </CardContent>
@@ -238,28 +226,29 @@ function TransferOwnership({ orgId, myUserId, members }: { orgId: string; myUser
       </CardHeader>
       <CardContent>
         {candidates.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Invite another person first. Only active members can become the owner.</p>
+          <p className="text-30 leading-5 text-text-weak">Invite another person first. Only active members can become the owner.</p>
         ) : (
           <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="transfer-to">New owner</Label>
-              <select id="transfer-to" className="h-9 rounded-md border bg-background px-3 text-sm" value={toUserId} onChange={(e) => setToUserId(e.target.value)}>
-                {candidates.map((m) => (
-                  <option key={m.id} value={m.userId ?? ""}>
-                    {m.fullName ?? m.email}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <FormField id="transfer-to" label="New owner">
+              {(f) => (
+                <Select {...f} value={toUserId} onChange={(e) => setToUserId(e.target.value)}>
+                  {candidates.map((m) => (
+                    <option key={m.id} value={m.userId ?? ""}>
+                      {m.fullName ?? m.email}
+                    </option>
+                  ))}
+                </Select>
+              )}
+            </FormField>
             <div aria-live="polite">
               {error && (
-                <Alert variant="destructive">
+                <Alert variant="error">
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
             </div>
-            <Button type="submit" variant="outline" disabled={pending || !toUserId}>
-              {pending ? "Transferring..." : "Transfer ownership"}
+            <Button type="submit" variant="secondary" loading={pending} disabled={!toUserId}>
+              Transfer ownership
             </Button>
           </form>
         )}

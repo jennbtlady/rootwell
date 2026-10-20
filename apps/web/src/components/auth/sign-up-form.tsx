@@ -4,10 +4,8 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowser } from "@/lib/supabase/browser";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle, Button, FormField, Input } from "@/components/ui";
+import { anchorClass } from "@/components/ui/text";
 import { friendlyAuthError } from "./messages";
 
 export function SignUpForm() {
@@ -54,35 +52,31 @@ export function SignUpForm() {
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="fullName">Your name</Label>
-        <Input id="fullName" name="fullName" autoComplete="name" required value={fullName} onChange={(e) => setFullName(e.target.value)} />
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="email">Email</Label>
-        <Input id="email" name="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="password">Password</Label>
-        <Input id="password" name="password" type="password" autoComplete="new-password" required minLength={8} aria-describedby="password-help" value={password} onChange={(e) => setPassword(e.target.value)} />
-        <p id="password-help" className="text-xs text-muted-foreground">At least 8 characters.</p>
-      </div>
+      <FormField id="fullName" label="Your name" required>
+        {(f) => <Input {...f} name="fullName" autoComplete="name" required value={fullName} onChange={(e) => setFullName(e.target.value)} />}
+      </FormField>
+      <FormField id="email" label="Email" required>
+        {(f) => <Input {...f} name="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />}
+      </FormField>
+      <FormField id="password" label="Password" required help="At least 8 characters.">
+        {(f) => <Input {...f} name="password" type="password" autoComplete="new-password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} />}
+      </FormField>
 
       <div aria-live="polite">
         {error && (
-          <Alert variant="destructive">
+          <Alert variant="error">
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
       </div>
 
-      <Button type="submit" disabled={pending}>
-        {pending ? "Creating account..." : "Create account"}
+      <Button type="submit" loading={pending}>
+        Create account
       </Button>
 
-      <p className="text-center text-sm text-muted-foreground">
+      <p className="text-center text-30 text-text-weak">
         Already have an account?{" "}
-        <Link href="/sign-in" className="underline underline-offset-4">
+        <Link href="/sign-in" className={anchorClass}>
           Sign in
         </Link>
       </p>

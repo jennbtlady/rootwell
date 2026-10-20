@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui";
 import { NewOrgForm } from "@/components/orgs/new-org-form";
 
 export const metadata: Metadata = { title: "New organization" };

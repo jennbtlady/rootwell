@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui";
 import { MfaEnrollForm } from "@/components/auth/mfa-enroll-form";
 import { safeNextPath } from "@/lib/session";
 

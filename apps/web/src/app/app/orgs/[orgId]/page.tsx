@@ -3,8 +3,7 @@ import { notFound } from "next/navigation";
 import { z } from "zod";
 import { getOrg } from "@maple/core/services";
 import { requireSession, withSession } from "@/lib/session";
-import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge, buttonVariants, Card, CardContent, CardDescription, CardHeader, CardTitle, Heading } from "@/components/ui";
 import { RemoveSampleButton } from "@/components/orgs/sample-org-buttons";
 import { ROLE_LABEL } from "@/components/orgs/role-labels";
 
@@ -22,13 +21,13 @@ export default async function OrgPage({ params }: PageProps<"/app/orgs/[orgId]">
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="text-xl font-semibold">
+          <Heading variant="heading30" as="h1" noMargin className="flex items-center gap-2">
             {org.name}
-            {org.isSample && <span className="ml-2 rounded bg-muted px-2 py-0.5 align-middle text-xs font-normal text-muted-foreground">Sample</span>}
-          </h1>
-          <p className="text-sm text-muted-foreground">You are {ROLE_LABEL[org.role].toLowerCase() === "owner" ? "the owner" : `a ${ROLE_LABEL[org.role].toLowerCase()}`}.</p>
+            {org.isSample && <Badge variant="new">Sample</Badge>}
+          </Heading>
+          <p className="text-30 leading-5 text-text-weak">You are {ROLE_LABEL[org.role].toLowerCase() === "owner" ? "the owner" : `a ${ROLE_LABEL[org.role].toLowerCase()}`}.</p>
         </div>
-        <Link href={`/app/orgs/${orgId}/members`} className={buttonVariants({ variant: "outline", size: "sm" })}>
+        <Link href={`/app/orgs/${orgId}/members`} className={buttonVariants({ variant: "secondary", size: "small" })}>
           Team
         </Link>
       </div>
@@ -53,12 +52,12 @@ export default async function OrgPage({ params }: PageProps<"/app/orgs/[orgId]">
           <CardDescription>Constituents, gifts and the dashboard arrive in the next phase.</CardDescription>
         </CardHeader>
         <CardContent>
-          <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
-            <dt className="text-muted-foreground">Fiscal year starts</dt>
+          <dl className="grid gap-x-6 gap-y-2 text-30 leading-5 sm:grid-cols-2">
+            <dt className="text-text-weak">Fiscal year starts</dt>
             <dd>{MONTHS[org.fiscalYearStartMonth - 1]}</dd>
-            <dt className="text-muted-foreground">Time zone</dt>
+            <dt className="text-text-weak">Time zone</dt>
             <dd>{org.timezone.replace("_", " ")}</dd>
-            <dt className="text-muted-foreground">Plan</dt>
+            <dt className="text-text-weak">Plan</dt>
             <dd className="capitalize">{org.subscriptionStatus.replace("_", " ")}</dd>
           </dl>
         </CardContent>

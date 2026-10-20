@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { mfaRequiredFor } from "@maple/core/services";
 import { requireSession, withSession } from "@/lib/session";
 import { createSupabaseServer } from "@/lib/supabase/server";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui";
 
 /**
  * Every signed-in page lives under /app. This layout is where MFA is enforced:
@@ -25,15 +25,15 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
 
   return (
     <div className="flex min-h-full flex-1 flex-col">
-      <header className="border-b">
+      <header className="border-b border-border-weaker bg-background-body">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 px-4 py-3">
-          <Link href="/app" className="font-semibold tracking-tight">
+          <Link href="/app" className="rounded-20 font-semibold tracking-tight outline-none focus-visible:shadow-focus">
             Maple Ledger
           </Link>
           <div className="flex items-center gap-3">
-            <span className="hidden text-sm text-muted-foreground sm:inline">{session.email}</span>
+            <span className="hidden text-30 text-text-weak sm:inline">{session.email}</span>
             <form action="/auth/sign-out" method="post">
-              <Button type="submit" variant="ghost" size="sm">
+              <Button type="submit" variant="link" size="small">
                 Sign out
               </Button>
             </form>

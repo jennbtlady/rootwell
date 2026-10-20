@@ -3,10 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowser } from "@/lib/supabase/browser";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, Button, FormField, Input } from "@/components/ui";
 import { friendlyAuthError } from "./messages";
 
 export function MfaVerifyForm({ next }: { next: string }) {
@@ -36,19 +33,18 @@ export function MfaVerifyForm({ next }: { next: string }) {
 
   return (
     <form onSubmit={verify} className="flex flex-col gap-4" noValidate>
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="code">6 digit code from your authenticator app</Label>
-        <Input id="code" name="code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]*" maxLength={6} required autoFocus value={code} onChange={(e) => setCode(e.target.value)} />
-      </div>
+      <FormField id="code" label="6 digit code from your authenticator app" required>
+        {(f) => <Input {...f} name="code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]*" maxLength={6} required autoFocus value={code} onChange={(e) => setCode(e.target.value)} />}
+      </FormField>
       <div aria-live="polite">
         {error && (
-          <Alert variant="destructive">
+          <Alert variant="error">
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
       </div>
-      <Button type="submit" disabled={pending || code.length < 6}>
-        {pending ? "Checking..." : "Continue"}
+      <Button type="submit" loading={pending} disabled={code.length < 6}>
+        Continue
       </Button>
     </form>
   );

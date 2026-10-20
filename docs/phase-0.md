@@ -23,6 +23,8 @@ Status: in progress. Task list is in `build-plan.md` section 7. Tasks 1 to 8 are
 - Sample organization: "Explore a sample organization" creates one demo org per person (`app.create_sample_org()`), labeled Sample everywhere, removable by its owner. Being owner of the sample does not trigger the MFA requirement. Phase 1 fills `app.seed_sample_data()` with constituents, funds and gifts.
 - Data model note: `organizations.sample_org_enabled` now defaults to false and means "this organization is the demo one" (migration 0002). Rollback: set the default back to true.
 
+- Design system (added after task 7): built on Twilio Paste's tokens and component anatomy, owned in `apps/web/src/components/ui`. See `docs/design-system.md` and the `/design` page. Every Phase 0 screen now uses it.
+
 ## Verified by hand on 2026-10-20
 
 Against local Supabase in the desktop app's browser: sign up, create an org through the API, forced authenticator enrollment for the new owner, sign out, password sign-in stopping at the code step, magic link from Mailpit (http://127.0.0.1:54324) landing on the callback and then the code step, a foreign org id returning 404, the main pages at 375px width, inviting a staff member, accepting the invitation from the Mailpit email, setting a password, seeing the team read-only as staff, and creating then removing the sample organization.

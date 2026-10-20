@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, errorMessage } from "@/lib/api";
-import { Button } from "@/components/ui/button";
+import { Button, HelpText } from "@/components/ui";
 
 export function ExploreSampleButton() {
   const router = useRouter();
@@ -23,14 +23,14 @@ export function ExploreSampleButton() {
 
   return (
     <div className="flex flex-col gap-2">
-      <Button type="button" variant="outline" disabled={pending} onClick={create}>
-        {pending ? "Setting up..." : "Explore a sample organization"}
+      <Button type="button" variant="secondary" loading={pending} onClick={create}>
+        Explore a sample organization
       </Button>
-      <p className="text-xs text-muted-foreground">Demo data you can click around in and remove any time.</p>
+      <HelpText>Demo data you can click around in and remove any time.</HelpText>
       {error && (
-        <p role="alert" className="text-sm text-destructive">
+        <HelpText variant="error" role="alert">
           {error}
-        </p>
+        </HelpText>
       )}
     </div>
   );
@@ -54,13 +54,13 @@ export function RemoveSampleButton({ orgId }: { orgId: string }) {
 
   return (
     <div className="flex flex-col gap-2">
-      <Button type="button" variant="outline" size="sm" disabled={pending} onClick={remove}>
-        {pending ? "Removing..." : "Remove sample organization"}
+      <Button type="button" variant="destructive_secondary" size="small" loading={pending} onClick={remove}>
+        Remove sample organization
       </Button>
       {error && (
-        <p role="alert" className="text-sm text-destructive">
+        <HelpText variant="error" role="alert">
           {error}
-        </p>
+        </HelpText>
       )}
     </div>
   );

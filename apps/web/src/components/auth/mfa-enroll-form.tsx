@@ -3,10 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowser } from "@/lib/supabase/browser";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, Button, FormField, Input } from "@/components/ui";
 import { friendlyAuthError } from "./messages";
 
 type Enrollment = { factorId: string; qrCode: string; secret: string };
@@ -70,11 +67,11 @@ export function MfaEnrollForm({ next }: { next: string }) {
     return (
       <div aria-live="polite">
         {error ? (
-          <Alert variant="destructive">
+          <Alert variant="error">
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         ) : (
-          <p className="text-sm text-muted-foreground">Preparing your setup code...</p>
+          <p className="text-30 text-text-weak">Preparing your setup code...</p>
         )}
       </div>
     );
@@ -82,35 +79,34 @@ export function MfaEnrollForm({ next }: { next: string }) {
 
   return (
     <form onSubmit={verify} className="flex flex-col gap-4" noValidate>
-      <ol className="list-decimal space-y-2 pl-5 text-sm">
+      <ol className="list-decimal space-y-2 pl-5 text-30 leading-5">
         <li>Open an authenticator app on your phone, such as Google Authenticator, Microsoft Authenticator, or 1Password.</li>
         <li>Scan this code, or type the setup key by hand.</li>
         <li>Enter the 6 digit code the app shows.</li>
       </ol>
 
-      <div className="flex justify-center rounded-md border bg-white p-2">
+      <div className="flex justify-center rounded-30 border border-border-weaker bg-background-weakest p-2">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={enrollment.qrCode} alt="Setup code to scan with your authenticator app" width={192} height={192} />
       </div>
-      <p className="text-xs text-muted-foreground">
+      <p className="text-20 text-text-weak">
         Setup key: <code className="select-all break-all font-mono">{enrollment.secret}</code>
       </p>
 
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="code">6 digit code</Label>
-        <Input id="code" name="code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]*" maxLength={6} required value={code} onChange={(e) => setCode(e.target.value)} />
-      </div>
+      <FormField id="code" label="6 digit code" required>
+        {(f) => <Input {...f} name="code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]*" maxLength={6} required value={code} onChange={(e) => setCode(e.target.value)} />}
+      </FormField>
 
       <div aria-live="polite">
         {error && (
-          <Alert variant="destructive">
+          <Alert variant="error">
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
       </div>
 
-      <Button type="submit" disabled={pending || code.length < 6}>
-        {pending ? "Checking..." : "Turn on two-step sign-in"}
+      <Button type="submit" loading={pending} disabled={code.length < 6}>
+        Turn on two-step sign-in
       </Button>
     </form>
   );

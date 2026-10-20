@@ -1,24 +1,84 @@
 # Design system
 
-Decision (Jenn, 2026-10-20): the product's design system is to be built on Twilio's Paste
-(https://github.com/twilio-labs/paste), not left as shadcn/ui defaults.
+Decision (Jenn, 2026-10-20): Maple Ledger's design system is built on Twilio Paste's design
+tokens and component anatomy. The components are our own, in this repo. We do not use
+Paste's React library at runtime.
 
-Status: noted, not started. The Phase 0 screens use shadcn/ui (base-nova preset) as a
-placeholder. Nothing in those screens is styled in a way that would be hard to replace.
+Why tokens and not components: Paste's components are built on Emotion, which would make
+every piece of UI a client component in Next.js, and they cannot be shared with the Expo
+app. Its tokens are plain values that both apps can read, and its guidelines are good.
 
-## What to decide when this starts
+## Where things live
 
-- Adopt Paste directly (its React components and tokens, which bring their own theming
-  and accessibility work), or adopt Paste's tokens, spacing scale, type scale and
-  component patterns on top of Tailwind and the existing components. Paste is built on
-  its own styling system, so mixing it with Tailwind needs a clear boundary.
-- Which Paste theme is the base, and how the Maple Ledger palette maps onto its tokens.
-- The mobile app (Phase 7) uses NativeWind. Shared tokens must be expressible as plain
-  values (colors, spacing, type) so both apps read the same source.
-- Accessibility is a strength of Paste. Keep its focus, contrast and keyboard behavior
-  intact rather than restyling over them.
+| What | Where |
+|---|---|
+| Token source | `@twilio-paste/design-tokens` (MIT), a dev dependency of `packages/design` |
+| Generated stylesheets | `packages/design/tokens.css` (every token as `--paste-*`, light on `:root`, dark under `.dark`) and `packages/design/theme.css` (a Tailwind `@theme` block) |
+| Design changes | `packages/design/overrides.css`: redefine any `--paste-*` token there and every component follows |
+| Regenerate after upgrading | `pnpm --filter @maple/design build:tokens` |
+| Components | `apps/web/src/components/ui/`, exported from `@/components/ui` |
+| Living style guide | `/design` in the web app |
+| Font | Inter, loaded through `next/font` as `--font-inter` |
 
-## Where it lands in the plan
+## How Paste names become Tailwind classes
 
-Best slot: the start of Phase 1, before the constituent and gift screens exist, so the
-form patterns (which Phase 1 is full of) are built on the final system once.
+The theme exposes tokens under Paste's own names, so a line of Paste source maps to a
+class one to one. When porting a component, read its source in the Paste repository
+(`packages/paste-core/components/<name>/src`) and translate:
+
+| Paste source | Tailwind class |
+|---|---|
+| `backgroundColor="colorBackgroundPrimary"` | `bg-background-primary` |
+| `color="colorTextWeak"` | `text-text-weak` |
+| `borderColor="colorBorderWeaker"` | `border-border-weaker` |
+| `boxShadow="shadowBorderWeak"` | `shadow-border-weak` |
+| `boxShadow="shadowFocus"` | `shadow-focus` (on `focus-visible:`) |
+| `borderRadius="borderRadius30"` | `rounded-30` |
+| `fontSize="fontSize30"` (+ `lineHeight30`) | `text-30` (sets both) |
+| `lineHeight="lineHeight20"` alone | `leading-20` |
+| `fontWeight="fontWeightSemibold"` | `font-semibold` |
+| `padding="space50"` | `p-4` (Paste's scale is 4px like Tailwind's: 20 = 1, 30 = 2, 40 = 3, 50 = 4, 60 = 5, 70 = 6, 90 = 8, 100 = 9, 130 = 12) |
+| `size="sizeIcon20"` | `size-5` (icon sizes: 10 = 4, 20 = 5, 30 = 5, 40 = 6) |
+
+Borders on fields and buttons are box shadows, as in Paste, so the focus ring can replace
+them without a layout shift.
+
+## Components
+
+| Component | After Paste | Notes |
+|---|---|---|
+| `Button` | Button | `primary`, `secondary`, `destructive`, `destructive_secondary`, `link`, `destructive_link`; sizes `default`, `small`, `icon`, `icon_small`; `loading` shows a spinner and sets `aria-busy`. `buttonVariants()` styles a `Link` (primary or secondary only). |
+| `Input`, `Textarea`, `Select` | Input, TextArea, Select | `hasError`, `disabled`, `readOnly`; `insertBefore` / `insertAfter` for prefixes like `$`. Select is the native element with a chevron. |
+| `Label` | Label | `required` shows the red dot with "Required" for screen readers; `optional` adds "(optional)". |
+| `HelpText` | HelpText | `default`, `error`, `success`, `warning`. Error text says what to do. |
+| `FormField` | (composition) | Wires label, control, help and error ids. Use it for every field. |
+| `Heading` | Heading | `heading10` to `heading60`, each with a default element; `as` overrides. |
+| `Paragraph`, `anchorClass` | Paragraph, Anchor | Body text and in-content links. |
+| `Card` and parts | Card | 24px padding on phones, 36px above (Paste pads 36px everywhere). |
+| `Alert` and parts | Alert | `neutral` (status), `error` and `warning` (alert). Page-level messages only. |
+| `Badge` | Badge | Status words. Never clickable. |
+| `Spinner` | Spinner | Pass `label` when it should be announced. |
+
+Not yet ported, in the order Phase 1 will need them: Table, Pagination, Tabs, Modal,
+Menu, Combobox, Toast, Date picker, Checkbox, Radio, Switch, Skeleton, Empty state. Use
+Base UI (`@base-ui/react`, already installed) for keyboard and focus behavior of menus,
+dialogs and comboboxes, with Paste's look on top.
+
+## Rules
+
+1. Use the components. Reach for raw Tailwind only for layout (flex, grid, gaps).
+2. Colors come from the roles above, never from Tailwind's palette or hex values.
+3. Text sizes come from the Paste scale (`text-20` to `text-110`), not `text-sm` and friends.
+4. One primary button per screen. Buttons act on this page; links go somewhere.
+5. Every field uses `FormField`, so help and errors are announced with the field.
+6. Focus is a 4px blue ring (`shadow-focus`) on every interactive element. Never remove it.
+7. Status needs a word, not just a color.
+8. Copy: plain, short, no jargon a volunteer treasurer would not know. Error text names the fix. No em dashes.
+9. Phone first. Check every screen at 375px before calling it done.
+10. Dark mode exists in the tokens (`.dark`) but no screen is designed for it yet. Do not add a toggle until that work is scheduled.
+
+## Mobile app
+
+Phase 7's Expo app reads the same token values. `tokens.css` is the source; a small script
+can emit a JSON or TypeScript map for NativeWind from the same package when that phase
+starts.

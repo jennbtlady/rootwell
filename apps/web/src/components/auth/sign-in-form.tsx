@@ -4,10 +4,8 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowser } from "@/lib/supabase/browser";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, Button, FormField, Input } from "@/components/ui";
+import { anchorClass } from "@/components/ui/text";
 import { friendlyAuthError } from "./messages";
 
 export function SignInForm({ next, initialError }: { next: string; initialError?: string }) {
@@ -48,18 +46,16 @@ export function SignInForm({ next, initialError }: { next: string; initialError?
 
   return (
     <form onSubmit={signInWithPassword} className="flex flex-col gap-4" noValidate>
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="email">Email</Label>
-        <Input id="email" name="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="password">Password</Label>
-        <Input id="password" name="password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
-      </div>
+      <FormField id="email" label="Email" required>
+        {(f) => <Input {...f} name="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />}
+      </FormField>
+      <FormField id="password" label="Password" help="Leave this empty to get a sign-in link by email instead.">
+        {(f) => <Input {...f} name="password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />}
+      </FormField>
 
       <div aria-live="polite">
         {error && (
-          <Alert variant="destructive">
+          <Alert variant="error">
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
@@ -70,16 +66,16 @@ export function SignInForm({ next, initialError }: { next: string; initialError?
         )}
       </div>
 
-      <Button type="submit" disabled={pending !== null}>
-        {pending === "password" ? "Signing in..." : "Sign in"}
+      <Button type="submit" loading={pending === "password"} disabled={pending !== null}>
+        Sign in
       </Button>
-      <Button type="button" variant="outline" disabled={pending !== null} onClick={sendLink}>
-        {pending === "link" ? "Sending..." : "Email me a sign-in link instead"}
+      <Button type="button" variant="secondary" loading={pending === "link"} disabled={pending !== null} onClick={sendLink}>
+        Email me a sign-in link instead
       </Button>
 
-      <p className="text-center text-sm text-muted-foreground">
+      <p className="text-center text-30 text-text-weak">
         New here?{" "}
-        <Link href="/sign-up" className="underline underline-offset-4">
+        <Link href="/sign-up" className={anchorClass}>
           Create an account
         </Link>
       </p>
