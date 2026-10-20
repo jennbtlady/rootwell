@@ -29,7 +29,7 @@ export default async function MergesPage({ params }: PageProps<"/app/orgs/[orgId
       {merges.length === 0 ? (
         <EmptyState title="No merges yet" />
       ) : (
-        <Table>
+        <Table label="Merge history">
           <THead>
             <TR>
               <TH>When</TH>

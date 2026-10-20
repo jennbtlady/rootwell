@@ -1,0 +1,13 @@
+Donor ID,First Name,Last Name,Email,Phone,Address,City,State,Zip,Amount,Date,Fund,Campaign,Method,Check No
+,Dana,Rivera,dana.e2e@example.org,217-555-0100,12 Elm St,Springfield,il,62701,$100.00,3/14/2025,General,Spring appeal,check,1001
+,Dana,Rivera,DANA.e2e@Example.org,,12 Elm St,Springfield,IL,62701,50,2025-06-01,General,,cash,
+,"Rivera,",,,,,,,,,,,,,
+,Tom,Okafor,not-an-email,,,,,,25,4/1/2025,,,,
+,Priya,Natarajan,priya.e2e@example.org,12,,,,,(40.00),5/2/2025,General,,Visa,
+,Hector,Alvarez,,,,,,,75,someday,Building,,,
+,Grace,Kim,grace.e2e@example.org,,,,,,,,,,,
+,Marcus,Chen,marcus.e2e@example.org,,,,,,200,1/5/2025,New Roof Fund,Capital campaign,Stock,
+,Kenji,Sato,,,,,,,30,2/2/2025,General,,barter,
+,Walter,Brennan,walter.e2e@example.org,,,,,,0,2/2/2025,General,,,
+,Ruth,Goldberg,,,,,,,45,13/2/2025,General,,cash,
+,Elena,Vasquez,elena.e2e@example.org,,,,,,60,3/3/2027,General,,cash,

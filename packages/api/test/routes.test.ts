@@ -102,10 +102,15 @@ describe.skipIf(!DATABASE_URL)("api routes against the database", () => {
       ["GET", `/api/v1/orgs/${orgB}/merges`, undefined],
       ["POST", `/api/v1/orgs/${orgB}/merges/${randomUUID()}/undo`, undefined],
       ["GET", `/api/v1/orgs/${orgB}/gifts?filter=unacknowledged`, undefined],
+      ["GET", `/api/v1/orgs/${orgB}/imports`, undefined],
+      ["POST", `/api/v1/orgs/${orgB}/imports`, { kind: "constituents", fileName: "x.csv", headers: ["a"], expectedRows: 1 }],
+      ["GET", `/api/v1/orgs/${orgB}/imports/${randomUUID()}`, undefined],
+      ["POST", `/api/v1/orgs/${orgB}/imports/${randomUUID()}/commit`, undefined],
+      ["POST", `/api/v1/orgs/${orgB}/imports/${randomUUID()}/rollback`, undefined],
     ] as const) {
       const res = await app.request(path, { method, headers: { ...auth(ownerA), ...json }, body: body ? JSON.stringify(body) : undefined });
       // Reads of a foreign org are empty or not found, never a leak; writes are refused.
-      const allowed = method === "GET" && (path.includes("/constituents?") || path.includes("/coding/") || path.endsWith("/batches") || path.endsWith("/health") || path.endsWith("/duplicates") || path.endsWith("/merges") || path.includes("/gifts?")) ? [200, 403, 404] : [403, 404];
+      const allowed = method === "GET" && (path.includes("/constituents?") || path.includes("/coding/") || path.endsWith("/batches") || path.endsWith("/health") || path.endsWith("/duplicates") || path.endsWith("/merges") || path.includes("/gifts?") || path.endsWith("/imports")) ? [200, 403, 404] : [403, 404];
       expect(allowed, `${method} ${path} -> ${res.status}`).toContain(res.status);
       const text = await res.text();
       if (res.status === 200) expect(text).toMatch(/"items":\[\]|"total":0|"constituents":0/);

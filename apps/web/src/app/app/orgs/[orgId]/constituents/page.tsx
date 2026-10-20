@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CONSTITUENT_FILTERS, listConstituents, type ConstituentFilter } from "@maple/core/services";
+import { CONSTITUENT_FILTERS, getOrg, listConstituents, type ConstituentFilter } from "@maple/core/services";
 import { requireSession, withSession } from "@/lib/session";
 import { formatDate, formatMoney } from "@/lib/format";
 import { Badge, buttonVariants, EmptyState, Heading, Table, TBody, TD, TH, THead, TR } from "@/components/ui";
@@ -18,7 +18,8 @@ export default async function ConstituentsPage({ params, searchParams }: PagePro
   const page = Math.max(1, Number(typeof sp.page === "string" ? sp.page : 1) || 1);
   const filter = typeof sp.filter === "string" && (CONSTITUENT_FILTERS as readonly string[]).includes(sp.filter) ? (sp.filter as ConstituentFilter) : undefined;
   const session = await requireSession();
-  const { items, total } = await withSession(session, (tx) => listConstituents(tx, orgId, { q, limit: PAGE, offset: (page - 1) * PAGE, filter }));
+  const [{ items, total }, org] = await withSession(session, (tx) => Promise.all([listConstituents(tx, orgId, { q, limit: PAGE, offset: (page - 1) * PAGE, filter }), getOrg(tx, orgId)]));
+  const canImport = org?.role === "owner" || org?.role === "admin";
   const base = `/app/orgs/${orgId}/constituents`;
   const FILTER_TITLE: Record<ConstituentFilter, string> = { missing_email: "Constituents with no email", missing_address: "Constituents with no address", stale: "No gift or note in 36 months" };
 
@@ -35,9 +36,16 @@ export default async function ConstituentsPage({ params, searchParams }: PagePro
             </Link>
           )}
         </div>
-        <Link href={`${base}/new`} className={buttonVariants({ size: "small" })}>
-          Add constituent
-        </Link>
+        <div className="flex gap-2">
+          {canImport && (
+            <Link href={`/app/orgs/${orgId}/imports/new`} className={buttonVariants({ variant: "secondary", size: "small" })}>
+              Import a spreadsheet
+            </Link>
+          )}
+          <Link href={`${base}/new`} className={buttonVariants({ size: "small" })}>
+            Add constituent
+          </Link>
+        </div>
       </div>
       <ConstituentSearch base={base} initial={q} />
 
@@ -53,7 +61,7 @@ export default async function ConstituentsPage({ params, searchParams }: PagePro
               </Link>
             }
           >
-            Donors, members, volunteers and organizations all live here. You can also import a spreadsheet in a later step.
+            Donors, members, volunteers and organizations all live here. Add them one at a time, or import a spreadsheet.
           </EmptyState>
         )
       ) : (
@@ -61,7 +69,7 @@ export default async function ConstituentsPage({ params, searchParams }: PagePro
           <p className="text-30 leading-5 text-text-weak">
             {q ? `${total} match${total === 1 ? "" : "es"}` : `${total} constituent${total === 1 ? "" : "s"}`}
           </p>
-          <Table>
+          <Table label="Constituents">
             <THead>
               <TR>
                 <TH>Name</TH>

@@ -6,13 +6,27 @@ import { cn } from "@/lib/cn";
  * background, 12px by 16px cells, optional striping. Wrap in a scroll container on
  * phones; the `scrollHorizontally` prop does that.
  */
-export function Table({ className, striped, scrollHorizontally = true, children, ...props }: React.ComponentPropsWithRef<"table"> & { striped?: boolean; scrollHorizontally?: boolean }) {
+export function Table({
+  className,
+  striped,
+  scrollHorizontally = true,
+  label = "Table",
+  children,
+  ...props
+}: React.ComponentPropsWithRef<"table"> & { striped?: boolean; scrollHorizontally?: boolean; /** Names the scroll area for screen readers. */ label?: string }) {
   const table = (
     <table className={cn("w-full border-collapse text-30 leading-5 text-text", striped && "[&_tbody_tr:nth-child(even)]:bg-background-row-striped", className)} {...props}>
       {children}
     </table>
   );
-  return scrollHorizontally ? <div className="w-full overflow-x-auto rounded-30 border border-border-weaker">{table}</div> : table;
+  // A table wider than a phone scrolls sideways. tabIndex lets keyboard users scroll it (WCAG 2.1.1).
+  return scrollHorizontally ? (
+    <div role="region" aria-label={label} tabIndex={0} className="w-full overflow-x-auto rounded-30 border border-border-weaker outline-none focus-visible:shadow-focus">
+      {table}
+    </div>
+  ) : (
+    table
+  );
 }
 
 export function THead({ className, ...props }: React.ComponentPropsWithRef<"thead">) {

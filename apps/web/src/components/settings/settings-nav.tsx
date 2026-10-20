@@ -10,6 +10,7 @@ export function SettingsNav({ orgId }: { orgId: string }) {
   const items = [
     { href: `${base}/coding`, label: "Funds, campaigns, appeals" },
     { href: `${base}/gift-standards`, label: "Gift entry standards" },
+    { href: `/app/orgs/${orgId}/imports`, label: "Imports" },
   ];
   return (
     <nav aria-label="Settings">

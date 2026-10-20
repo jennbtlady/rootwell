@@ -55,7 +55,7 @@ export function ConstituentTabs({ orgId, constituent: c, gifts, interactions, au
 function GiftsPanel({ orgId, gifts }: { orgId: string; gifts: Gift[] }) {
   if (gifts.length === 0) return <EmptyState title="No gifts yet">Gifts entered in a batch will show up here.</EmptyState>;
   return (
-    <Table>
+    <Table label="Gifts">
       <THead>
         <TR>
           <TH>Date</TH>

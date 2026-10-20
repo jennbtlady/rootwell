@@ -49,7 +49,7 @@ function KindPanel({ orgId, kind, rows, campaigns }: { orgId: string; kind: Codi
       {rows.length === 0 ? (
         <EmptyState title={`No ${l.many.toLowerCase()} yet`} />
       ) : (
-        <Table>
+        <Table label="Gift coding">
           <THead>
             <TR>
               <TH>Name</TH>

@@ -18,6 +18,9 @@ export const recurringFrequency = pgEnum("recurring_frequency", ["monthly", "qua
 export const recurringStatus = pgEnum("recurring_status", ["active", "paused", "ended"]);
 export const pledgeStatus = pgEnum("pledge_status", ["open", "fulfilled", "written_off"]);
 export const duplicateStatus = pgEnum("duplicate_status", ["open", "merged", "not_duplicate"]);
+export const importKind = pgEnum("import_kind", ["constituents", "constituents_gifts"]);
+export const importStatus = pgEnum("import_status", ["uploading", "ready", "committed", "rolled_back"]);
+export const importRowAction = pgEnum("import_row_action", ["create", "match", "review", "skip", "error"]);
 
 /**
  * Columns every tenant-scoped table carries. created_by/updated_by are filled by the

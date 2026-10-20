@@ -54,7 +54,7 @@ export default async function BatchesPage({ params }: PageProps<"/app/orgs/[orgI
 
 function BatchTable({ base, batches }: { base: string; batches: Awaited<ReturnType<typeof listBatches>> }) {
   return (
-    <Table>
+    <Table label="Batches">
       <THead>
         <TR>
           <TH>Date</TH>

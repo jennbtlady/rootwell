@@ -72,7 +72,7 @@ export function BatchWorkspace({ orgId, batch, standards, funds, campaigns, appe
         {batch.gifts.length === 0 ? (
           <EmptyState title="No gifts yet">Enter the first gift above.</EmptyState>
         ) : (
-          <Table>
+          <Table label="Gifts in this batch">
             <THead>
               <TR>
                 <TH>Donor</TH>

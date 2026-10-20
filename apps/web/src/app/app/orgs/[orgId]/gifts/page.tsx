@@ -44,7 +44,7 @@ export default async function GiftsPage({ params, searchParams }: PageProps<"/ap
         <EmptyState title={filter ? "Nothing here. Good." : "No gifts yet"} />
       ) : (
         <>
-          <Table>
+          <Table label="Gifts">
             <THead>
               <TR>
                 <TH>Date</TH>
