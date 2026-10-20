@@ -10,3 +10,4 @@ export * from "./gifts";
 export * from "./dedupe";
 export * from "./imports";
 export * from "./reporting";
+export * from "./integrations";

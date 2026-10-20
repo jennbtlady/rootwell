@@ -17,7 +17,7 @@ const codingColumns = () => ({
   ...rowMeta,
 });
 
-export const funds = pgTable("funds", { ...codingColumns() }, (t) => [
+export const funds = pgTable("funds", { ...codingColumns(), /** QuickBooks income account name. */ incomeAccount: text("income_account") }, (t) => [
   uniqueIndex("funds_org_name_uq").on(t.orgId, t.name),
   uniqueIndex("funds_org_code_uq").on(t.orgId, t.code),
 ]);

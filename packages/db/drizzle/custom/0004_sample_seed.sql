@@ -108,6 +108,18 @@ begin
   insert into gifts (org_id, constituent_id, batch_id, amount, gift_date, fund_id, campaign_id, payment_method, check_number)
   values (p_org, v_ids[3], v_batch, 250, current_date, v_general, v_spring, 'check', '4471'), (p_org, v_ids[8], v_batch, 100, current_date, v_food, v_spring, 'cash', null);
 
+  -- Phase 5: a giving page, two online gifts waiting for their Stripe deposit, and the
+  -- QuickBooks account names, so those screens have something in them.
+  update funds set income_account = '4000 Contributions:Unrestricted' where id = v_general;
+  update funds set income_account = '4010 Contributions:Restricted' where id = v_food;
+  update organizations set accounting = '{"depositAccount":"Checking","feeAccount":"Merchant fees","defaultIncomeAccount":"Contributions"}'::jsonb where id = p_org;
+  insert into donation_pages (org_id, slug, title, intro, thank_you, fund_ids, campaign_id)
+  values (p_org, 'sample-' || left(replace(p_org::text, '-', ''), 12), 'Feed a neighbor', 'Every $25 puts a week of groceries on a family''s table.',
+          'Thank you. Your gift is already at work in the pantry.', array[v_general, v_food], v_spring);
+  insert into gifts (org_id, constituent_id, amount, gift_date, fund_id, campaign_id, payment_method, reference, external_source, external_id, fee_amount, net_amount, fee_covered_amount, source_platform)
+  values (p_org, v_ids[14], 102.56, current_date - 1, v_general, v_spring, 'card', 'ch_sample_1', 'stripe', 'ch_sample_1', 2.56, 100.00, 2.56, 'stripe'),
+         (p_org, v_ids[21], 50, current_date, v_food, v_spring, 'card', 'ch_sample_2', 'stripe', 'ch_sample_2', 1.40, 48.60, null, 'stripe');
+
   -- History is thanked, the way a working office would have it; the last few weeks are not.
   update gifts set acknowledged_at = (gift_date + 3)::timestamptz, acknowledgment_method = case when amount >= 250 then 'letter' else 'email' end
    where org_id = p_org and posted_at is not null and gift_date < current_date - 20;

@@ -1,4 +1,4 @@
-import { index, integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { index, integer, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { batchStatus, day, externalSource, giftType, money, paymentMethod, pledgeStatus, recurringFrequency, recurringStatus, rowMeta, uuidPk } from "./_shared";
 import { appeals, campaigns, funds } from "./coding";
 import { constituents } from "./constituents";
@@ -15,6 +15,9 @@ export const batches = pgTable(
     batchDate: day("batch_date").notNull(),
     description: text("description"),
     status: batchStatus("status").notNull().default("open"),
+    /** A Stripe payout becomes one suggested batch. */
+    externalSource: text("external_source"),
+    externalId: text("external_id"),
     /** What the deposit slip says. Posting compares it to the gifts. */
     expectedTotal: money("expected_total"),
     expectedCount: integer("expected_count"),
@@ -23,7 +26,7 @@ export const batches = pgTable(
     notes: text("notes"),
     ...rowMeta,
   },
-  (t) => [index("batches_org_status_date_idx").on(t.orgId, t.status, t.batchDate)],
+  (t) => [index("batches_org_status_date_idx").on(t.orgId, t.status, t.batchDate), uniqueIndex("batches_org_external_uq").on(t.orgId, t.externalSource, t.externalId)],
 );
 
 export const recurringPlans = pgTable(
@@ -102,6 +105,14 @@ export const gifts = pgTable(
     fairMarketValue: money("fair_market_value"),
     /** Defaults to amount less fair market value. Used on statements. */
     deductibleAmount: money("deductible_amount"),
+    /** Processing fee charged by the payment platform, when known. */
+    feeAmount: money("fee_amount"),
+    /** What reached the bank: amount less fee. */
+    netAmount: money("net_amount"),
+    /** Part of the amount the donor added to cover the fee. Included in amount. */
+    feeCoveredAmount: money("fee_covered_amount"),
+    /** Where an online gift came from: stripe, givebutter, facebook, paypal. Null for checks and cash. */
+    sourcePlatform: text("source_platform"),
     acknowledgedAt: timestamp("acknowledged_at", { withTimezone: true }),
     acknowledgmentMethod: text("acknowledgment_method"),
     notes: text("notes"),

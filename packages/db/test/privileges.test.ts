@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { as, cleanup, createOrgWithTeam, errorCode, hasDb, makeDb, type TestOrg } from "./helpers";
+import { as, asSystem, cleanup, createOrgWithTeam, errorCode, hasDb, makeDb, type TestOrg } from "./helpers";
 import { withPublic, type Db } from "../src";
 
 /** The `app` functions are the security boundary: check who can call what. */
@@ -38,5 +38,24 @@ describe.skipIf(!hasDb)("function privileges", () => {
       const rows = code ? 0 : (await withPublic(db, (tx) => tx.execute(sql`select 1 from ${sql.identifier(t)} limit 1`))).length;
       expect(rows, t).toBe(0);
     }
+  });
+
+  it("integration credentials stay with owners, admins, and that org's system actor", async () => {
+    await asSystem(db, a.id, (tx) =>
+      tx.execute(sql`insert into integrations (org_id, provider, status, account_id, credentials) values (${a.id}, 'mailchimp', 'connected', 'Acct', 'v1.secret')`),
+    );
+    expect(await as(db, a.owner, async (tx) => (await tx.execute(sql`select app.integration_credentials(${a.id}, 'mailchimp') as c`))[0])).toEqual({ c: "v1.secret" });
+    expect(await asSystem(db, a.id, async (tx) => (await tx.execute(sql`select app.integration_credentials(${a.id}, 'mailchimp') as c`))[0])).toEqual({ c: "v1.secret" });
+    expect(await errorCode(as(db, a.staff, (tx) => tx.execute(sql`select app.integration_credentials(${a.id}, 'mailchimp')`)))).toBe("42501");
+    expect(await errorCode(as(db, b.owner, (tx) => tx.execute(sql`select app.integration_credentials(${a.id}, 'mailchimp')`)))).toBe("42501");
+    expect(await errorCode(asSystem(db, b.id, (tx) => tx.execute(sql`select app.integration_credentials(${a.id}, 'mailchimp')`)))).toBe("42501");
+    expect(await errorCode(withPublic(db, (tx) => tx.execute(sql`select app.integration_credentials(${a.id}, 'mailchimp')`)))).toBe("42501");
+    // The column itself is not readable by signed-in roles, even the owner.
+    expect(await errorCode(as(db, a.owner, (tx) => tx.execute(sql`select credentials from integrations`)))).toBe("42501");
+    // Only the webhook receiver (signed out, after the signature check) maps accounts to orgs.
+    expect(await errorCode(as(db, a.owner, (tx) => tx.execute(sql`select app.org_for_integration_account('mailchimp', 'Acct')`)))).toBe("42501");
+    // Webhook rows are written only by the system actor for the same org.
+    expect(await errorCode(as(db, a.owner, (tx) => tx.execute(sql`insert into webhook_events (org_id, provider, event_id, type) values (${a.id}, 'stripe', 'evt_x', 't')`)))).toBe("42501");
+    expect(await errorCode(asSystem(db, b.id, (tx) => tx.execute(sql`insert into webhook_events (org_id, provider, event_id, type) values (${a.id}, 'stripe', 'evt_y', 't')`)))).toBe("42501");
   });
 });

@@ -33,6 +33,8 @@ export const organizations = pgTable("organizations", {
   hideBoardNames: boolean("hide_board_names").notNull().default(true),
   // True only for the demo organization every account can add and remove.
   sampleOrgEnabled: boolean("sample_org_enabled").notNull().default(false),
+  /** Account names for the QuickBooks export. */
+  accounting: jsonb("accounting").$type<{ depositAccount?: string; feeAccount?: string; defaultIncomeAccount?: string }>().notNull().default({}),
 
   // Billing. Subscription state is mirrored from Stripe webhooks; Stripe is the source of truth.
   stripeCustomerId: text("stripe_customer_id").unique(),

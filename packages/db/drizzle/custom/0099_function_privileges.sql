@@ -16,3 +16,9 @@ revoke execute on function app.refresh_all_dashboards() from authenticated, serv
 -- Signed-out visitors: only the board link, which checks the token itself.
 grant usage on schema app to anon;
 grant execute on function app.board_view(text) to anon;
+
+-- The public giving page and the webhook receiver run before anyone signs in.
+grant execute on function app.public_donation_page(text) to anon;
+grant execute on function app.org_for_integration_account(integration_provider, text) to anon;
+-- Signed-in users have no reason to look up which organization owns an account id.
+revoke execute on function app.org_for_integration_account(integration_provider, text) from authenticated;

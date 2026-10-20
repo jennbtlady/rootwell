@@ -23,6 +23,8 @@ export const importStatus = pgEnum("import_status", ["uploading", "ready", "comm
 export const importRowAction = pgEnum("import_row_action", ["create", "match", "review", "skip", "error"]);
 export const ackChannel = pgEnum("ack_channel", ["letter", "email", "phone", "in_person"]);
 export const ackStatus = pgEnum("ack_status", ["sent", "marked", "failed"]);
+export const integrationProvider = pgEnum("integration_provider", ["stripe", "mailchimp"]);
+export const integrationStatus = pgEnum("integration_status", ["connected", "error", "disconnected"]);
 
 /**
  * Columns every tenant-scoped table carries. created_by/updated_by are filled by the
