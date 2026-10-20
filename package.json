@@ -1,0 +1,38 @@
+{
+  "name": "maple-ledger",
+  "private": true,
+  "packageManager": "pnpm@12.14.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:db": "pnpm --filter @maple/db test",
+    "db:generate": "pnpm --filter @maple/db generate",
+    "db:migrate": "pnpm --filter @maple/db migrate",
+    "format": "prettier --write .",
+    "supabase": "supabase",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:reset": "supabase db reset && pnpm db:migrate"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "prettier": "^3.9.10",
+    "supabase": "^2.121.0",
+    "turbo": "^2.11.9",
+    "typescript": "^5"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "unrs-resolver",
+      "sharp",
+      "supabase"
+    ]
+  }
+}

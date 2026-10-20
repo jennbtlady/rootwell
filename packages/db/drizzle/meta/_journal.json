@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1792513172303,
+      "tag": "0000_robust_jane_foster",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792515054391,
+      "tag": "0001_user_refs_set_null",
+      "breakpoints": true
+    }
+  ]
+}
