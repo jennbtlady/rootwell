@@ -1,17 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { z } from "zod";
-import { getOrg } from "@maple/core/services";
+import { getBilling, getOrg } from "@maple/core/services";
 import { requireSession, withSession } from "@/lib/session";
 import { Badge } from "@/components/ui";
 import { OrgNav } from "@/components/orgs/org-nav";
+import { BillingBanner } from "@/components/billing/billing-banner";
 
 /** Every page inside one organization: name, Sample badge, section navigation. */
 export default async function OrgLayout({ params, children }: LayoutProps<"/app/orgs/[orgId]">) {
   const { orgId } = await params;
   if (!z.string().uuid().safeParse(orgId).success) notFound();
   const session = await requireSession();
-  const org = await withSession(session, (tx) => getOrg(tx, orgId));
+  const [org, billing] = await withSession(session, (tx) => Promise.all([getOrg(tx, orgId), getBilling(tx, orgId)]));
   if (!org) notFound();
   const canManage = org.role === "owner" || org.role === "admin";
 
@@ -24,6 +25,7 @@ export default async function OrgLayout({ params, children }: LayoutProps<"/app/
         {org.isSample && <Badge variant="new">Sample</Badge>}
       </div>
       <OrgNav orgId={orgId} canManage={canManage} boardOnly={org.role === "board_viewer"} />
+      {billing && <BillingBanner orgId={orgId} billing={billing} role={org.role} />}
       <div>{children}</div>
     </div>
   );

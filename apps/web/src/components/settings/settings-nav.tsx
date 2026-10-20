@@ -13,6 +13,7 @@ export function SettingsNav({ orgId }: { orgId: string }) {
     { href: `${base}/board`, label: "Board sharing" },
     { href: `${base}/giving`, label: "Giving pages" },
     { href: `${base}/integrations`, label: "Integrations" },
+    { href: `${base}/billing`, label: "Billing" },
     { href: `/app/orgs/${orgId}/imports`, label: "Imports" },
   ];
   return (

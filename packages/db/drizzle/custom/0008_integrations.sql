@@ -59,7 +59,8 @@ alter table donation_pages drop constraint if exists donation_pages_slug_format;
 alter table donation_pages add constraint donation_pages_slug_format check (slug ~ '^[a-z0-9]([a-z0-9-]{1,48}[a-z0-9])$');
 
 -- What the public giving page may know: the page, the org's name, the funds offered, and
--- whether Stripe is connected. Nothing about donors.
+-- whether Stripe is connected. Nothing about donors. 0009_billing.sql redefines this to
+-- also hide Stripe while the organization is read only.
 create or replace function app.public_donation_page(p_slug text) returns jsonb
 language sql stable security definer set search_path = public as $$
   select jsonb_build_object(
