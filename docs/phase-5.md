@@ -131,6 +131,11 @@ Mailchimp with two audiences, Newsletter and Donors. Outside production only.
   or a small token bucket).
 - Refunds are flagged, not applied. Someone decides whether to delete or adjust the gift.
 - Stripe Billing for our own subscription is still the Phase 0 task 9 item.
+- Embedding a giving page in a nonprofit's own website is a future build (Jenn,
+  2026-10-20). Today they link to `/give/{slug}`. Stripe Checkout will not load inside a
+  frame, so an embed needs either checkout opening in the full window or Stripe's embedded
+  checkout. Plan: allow framing on `/give/*` only, an embed layout that resizes itself, and
+  a "Copy embed code" box on each giving page.
 
 ## Rollback
 
