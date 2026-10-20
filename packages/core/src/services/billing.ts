@@ -8,6 +8,8 @@ import type { Tx } from "./types";
 export type Billing = {
   status: string;
   trialEndsAt: string | null;
+  /** Whole days left in the trial, rounded up. Null when not on a trial. */
+  trialDaysLeft: number | null;
   readOnlyUntil: string | null;
   writable: boolean;
   isSample: boolean;
@@ -17,13 +19,15 @@ export type Billing = {
 
 export async function getBilling(tx: Tx, orgId: string): Promise<Billing | null> {
   const r = await tx.execute(sql`
-    select subscription_status, trial_ends_at, read_only_until, sample_org_enabled, stripe_customer_id, stripe_subscription_id, app.org_writable(id) as writable
+    select subscription_status, trial_ends_at, read_only_until, sample_org_enabled, stripe_customer_id, stripe_subscription_id, app.org_writable(id) as writable,
+           case when trial_ends_at is not null then ceil(extract(epoch from trial_ends_at - now()) / 86400)::int end as trial_days_left
       from organizations where id = ${orgId}`);
   if (!r.length) return null;
   const x = r[0] as Record<string, unknown>;
   return {
     status: String(x.subscription_status),
     trialEndsAt: x.trial_ends_at ? new Date(x.trial_ends_at as string).toISOString() : null,
+    trialDaysLeft: x.trial_days_left == null ? null : Number(x.trial_days_left),
     readOnlyUntil: x.read_only_until ? new Date(x.read_only_until as string).toISOString() : null,
     writable: Boolean(x.writable),
     isSample: Boolean(x.sample_org_enabled),

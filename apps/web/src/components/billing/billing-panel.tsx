@@ -16,7 +16,7 @@ const LABEL: Record<string, { text: string; variant: "success" | "warning" | "er
   incomplete_expired: { text: "Payment not finished", variant: "error" },
 };
 
-export function BillingPanel({ orgId, billing, isOwner, mode, justSubscribed }: { orgId: string; billing: Omit<Billing, "stripeCustomerId">; isOwner: boolean; mode: "live" | "simulated"; justSubscribed: boolean }) {
+export function BillingPanel({ orgId, billing, isOwner, mode, justSubscribed }: { orgId: string; billing: Billing; isOwner: boolean; mode: "live" | "simulated"; justSubscribed: boolean }) {
   const toast = useToast();
   const [pending, setPending] = useState<string | null>(null);
   const label = LABEL[billing.status] ?? { text: billing.status, variant: "neutral" as const };

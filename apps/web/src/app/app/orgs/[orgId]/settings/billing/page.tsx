@@ -13,7 +13,7 @@ export default async function BillingPage({ params, searchParams }: PageProps<"/
   const session = await requireSession();
   const [billing, org] = await withSession(session, (tx) => Promise.all([getBilling(tx, orgId), getOrg(tx, orgId)]));
   if (!billing || !org) return null;
-  const { stripeCustomerId: _c, ...b } = billing;
+  const b = { ...billing, stripeCustomerId: null };
   return (
     <div className="flex flex-col gap-4">
       <div>

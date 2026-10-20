@@ -34,8 +34,8 @@ export function BillingBanner({ orgId, billing, role }: { orgId: string; billing
       </Alert>
     );
   }
-  if (billing.status === "trialing" && !billing.hasSubscription && billing.trialEndsAt) {
-    const days = Math.ceil((new Date(billing.trialEndsAt).getTime() - Date.now()) / 86400_000);
+  if (billing.status === "trialing" && !billing.hasSubscription && billing.trialEndsAt && billing.trialDaysLeft != null) {
+    const days = billing.trialDaysLeft;
     if (days <= 7)
       return (
         <Alert>
