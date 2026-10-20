@@ -80,6 +80,17 @@ describe.skipIf(!hasDb)("sample organization", () => {
     expect(org.sample_org_enabled).toBe(true);
     expect(org.name).toMatch(/demo/i);
 
+    // The sample comes seeded: people, two years of posted gifts, one open batch.
+    const counts = await as(db, a.staff, async (tx) => (await tx.execute(sql`
+      select (select count(*) from constituents where org_id = ${first.id})::int as people,
+             (select count(*) from gifts where org_id = ${first.id} and posted_at is not null)::int as posted,
+             (select count(*) from batches where org_id = ${first.id} and status = 'open')::int as open_batches,
+             (select count(*) from funds where org_id = ${first.id})::int as funds`))[0] as { people: number; posted: number; open_batches: number; funds: number }, "aal1");
+    expect(counts.people).toBeGreaterThan(30);
+    expect(counts.posted).toBeGreaterThan(100);
+    expect(counts.open_batches).toBe(1);
+    expect(counts.funds).toBe(3);
+
     // A real org cannot be deleted through this door, and others cannot delete the sample.
     expect(await errorCode(as(db, a.owner, (tx) => tx.execute(sql`select app.delete_sample_org(${a.id})`)))).toBe("42501");
     expect(await errorCode(as(db, a.owner, (tx) => tx.execute(sql`select app.delete_sample_org(${first.id})`)))).toBe("42501");

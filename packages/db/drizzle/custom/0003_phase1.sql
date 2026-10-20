@@ -220,7 +220,7 @@ begin
     end if;
     return new;
   end if;
-  if new.batch_id is not null and (tg_op = 'INSERT' or new.batch_id is distinct from old.batch_id) then
+  if new.batch_id is not null and (tg_op = 'INSERT' or new.batch_id is distinct from old.batch_id) and app.actor() <> 'system' then
     if exists (select 1 from batches b where b.id = new.batch_id and b.status <> 'open') then
       raise exception 'that batch is already posted' using errcode = '42501';
     end if;
@@ -243,7 +243,8 @@ begin
   select org_id, status, expected_total, expected_count into v_org, v_status, v_expected_total, v_expected_count
     from batches where id = p_batch;
   if v_org is null then raise exception 'batch not found' using errcode = 'P0002'; end if;
-  if not (app.has_role(v_org, '{owner,admin}') and app.is_aal2()) then
+  -- MFA is required to post real money. The sample organization is exempt so people can try it.
+  if not (app.has_role(v_org, '{owner,admin}') and (app.is_aal2() or exists (select 1 from organizations o where o.id = v_org and o.sample_org_enabled))) then
     raise exception 'only an owner or admin with MFA can post a batch' using errcode = '42501';
   end if;
   if v_status <> 'open' then raise exception 'batch is already posted' using errcode = '42501'; end if;

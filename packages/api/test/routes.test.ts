@@ -184,6 +184,16 @@ describe.skipIf(!DATABASE_URL)("api routes against the database", () => {
     expect(candidates[0]?.id).toBe(donor);
     expect(candidates[0]?.reasons).toContain("same email");
 
+    const found = (await (await app.request(`/api/v1/orgs/${orgA}/constituents?q=riv`, { headers: auth(staffA) })).json()) as { items: { id: string }[]; total: number };
+    expect(found.items.map((i) => i.id)).toEqual([donor]);
+
+    const tagRes = await post(staffA, `/api/v1/orgs/${orgA}/tags`, { name: "Board" });
+    const tagId = ((await tagRes.json()) as { id: string }).id;
+    const setTags = await app.request(`/api/v1/orgs/${orgA}/constituents/${donor}/tags`, { method: "PUT", headers: h(staffA), body: JSON.stringify({ tagIds: [tagId] }) });
+    expect(setTags.status).toBe(200);
+    const clearTags = await app.request(`/api/v1/orgs/${orgA}/constituents/${donor}/tags`, { method: "PUT", headers: h(staffA), body: JSON.stringify({ tagIds: [] }) });
+    expect(clearTags.status).toBe(200);
+
     const detail = (await (await app.request(`/api/v1/orgs/${orgA}/constituents/${donor}`, { headers: auth(staffA) })).json()) as { displayName: string; emails: { email: string; isPrimary: boolean }[] };
     expect(detail.displayName).toBe("Dana Rivera");
     expect(detail.emails[0]?.email).toBe("dana@example.org");

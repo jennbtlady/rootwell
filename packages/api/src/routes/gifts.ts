@@ -23,6 +23,7 @@ import { validate } from "../validate";
 
 const orgParam = z.object({ orgId: z.string().uuid() });
 const idParam = orgParam.extend({ id: z.string().uuid() });
+const looseBody = z.object({}).passthrough();
 
 export const giftRoutes = new Hono<ApiEnv>()
   // standards
@@ -78,9 +79,11 @@ export const giftRoutes = new Hono<ApiEnv>()
     return c.json(result);
   })
   // gifts
-  .post("/:orgId/gifts", validate("param", orgParam), async (c) => {
+  // The gift body is validated by the org's standards engine, not a fixed schema, so the
+  // route accepts any object and validateGift() reports field issues.
+  .post("/:orgId/gifts", validate("param", orgParam), validate("json", looseBody), async (c) => {
     const { orgId } = c.req.valid("param");
-    const body = await c.req.json().catch(() => ({}));
+    const body = c.req.valid("json");
     const result = await withRls(getDb(), c.get("claims"), async (tx) => {
       const standards = await getStandards(tx, orgId);
       if (!standards) return null;
@@ -98,9 +101,9 @@ export const giftRoutes = new Hono<ApiEnv>()
     if (!gift) return c.json({ error: "Not found" }, 404);
     return c.json(gift);
   })
-  .patch("/:orgId/gifts/:id", validate("param", idParam), async (c) => {
+  .patch("/:orgId/gifts/:id", validate("param", idParam), validate("json", looseBody), async (c) => {
     const { orgId, id } = c.req.valid("param");
-    const body = await c.req.json().catch(() => ({}));
+    const body = c.req.valid("json");
     const result = await withRls(getDb(), c.get("claims"), async (tx) => {
       const standards = await getStandards(tx, orgId);
       if (!standards) return null;

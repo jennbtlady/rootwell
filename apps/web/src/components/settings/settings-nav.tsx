@@ -1,0 +1,30 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { cn } from "cn";
+
+export function SettingsNav({ orgId }: { orgId: string }) {
+  const path = usePathname();
+  const base = `/app/orgs/${orgId}/settings`;
+  const items = [
+    { href: `${base}/coding`, label: "Funds, campaigns, appeals" },
+    { href: `${base}/gift-standards`, label: "Gift entry standards" },
+  ];
+  return (
+    <nav aria-label="Settings">
+      <ul className="flex gap-1 overflow-x-auto sm:flex-col">
+        {items.map((it) => {
+          const active = path.startsWith(it.href);
+          return (
+            <li key={it.href}>
+              <Link href={it.href} aria-current={active ? "page" : undefined} className={cn("block rounded-20 px-3 py-2 text-30 leading-5 outline-none focus-visible:shadow-focus", active ? "bg-background-primary-weakest font-medium text-text-primary" : "text-text-weak hover:bg-background hover:text-text")}>
+                {it.label}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
+  );
+}

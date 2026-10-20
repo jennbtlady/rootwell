@@ -120,7 +120,9 @@ export async function listConstituents(tx: Tx, orgId: string, opts: { q?: string
     const hits = await searchConstituents(tx, orgId, q, limit);
     if (hits.length === 0) return { items: [], total: 0 };
     const ids = hits.map((h) => h.id);
-    const rows = await tx.execute(sql`select ${summarySelect} from constituents c ${giftJoin} where c.id = any(${ids}::uuid[])`);
+    // Drizzle spreads a JS array into separate parameters, so build an IN list explicitly.
+    const idList = sql.join(ids.map((id) => sql`${id}::uuid`), sql`, `);
+    const rows = await tx.execute(sql`select ${summarySelect} from constituents c ${giftJoin} where c.id in (${idList})`);
     const byId = new Map(rows.map((r) => [(r as { id: string }).id, mapSummary(r as Record<string, unknown>)]));
     return { items: ids.map((id) => byId.get(id)!).filter(Boolean), total: hits.length };
   }
@@ -246,7 +248,12 @@ export async function createTag(tx: Tx, orgId: string, name: string): Promise<{ 
 }
 
 export async function setConstituentTags(tx: Tx, orgId: string, constituentId: string, tagIds: string[]): Promise<void> {
-  await tx.execute(sql`delete from constituent_tags where constituent_id = ${constituentId} and org_id = ${orgId} and not (tag_id = any(${tagIds}::uuid[]))`);
+  if (tagIds.length === 0) {
+    await tx.execute(sql`delete from constituent_tags where constituent_id = ${constituentId} and org_id = ${orgId}`);
+    return;
+  }
+  const keep = sql.join(tagIds.map((id) => sql`${id}::uuid`), sql`, `);
+  await tx.execute(sql`delete from constituent_tags where constituent_id = ${constituentId} and org_id = ${orgId} and tag_id not in (${keep})`);
   for (const tagId of tagIds) {
     await tx.execute(sql`insert into constituent_tags (org_id, constituent_id, tag_id) values (${orgId}, ${constituentId}, ${tagId}) on conflict do nothing`);
   }

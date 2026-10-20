@@ -1,36 +1,31 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { z } from "zod";
-import { getOrg } from "@maple/core/services";
+import { getOrg, listBatches, listConstituents } from "@maple/core/services";
 import { requireSession, withSession } from "@/lib/session";
-import { Badge, buttonVariants, Card, CardContent, CardDescription, CardHeader, CardTitle, Heading } from "@/components/ui";
+import { formatDate, formatMoney } from "@/lib/format";
+import { buttonVariants, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui";
 import { RemoveSampleButton } from "@/components/orgs/sample-org-buttons";
 import { ROLE_LABEL } from "@/components/orgs/role-labels";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
+/** Overview: the few numbers and links a person wants when they open an organization. */
 export default async function OrgPage({ params }: PageProps<"/app/orgs/[orgId]">) {
   const { orgId } = await params;
-  if (!z.string().uuid().safeParse(orgId).success) notFound();
-
   const session = await requireSession();
-  const org = await withSession(session, (tx) => getOrg(tx, orgId));
-  if (!org) notFound();
+  const data = await withSession(session, async (tx) => {
+    const org = await getOrg(tx, orgId);
+    if (!org) return null;
+    const [{ total }, openBatches] = await Promise.all([listConstituents(tx, orgId, { limit: 1 }), listBatches(tx, orgId, { status: "open", limit: 5 })]);
+    return { org, constituentCount: total, openBatches };
+  });
+  if (!data) notFound();
+  const { org } = data;
+  const base = `/app/orgs/${orgId}`;
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <Heading variant="heading30" as="h1" noMargin className="flex items-center gap-2">
-            {org.name}
-            {org.isSample && <Badge variant="new">Sample</Badge>}
-          </Heading>
-          <p className="text-30 leading-5 text-text-weak">You are {ROLE_LABEL[org.role].toLowerCase() === "owner" ? "the owner" : `a ${ROLE_LABEL[org.role].toLowerCase()}`}.</p>
-        </div>
-        <Link href={`/app/orgs/${orgId}/members`} className={buttonVariants({ variant: "secondary", size: "small" })}>
-          Team
-        </Link>
-      </div>
+      <p className="text-30 leading-5 text-text-weak">You are {org.role === "owner" ? "the owner" : `a ${ROLE_LABEL[org.role].toLowerCase()}`}.</p>
 
       {org.isSample && (
         <Card>
@@ -46,10 +41,56 @@ export default async function OrgPage({ params }: PageProps<"/app/orgs/[orgId]">
         </Card>
       )}
 
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Constituents</CardTitle>
+            <CardDescription>{data.constituentCount === 0 ? "No one yet." : `${data.constituentCount} people, households and organizations.`}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              <Link href={`${base}/constituents`} className={buttonVariants({ variant: "secondary", size: "small" })}>
+                Open list
+              </Link>
+              <Link href={`${base}/constituents/new`} className={buttonVariants({ size: "small" })}>
+                Add constituent
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Open gift batches</CardTitle>
+            <CardDescription>{data.openBatches.length === 0 ? "Nothing waiting to be posted." : `${data.openBatches.length} open.`}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {data.openBatches.length > 0 && (
+              <ul className="flex flex-col gap-1 text-30 leading-5">
+                {data.openBatches.map((b) => (
+                  <li key={b.id} className="flex justify-between gap-2">
+                    <Link href={`${base}/batches/${b.id}`} className="text-text-link underline-offset-2 hover:underline">
+                      {formatDate(b.batchDate)}
+                      {b.description ? ` · ${b.description}` : ""}
+                    </Link>
+                    <span className="tabular-nums text-text-weak">
+                      {b.giftCount} · {formatMoney(b.giftTotal)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div>
+              <Link href={`${base}/batches`} className={buttonVariants({ variant: "secondary", size: "small" })}>
+                All batches
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       <Card>
         <CardHeader>
           <CardTitle>Organization</CardTitle>
-          <CardDescription>Constituents, gifts and the dashboard arrive in the next phase.</CardDescription>
         </CardHeader>
         <CardContent>
           <dl className="grid gap-x-6 gap-y-2 text-30 leading-5 sm:grid-cols-2">

@@ -19,7 +19,7 @@ export function Label({ className, required, optional, disabled, children, ...pr
     >
       {required && (
         <span className="mt-[7px] inline-block size-1.5 shrink-0 rounded-full bg-background-required" aria-hidden="false">
-          <span className="sr-only">Required</span>
+          <span className="sr-only">Required, </span>
         </span>
       )}
       <span>

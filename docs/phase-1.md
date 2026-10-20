@@ -2,6 +2,18 @@
 
 Status: in progress. Started 2026-10-20 on branch `phase-1/constituents-and-gifts`.
 
+Done: tasks 1, 2, 3 and 6, the components in task 4 that the screens needed (Table, Tabs,
+Modal, Combobox, Checkbox, Radio, Pagination, Skeleton, Empty state), and the screens in
+task 5. Open: Toast, Playwright (task 7), and polish from use.
+
+## Verified by hand on 2026-10-20
+
+In the sample organization: the seeded list of 41 constituents, search, the batch list
+with two years of posted batches, entering a gift through the donor search, the standards
+refusing a gift with "Campaign is required here" and "Enter the check number" under the
+fields, posting refused with "batch total 375.00 does not match the expected total
+350.00", and posting succeeding once the extra gift was removed, which locked the batch.
+
 Brief: constituent CRUD, search, relationships, interactions, tags. Funds, campaigns,
 appeals. Gift entry standards, guided gift form, batches and posting, audit log.
 
