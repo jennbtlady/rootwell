@@ -33,6 +33,9 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
             Maple Ledger
           </Link>
           <div className="flex items-center gap-3">
+            <Link href="/app/help" className="rounded-20 text-30 text-text-link outline-none hover:underline focus-visible:shadow-focus">
+              Help
+            </Link>
             <span className="hidden text-30 text-text-weak sm:inline">{session.email}</span>
             <form action="/auth/sign-out" method="post">
               <Button type="submit" variant="link" size="small">

@@ -14,6 +14,7 @@ import { webhooks } from "./routes/webhooks";
 import { publicGive } from "./routes/public-give";
 import { stripeSim } from "./routes/stripe-sim";
 import { billingRoutes, billingSim, billingWebhook, readOnlyGuard } from "./routes/billing";
+import { accountRoutes } from "./routes/account";
 import { handleApiError } from "./errors";
 
 /**
@@ -43,6 +44,7 @@ export const app = new Hono<ApiEnv>()
   .route("/orgs", reporting)
   .route("/orgs", integrationRoutes)
   .route("/orgs", billingRoutes)
+  .route("/orgs", accountRoutes)
   .onError(handleApiError);
 
 export type AppType = typeof app;

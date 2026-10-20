@@ -129,6 +129,7 @@ describe.skipIf(!DATABASE_URL)("api routes against the database", () => {
       ["GET", `/api/v1/orgs/${orgB}/billing`, undefined],
       ["POST", `/api/v1/orgs/${orgB}/billing/checkout`, undefined],
       ["POST", `/api/v1/orgs/${orgB}/billing/portal`, undefined],
+      ["GET", `/api/v1/orgs/${orgB}/export/everything`, undefined],
     ] as const) {
       const res = await app.request(path, { method, headers: { ...auth(ownerA), ...json }, body: body ? JSON.stringify(body) : undefined });
       // Reads of a foreign org are empty or not found, never a leak; writes are refused.

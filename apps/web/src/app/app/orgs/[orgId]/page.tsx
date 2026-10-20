@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { getOrg, listBatches, listConstituents } from "@maple/core/services";
+import { getOrg, listBatches, listConstituents, setupProgress } from "@maple/core/services";
 import { requireSession, withSession } from "@/lib/session";
 import { formatDate, formatMoney } from "@/lib/format";
 import { buttonVariants, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui";
@@ -16,8 +16,8 @@ export default async function OrgPage({ params }: PageProps<"/app/orgs/[orgId]">
   const data = await withSession(session, async (tx) => {
     const org = await getOrg(tx, orgId);
     if (!org) return null;
-    const [{ total }, openBatches] = await Promise.all([listConstituents(tx, orgId, { limit: 1 }), listBatches(tx, orgId, { status: "open", limit: 5 })]);
-    return { org, constituentCount: total, openBatches };
+    const [{ total }, openBatches, steps] = await Promise.all([listConstituents(tx, orgId, { limit: 1 }), listBatches(tx, orgId, { status: "open", limit: 5 }), setupProgress(tx, orgId)]);
+    return { org, constituentCount: total, openBatches, steps: steps ?? [] };
   });
   if (!data) notFound();
   const { org } = data;
@@ -39,6 +39,22 @@ export default async function OrgPage({ params }: PageProps<"/app/orgs/[orgId]">
               <RemoveSampleButton orgId={orgId} />
             </CardContent>
           )}
+        </Card>
+      )}
+
+      {!org.isSample && (org.role === "owner" || org.role === "admin") && data.steps.some((st) => !st.done && !st.optional) && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Get set up</CardTitle>
+            <CardDescription>
+              {data.steps.filter((st) => st.done && !st.optional).length} of {data.steps.filter((st) => !st.optional).length} steps done. Funds, gift rules, your donors, your team, and thank-you letters.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href={`${base}/setup`} className={buttonVariants({ size: "small" })}>
+              See the steps
+            </Link>
+          </CardContent>
         </Card>
       )}
 

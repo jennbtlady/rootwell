@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createDb, type Db } from "@maple/db";
 import { app, setDb, setVerifier } from "../src";
+import { strFromU8, unzipSync } from "fflate";
 import { SimulatedBillingGateway, setBillingGateway } from "../src/integrations";
 
 const DATABASE_URL = process.env.DATABASE_URL;
@@ -99,6 +100,16 @@ describe.skipIf(!DATABASE_URL)("billing", () => {
     expect((await call(admin, "GET", "/constituents")).status).toBe(200);
     expect((await call(owner, "GET", "/billing")).status).toBe(200);
     expect((await call(owner, "PATCH", "/board-settings", { hideBoardNames: true })).status).toBe(200);
+  });
+
+  it("everything can still be downloaded while read only", async () => {
+    const res = await call(admin, "GET", "/export/everything");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("application/zip");
+    const files = unzipSync(new Uint8Array(await res.arrayBuffer()));
+    expect(Object.keys(files)).toEqual(expect.arrayContaining(["README.txt", "organization.csv", "constituents.csv", "gifts.csv", "funds.csv"]));
+    expect(strFromU8(files["organization.csv"]!)).toContain("Lakeside Literacy");
+    expect(strFromU8(files["organization.csv"]!)).not.toContain("stripe");
   });
 
   it("restarting the subscription restores changes and clears the read-only date (trial days left still count)", async () => {
