@@ -37,6 +37,10 @@ docs/           Brief, build plan, one page per phase
 
 Homebrew is not required for anything in this repo.
 
+## Two-step sign-in while testing
+
+Owners and admins must set up an authenticator app before they can manage an organization, and the database refuses their sensitive writes without it. For local testing, put `MFA_ENFORCEMENT=off` in `apps/web/.env.local` and restart `pnpm dev`. The switch is ignored in production builds. Set it back to `on` (or remove it) to test the real flow.
+
 ## Email templates
 
 Auth emails (invitations, sign-in links, confirmations) use the templates in `supabase/templates/`. They link to `/auth/callback` with a token hash. After changing a template or `supabase/config.toml`, restart with `pnpm db:stop` then `pnpm db:start`. A hosted Supabase project needs the same templates pasted into its dashboard.

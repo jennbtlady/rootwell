@@ -36,6 +36,16 @@ describe.skipIf(!hasDb)("role and MFA matrix", () => {
     expect(withMfa).toBe(1);
   });
 
+  it("the local MFA switch lets an admin without aal2 through, only when set", async () => {
+    const n = await as(db, a.admin, async (tx) => {
+      await tx.execute(sql`select set_config('app.mfa_enforcement', 'off', true)`);
+      return (await tx.execute(sql`update organizations set name = 'Switch test' where id = ${a.id}`)).count;
+    }, "aal1");
+    expect(n).toBe(1);
+    const without = await as(db, a.admin, async (tx) => (await tx.execute(sql`update organizations set name = 'Still off' where id = ${a.id}`)).count, "aal1");
+    expect(without).toBe(0);
+  });
+
   it("nobody can promote themselves to owner through a plain update", async () => {
     // The row is visible to the admin, so the update is attempted and the with-check
     // clause rejects the new owner row with a permission error.

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { mfaEnforcementOff } from "@maple/db";
 import { mfaRequiredFor } from "@maple/core/services";
 import { requireSession, withSession } from "@/lib/session";
 import { createSupabaseServer } from "@/lib/supabase/server";
@@ -13,7 +14,7 @@ import { Button } from "@/components/ui";
 export default async function AppLayout({ children }: LayoutProps<"/app">) {
   const session = await requireSession();
 
-  if (session.aal !== "aal2") {
+  if (session.aal !== "aal2" && !mfaEnforcementOff()) {
     // getUser() asks Auth for the verified user, including enrolled factors.
     const supabase = await createSupabaseServer();
     const { data } = await supabase.auth.getUser();

@@ -37,9 +37,11 @@ language sql stable as $$
 $$;
 
 -- MFA complete. Supabase sets aal to aal2 after a successful MFA challenge.
+-- app.mfa_enforcement = 'off' is a transaction-local switch that withRls() sets only in
+-- local development when MFA_ENFORCEMENT=off. Production never sets it.
 create or replace function app.is_aal2() returns boolean
 language sql stable as $$
-  select app.is_system() or app.jwt()->>'aal' = 'aal2'
+  select app.is_system() or app.jwt()->>'aal' = 'aal2' or coalesce(current_setting('app.mfa_enforcement', true), '') = 'off'
 $$;
 
 -- Orgs the current identity may see. Security definer so the lookup itself is not

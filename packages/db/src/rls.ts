@@ -19,7 +19,17 @@ export type RlsTx = Tx;
 export async function withRls<T>(db: Db, claims: Claims, fn: (tx: Tx) => Promise<T>): Promise<T> {
   return db.transaction(async (tx) => {
     await tx.execute(sql`select set_config('request.jwt.claims', ${JSON.stringify(claims)}, true)`);
+    if (mfaEnforcementOff()) await tx.execute(sql`select set_config('app.mfa_enforcement', 'off', true)`);
     await tx.execute(sql`set local role authenticated`);
     return fn(tx);
   });
+}
+
+/**
+ * Local development only: MFA_ENFORCEMENT=off lets owners and admins work without a
+ * second step while testing. Ignored when NODE_ENV is production, so a stray variable
+ * on a server cannot turn MFA off.
+ */
+export function mfaEnforcementOff(): boolean {
+  return process.env.MFA_ENFORCEMENT === "off" && process.env.NODE_ENV !== "production";
 }
