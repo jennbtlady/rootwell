@@ -13,7 +13,8 @@ const base = z.object({
   endsOn: isoDate.nullish(),
 });
 
-export const fundInput = base;
+/** incomeAccount: the QuickBooks income account gifts to this fund are credited to. */
+export const fundInput = base.extend({ incomeAccount: optionalText(100) });
 export const campaignInput = base.extend({ goalAmount: money.nullish() });
 export const appealInput = base.extend({ campaignId: z.string().uuid().nullish() });
 

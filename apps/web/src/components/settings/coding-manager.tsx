@@ -98,6 +98,7 @@ function CodingModal({ orgId, kind, row, campaigns, onClose }: { orgId: string; 
   const [endsOn, setEndsOn] = useState(row?.endsOn ?? "");
   const [goalAmount, setGoalAmount] = useState(row?.goalAmount ?? "");
   const [campaignId, setCampaignId] = useState(row?.campaignId ?? "");
+  const [incomeAccount, setIncomeAccount] = useState(row?.incomeAccount ?? "");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -109,6 +110,7 @@ function CodingModal({ orgId, kind, row, campaigns, onClose }: { orgId: string; 
       name, code: code || null, description: description || null, active, startsOn: startsOn || null, endsOn: endsOn || null,
       ...(kind === "campaigns" ? { goalAmount: goalAmount || null } : {}),
       ...(kind === "appeals" ? { campaignId: campaignId || null } : {}),
+      ...(kind === "funds" ? { incomeAccount: incomeAccount || null } : {}),
     };
     const res = row
       ? await api().api.v1.orgs[":orgId"].coding[":kind"][":id"].$patch({ param: { orgId, kind, id: row.id }, json: body })
@@ -146,6 +148,11 @@ function CodingModal({ orgId, kind, row, campaigns, onClose }: { orgId: string; 
           {kind === "campaigns" && (
             <FormField id="cd-goal" label="Goal" optional>
               {(f) => <Input {...f} inputMode="decimal" insertBefore="$" value={goalAmount} onChange={(e) => setGoalAmount(e.target.value)} />}
+            </FormField>
+          )}
+          {kind === "funds" && (
+            <FormField id="cd-income" label="QuickBooks income account" optional help="Gifts to this fund are credited here in the QuickBooks export. Leave blank to use your default.">
+              {(f) => <Input {...f} value={incomeAccount} onChange={(e) => setIncomeAccount(e.target.value)} />}
             </FormField>
           )}
           {kind === "appeals" && (

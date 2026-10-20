@@ -1,0 +1,24 @@
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { getDonationPage, listCoding } from "@maple/core/services";
+import { requireSession, withSession } from "@/lib/session";
+import { Heading } from "@/components/ui";
+import { DonationPageForm } from "@/components/settings/donation-page-form";
+
+export const metadata: Metadata = { title: "Edit giving page" };
+
+export default async function EditGivingPage({ params }: PageProps<"/app/orgs/[orgId]/settings/giving/[pageId]">) {
+  const { orgId, pageId } = await params;
+  if (!/^[0-9a-f-]{36}$/.test(pageId)) notFound();
+  const session = await requireSession();
+  const [page, funds, campaigns] = await withSession(session, (tx) => Promise.all([getDonationPage(tx, orgId, pageId), listCoding(tx, "funds", orgId), listCoding(tx, "campaigns", orgId)]));
+  if (!page) notFound();
+  return (
+    <div className="flex flex-col gap-4">
+      <Heading variant="heading30" as="h1" noMargin>
+        Edit giving page
+      </Heading>
+      <DonationPageForm orgId={orgId} funds={funds} campaigns={campaigns} page={page} />
+    </div>
+  );
+}

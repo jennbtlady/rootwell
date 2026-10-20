@@ -9,7 +9,9 @@ import { validate } from "../validate";
 
 const kindParam = z.object({ orgId: z.string().uuid(), kind: z.enum(CODING_KINDS) });
 const kindIdParam = kindParam.extend({ id: z.string().uuid() });
-const anyCoding = z.union([appealInput, campaignInput, fundInput]);
+// One body shape with every kind's extra field. The service reads only the fields for the
+// kind in the path. (A union would match the first member and drop the other kinds' fields.)
+const anyCoding = fundInput.extend({ goalAmount: campaignInput.shape.goalAmount, campaignId: appealInput.shape.campaignId });
 
 /** Funds, campaigns and appeals share one shape, so one set of routes serves all three. */
 export const coding = new Hono<ApiEnv>()

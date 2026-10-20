@@ -12,6 +12,7 @@ export type CodingRow = {
   endsOn: string | null;
   goalAmount?: string | null;
   campaignId?: string | null;
+  incomeAccount?: string | null;
   giftCount: number;
   giftTotal: string;
 };
@@ -29,6 +30,7 @@ function mapRow(r: Record<string, unknown>): CodingRow {
     startsOn: (r.starts_on as string | null) ?? null,
     endsOn: (r.ends_on as string | null) ?? null,
     ...(r.goal_amount !== undefined ? { goalAmount: (r.goal_amount as string | null) ?? null } : {}),
+    ...(r.income_account !== undefined ? { incomeAccount: (r.income_account as string | null) ?? null } : {}),
     ...(r.campaign_id !== undefined ? { campaignId: (r.campaign_id as string | null) ?? null } : {}),
     giftCount: Number(r.gift_count ?? 0),
     giftTotal: String(r.gift_total ?? "0.00"),
@@ -54,8 +56,9 @@ export async function createCoding(tx: Tx, kind: CodingKind, orgId: string, inpu
   const t = sql.identifier(TABLE[kind]);
   const goal = "goalAmount" in input ? input.goalAmount ?? null : null;
   const campaign = "campaignId" in input ? input.campaignId ?? null : null;
-  const extraCols = kind === "campaigns" ? sql`, goal_amount` : kind === "appeals" ? sql`, campaign_id` : sql``;
-  const extraVals = kind === "campaigns" ? sql`, ${goal}` : kind === "appeals" ? sql`, ${campaign}` : sql``;
+  const income = "incomeAccount" in input ? input.incomeAccount ?? null : null;
+  const extraCols = kind === "campaigns" ? sql`, goal_amount` : kind === "appeals" ? sql`, campaign_id` : sql`, income_account`;
+  const extraVals = kind === "campaigns" ? sql`, ${goal}` : kind === "appeals" ? sql`, ${campaign}` : sql`, ${income}`;
   const r = await tx.execute(sql`
     insert into ${t} (org_id, name, code, description, active, starts_on, ends_on ${extraCols})
     values (${orgId}, ${input.name}, ${input.code ?? null}, ${input.description ?? null}, ${input.active}, ${input.startsOn ?? null}, ${input.endsOn ?? null} ${extraVals})
@@ -68,7 +71,8 @@ export async function updateCoding(tx: Tx, kind: CodingKind, orgId: string, id: 
   const t = sql.identifier(TABLE[kind]);
   const goal = "goalAmount" in input ? input.goalAmount ?? null : null;
   const campaign = "campaignId" in input ? input.campaignId ?? null : null;
-  const extra = kind === "campaigns" ? sql`, goal_amount = ${goal}` : kind === "appeals" ? sql`, campaign_id = ${campaign}` : sql``;
+  const income = "incomeAccount" in input ? input.incomeAccount ?? null : null;
+  const extra = kind === "campaigns" ? sql`, goal_amount = ${goal}` : kind === "appeals" ? sql`, campaign_id = ${campaign}` : sql`, income_account = ${income}`;
   const r = await tx.execute(sql`
     update ${t} set name = ${input.name}, code = ${input.code ?? null}, description = ${input.description ?? null}, active = ${input.active},
            starts_on = ${input.startsOn ?? null}, ends_on = ${input.endsOn ?? null} ${extra}

@@ -107,13 +107,32 @@ describe.skipIf(!DATABASE_URL)("api routes against the database", () => {
       ["GET", `/api/v1/orgs/${orgB}/imports/${randomUUID()}`, undefined],
       ["POST", `/api/v1/orgs/${orgB}/imports/${randomUUID()}/commit`, undefined],
       ["POST", `/api/v1/orgs/${orgB}/imports/${randomUUID()}/rollback`, undefined],
+      ["GET", `/api/v1/orgs/${orgB}/integrations`, undefined],
+      ["GET", `/api/v1/orgs/${orgB}/integrations/health`, undefined],
+      ["POST", `/api/v1/orgs/${orgB}/integrations/events/${randomUUID()}/resolve`, undefined],
+      ["POST", `/api/v1/orgs/${orgB}/integrations/stripe/connect`, undefined],
+      ["DELETE", `/api/v1/orgs/${orgB}/integrations/stripe`, undefined],
+      ["POST", `/api/v1/orgs/${orgB}/integrations/stripe/simulate-payout`, undefined],
+      ["PUT", `/api/v1/orgs/${orgB}/integrations/mailchimp/key`, { apiKey: "sim-key-intruder-us1" }],
+      ["GET", `/api/v1/orgs/${orgB}/integrations/mailchimp/audiences`, undefined],
+      ["PATCH", `/api/v1/orgs/${orgB}/integrations/mailchimp/config`, { listId: "x", permissionConfirmed: true }],
+      ["POST", `/api/v1/orgs/${orgB}/integrations/mailchimp/sync`, undefined],
+      ["DELETE", `/api/v1/orgs/${orgB}/integrations/mailchimp`, undefined],
+      ["GET", `/api/v1/orgs/${orgB}/donation-pages`, undefined],
+      ["POST", `/api/v1/orgs/${orgB}/donation-pages`, { slug: `intruder-${randomUUID().slice(0, 8)}`, title: "Sneaky" }],
+      ["GET", `/api/v1/orgs/${orgB}/donation-pages/${randomUUID()}`, undefined],
+      ["PUT", `/api/v1/orgs/${orgB}/donation-pages/${randomUUID()}`, { slug: "intruder-page", title: "Sneaky" }],
+      ["DELETE", `/api/v1/orgs/${orgB}/donation-pages/${randomUUID()}`, undefined],
+      ["GET", `/api/v1/orgs/${orgB}/accounting`, undefined],
+      ["PUT", `/api/v1/orgs/${orgB}/accounting`, { depositAccount: "Sneaky" }],
+      ["GET", `/api/v1/orgs/${orgB}/accounting/export?from=2026-01-01&to=2026-12-31`, undefined],
     ] as const) {
       const res = await app.request(path, { method, headers: { ...auth(ownerA), ...json }, body: body ? JSON.stringify(body) : undefined });
       // Reads of a foreign org are empty or not found, never a leak; writes are refused.
-      const allowed = method === "GET" && (path.includes("/constituents?") || path.includes("/coding/") || path.endsWith("/batches") || path.endsWith("/health") || path.endsWith("/duplicates") || path.endsWith("/merges") || path.includes("/gifts?") || path.endsWith("/imports")) ? [200, 403, 404] : [403, 404];
+      const allowed = method === "GET" && (path.includes("/constituents?") || path.includes("/coding/") || path.endsWith("/batches") || path.endsWith("/health") || path.endsWith("/duplicates") || path.endsWith("/merges") || path.includes("/gifts?") || path.endsWith("/imports") || path.endsWith("/integrations") || path.endsWith("/integrations/health") || path.endsWith("/donation-pages")) ? [200, 403, 404] : [403, 404];
       expect(allowed, `${method} ${path} -> ${res.status}`).toContain(res.status);
       const text = await res.text();
-      if (res.status === 200) expect(text).toMatch(/"items":\[\]|"total":0|"constituents":0/);
+      if (res.status === 200) expect(text).toMatch(/"items":\[\]|"total":0|"constituents":0|"integrations":\[\]/);
       expect(text).not.toContain(orgB);
       expect(text).not.toContain("Route Org B");
     }

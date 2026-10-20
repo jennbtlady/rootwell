@@ -9,6 +9,10 @@ import { giftRoutes } from "./routes/gifts";
 import { dedupe } from "./routes/dedupe";
 import { imports } from "./routes/imports";
 import { reporting } from "./routes/reporting";
+import { integrationRoutes } from "./routes/integrations";
+import { webhooks } from "./routes/webhooks";
+import { publicGive } from "./routes/public-give";
+import { stripeSim } from "./routes/stripe-sim";
 import { handleApiError } from "./errors";
 
 /**
@@ -19,6 +23,10 @@ import { handleApiError } from "./errors";
 export const app = new Hono<ApiEnv>()
   .basePath("/api/v1")
   .get("/health", (c) => c.json({ ok: true }))
+  // No sign-in: signatures, public pages, and the test-mode Stripe stand-in.
+  .route("/webhooks", webhooks)
+  .route("/public", publicGive)
+  .route("/stripe-sim", stripeSim)
   .use("*", requireUser)
   .route("/me", me)
   .route("/orgs", orgs)
@@ -28,6 +36,7 @@ export const app = new Hono<ApiEnv>()
   .route("/orgs", dedupe)
   .route("/orgs", imports)
   .route("/orgs", reporting)
+  .route("/orgs", integrationRoutes)
   .onError(handleApiError);
 
 export type AppType = typeof app;

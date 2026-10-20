@@ -9,3 +9,6 @@ export * from "./import";
 export * from "./csv";
 export * from "./reports";
 export * from "./acknowledgments";
+export * from "./schemas/integrations";
+export * from "./accounting";
+export * from "./fees";

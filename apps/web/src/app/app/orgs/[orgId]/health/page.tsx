@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { dataHealth, getOrg } from "@maple/core/services";
+import { dataHealth, getOrg, integrationHealth } from "@maple/core/services";
 import { requireSession, withSession } from "@/lib/session";
 import { Card, Heading, Paragraph } from "@/components/ui";
 import { ScanButton } from "@/components/dedupe/scan-button";
+import { IntegrationHealthPanel } from "@/components/settings/integration-health";
 
 export const metadata: Metadata = { title: "Data health" };
 
@@ -11,7 +12,7 @@ export const metadata: Metadata = { title: "Data health" };
 export default async function HealthPage({ params }: PageProps<"/app/orgs/[orgId]/health">) {
   const { orgId } = await params;
   const session = await requireSession();
-  const [h, org] = await withSession(session, (tx) => Promise.all([dataHealth(tx, orgId), getOrg(tx, orgId)]));
+  const [h, org, ih] = await withSession(session, (tx) => Promise.all([dataHealth(tx, orgId), getOrg(tx, orgId), integrationHealth(tx, orgId)]));
   const base = `/app/orgs/${orgId}`;
   const pct = (n: number) => (h.constituents ? Math.round((n / h.constituents) * 100) : 0);
 
@@ -63,7 +64,7 @@ export default async function HealthPage({ params }: PageProps<"/app/orgs/[orgId
           </Link>
         </div>
       </Card>
-      <p className="text-30 leading-5 text-text-weak">Integration health (Stripe, Mailchimp, bookkeeping export) appears here in a later phase.</p>
+      <IntegrationHealthPanel orgId={orgId} health={ih} canResolve={org?.role === "owner" || org?.role === "admin"} />
     </div>
   );
 }

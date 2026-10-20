@@ -7,6 +7,7 @@ import { formatDate, formatMoney } from "@/lib/format";
 import { Badge, Card, Heading } from "@/components/ui";
 import { anchorClass } from "@/components/ui/text";
 import { BatchWorkspace } from "@/components/gifts/batch-workspace";
+import { BatchExport } from "@/components/gifts/batch-export";
 
 export default async function BatchPage({ params, searchParams }: PageProps<"/app/orgs/[orgId]/batches/[batchId]">) {
   const { orgId, batchId } = await params;
@@ -45,6 +46,12 @@ export default async function BatchPage({ params, searchParams }: PageProps<"/ap
           {batch.status === "posted" ? <Badge variant="success">Posted</Badge> : <Badge variant="warning">Open</Badge>}
         </div>
         {batch.description && <p className="text-30 leading-5 text-text-weak">{batch.description}</p>}
+        {batch.notes && <p className="text-30 leading-5 text-text-weak">{batch.notes}</p>}
+        {batch.status === "posted" && canPost && (
+          <div className="mt-2">
+            <BatchExport orgId={orgId} batchId={batch.id} />
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

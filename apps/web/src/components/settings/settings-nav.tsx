@@ -11,6 +11,8 @@ export function SettingsNav({ orgId }: { orgId: string }) {
     { href: `${base}/coding`, label: "Funds, campaigns, appeals" },
     { href: `${base}/gift-standards`, label: "Gift entry standards" },
     { href: `${base}/board`, label: "Board sharing" },
+    { href: `${base}/giving`, label: "Giving pages" },
+    { href: `${base}/integrations`, label: "Integrations" },
     { href: `/app/orgs/${orgId}/imports`, label: "Imports" },
   ];
   return (
