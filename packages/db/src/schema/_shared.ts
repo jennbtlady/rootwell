@@ -17,6 +17,7 @@ export const externalSource = pgEnum("external_source", ["manual", "stripe", "im
 export const recurringFrequency = pgEnum("recurring_frequency", ["monthly", "quarterly", "annual"]);
 export const recurringStatus = pgEnum("recurring_status", ["active", "paused", "ended"]);
 export const pledgeStatus = pgEnum("pledge_status", ["open", "fulfilled", "written_off"]);
+export const duplicateStatus = pgEnum("duplicate_status", ["open", "merged", "not_duplicate"]);
 
 /**
  * Columns every tenant-scoped table carries. created_by/updated_by are filled by the

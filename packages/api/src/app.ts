@@ -6,6 +6,7 @@ import { orgs } from "./routes/orgs";
 import { coding } from "./routes/coding";
 import { constituents } from "./routes/constituents";
 import { giftRoutes } from "./routes/gifts";
+import { dedupe } from "./routes/dedupe";
 import { handleApiError } from "./errors";
 
 /**
@@ -22,6 +23,7 @@ export const app = new Hono<ApiEnv>()
   .route("/orgs", coding)
   .route("/orgs", constituents)
   .route("/orgs", giftRoutes)
+  .route("/orgs", dedupe)
   .onError(handleApiError);
 
 export type AppType = typeof app;

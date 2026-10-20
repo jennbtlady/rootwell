@@ -95,13 +95,20 @@ describe.skipIf(!DATABASE_URL)("api routes against the database", () => {
       ["POST", `/api/v1/orgs/${orgB}/gifts`, { constituentId: randomUUID(), amount: "5", giftDate: "2026-01-01", paymentMethod: "cash" }],
       ["GET", `/api/v1/orgs/${orgB}/gift-standards`, undefined],
       ["PUT", `/api/v1/orgs/${orgB}/gift-standards`, { requiredFields: [] }],
+      ["GET", `/api/v1/orgs/${orgB}/health`, undefined],
+      ["GET", `/api/v1/orgs/${orgB}/duplicates`, undefined],
+      ["POST", `/api/v1/orgs/${orgB}/duplicates/scan`, undefined],
+      ["POST", `/api/v1/orgs/${orgB}/merges`, { survivorId: randomUUID(), mergedId: randomUUID() }],
+      ["GET", `/api/v1/orgs/${orgB}/merges`, undefined],
+      ["POST", `/api/v1/orgs/${orgB}/merges/${randomUUID()}/undo`, undefined],
+      ["GET", `/api/v1/orgs/${orgB}/gifts?filter=unacknowledged`, undefined],
     ] as const) {
       const res = await app.request(path, { method, headers: { ...auth(ownerA), ...json }, body: body ? JSON.stringify(body) : undefined });
       // Reads of a foreign org are empty or not found, never a leak; writes are refused.
-      const allowed = method === "GET" && (path.includes("/constituents?") || path.includes("/coding/") || path.endsWith("/batches")) ? [200, 403, 404] : [403, 404];
+      const allowed = method === "GET" && (path.includes("/constituents?") || path.includes("/coding/") || path.endsWith("/batches") || path.endsWith("/health") || path.endsWith("/duplicates") || path.endsWith("/merges") || path.includes("/gifts?")) ? [200, 403, 404] : [403, 404];
       expect(allowed, `${method} ${path} -> ${res.status}`).toContain(res.status);
       const text = await res.text();
-      if (res.status === 200) expect(text).toMatch(/"items":\[\]|"total":0/);
+      if (res.status === 200) expect(text).toMatch(/"items":\[\]|"total":0|"constituents":0/);
       expect(text).not.toContain(orgB);
       expect(text).not.toContain("Route Org B");
     }
@@ -234,6 +241,43 @@ describe.skipIf(!DATABASE_URL)("api routes against the database", () => {
     const mismatch = await post(ownerA, `/api/v1/orgs/${orgA}/batches/${batch2}/post`, {});
     expect(mismatch.status).toBe(400);
     expect(((await mismatch.json()) as { error: string }).error).toMatch(/does not match/);
+  });
+
+  it("scans duplicates, merges a pair, and undoes the merge through the API", async () => {
+    const h = (u: U) => ({ ...auth(u), ...json });
+    const mk = async (body: unknown) => ((await (await app.request(`/api/v1/orgs/${orgA}/constituents`, { method: "POST", headers: h(staffA), body: JSON.stringify(body) })).json()) as { id: string }).id;
+    const first = await mk({ firstName: "Priya", lastName: "Natarajan", emails: [{ email: "priya@example.org" }] });
+    const second = await mk({ firstName: "P.", lastName: "Natarajan", emails: [{ email: "PRIYA@example.org" }], phones: [{ phone: "217-555-0150" }] });
+
+    const scan = await app.request(`/api/v1/orgs/${orgA}/duplicates/scan`, { method: "POST", headers: auth(staffA) });
+    expect(scan.status).toBe(200);
+    const list = (await (await app.request(`/api/v1/orgs/${orgA}/duplicates`, { headers: auth(staffA) })).json()) as { items: { id: string; reasons: string[]; a: { id: string }; b: { id: string } }[] };
+    const pair = list.items.find((p) => [p.a.id, p.b.id].includes(first) && [p.a.id, p.b.id].includes(second));
+    expect(pair?.reasons).toContain("same email");
+
+    const health = (await (await app.request(`/api/v1/orgs/${orgA}/health`, { headers: auth(staffA) })).json()) as { openDuplicates: number };
+    expect(health.openDuplicates).toBeGreaterThanOrEqual(1);
+
+    const staffMerge = await app.request(`/api/v1/orgs/${orgA}/merges`, { method: "POST", headers: h(staffA), body: JSON.stringify({ survivorId: first, mergedId: second }) });
+    expect(staffMerge.status).toBe(403);
+    const merged = await app.request(`/api/v1/orgs/${orgA}/merges`, { method: "POST", headers: h(ownerA), body: JSON.stringify({ survivorId: first, mergedId: second, decisions: { first_name: "a" } }) });
+    expect(merged.status).toBe(201);
+    const { mergeId } = (await merged.json()) as { mergeId: string };
+
+    const gone = await app.request(`/api/v1/orgs/${orgA}/constituents/${second}`, { headers: auth(staffA) });
+    expect(gone.status).toBe(404);
+    const survivor = (await (await app.request(`/api/v1/orgs/${orgA}/constituents/${first}`, { headers: auth(staffA) })).json()) as { phones: unknown[] };
+    expect(survivor.phones).toHaveLength(1);
+
+    const merges = (await (await app.request(`/api/v1/orgs/${orgA}/merges`, { headers: auth(staffA) })).json()) as { items: { id: string; reversedAt: string | null }[] };
+    expect(merges.items.find((m) => m.id === mergeId)?.reversedAt).toBeNull();
+
+    const undo = await app.request(`/api/v1/orgs/${orgA}/merges/${mergeId}/undo`, { method: "POST", headers: auth(ownerA) });
+    expect(undo.status).toBe(200);
+    const back = await app.request(`/api/v1/orgs/${orgA}/constituents/${second}`, { headers: auth(staffA) });
+    expect(back.status).toBe(200);
+
+    for (const id of [first, second]) await app.request(`/api/v1/orgs/${orgA}/constituents/${id}`, { method: "DELETE", headers: auth(ownerA) });
   });
 
   it("creates one sample org per person and removes it", async () => {

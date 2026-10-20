@@ -112,7 +112,25 @@ function mapSummary(r: Record<string, unknown>): ConstituentSummary {
   };
 }
 
-export async function listConstituents(tx: Tx, orgId: string, opts: { q?: string; limit?: number; offset?: number } = {}): Promise<{ items: ConstituentSummary[]; total: number }> {
+export const CONSTITUENT_FILTERS = ["missing_email", "missing_address", "stale"] as const;
+export type ConstituentFilter = (typeof CONSTITUENT_FILTERS)[number];
+
+function filterClause(filter: ConstituentFilter | undefined) {
+  switch (filter) {
+    case "missing_email":
+      return sql`and not c.deceased and not exists (select 1 from constituent_emails e where e.constituent_id = c.id)`;
+    case "missing_address":
+      return sql`and not c.deceased and not exists (select 1 from constituent_addresses a where a.constituent_id = c.id and coalesce(a.line1, '') <> '')`;
+    case "stale":
+      return sql`and not c.deceased
+        and not exists (select 1 from gifts g where g.constituent_id = c.id and g.gift_date >= current_date - interval '36 months')
+        and not exists (select 1 from interactions i where i.constituent_id = c.id and i.occurred_on >= current_date - interval '36 months')`;
+    default:
+      return sql``;
+  }
+}
+
+export async function listConstituents(tx: Tx, orgId: string, opts: { q?: string; limit?: number; offset?: number; filter?: ConstituentFilter } = {}): Promise<{ items: ConstituentSummary[]; total: number }> {
   const limit = opts.limit ?? 50;
   const offset = opts.offset ?? 0;
   const q = (opts.q ?? "").trim();
@@ -129,7 +147,7 @@ export async function listConstituents(tx: Tx, orgId: string, opts: { q?: string
   const rows = await tx.execute(sql`
     select ${summarySelect}, count(*) over() as total
       from constituents c ${giftJoin}
-     where c.org_id = ${orgId}
+     where c.org_id = ${orgId} ${filterClause(opts.filter)}
      order by c.sort_name
      limit ${limit} offset ${offset}
   `);

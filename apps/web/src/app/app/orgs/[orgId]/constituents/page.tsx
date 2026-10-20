@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { listConstituents } from "@maple/core/services";
+import { CONSTITUENT_FILTERS, listConstituents, type ConstituentFilter } from "@maple/core/services";
 import { requireSession, withSession } from "@/lib/session";
 import { formatDate, formatMoney } from "@/lib/format";
 import { Badge, buttonVariants, EmptyState, Heading, Table, TBody, TD, TH, THead, TR } from "@/components/ui";
@@ -16,16 +16,25 @@ export default async function ConstituentsPage({ params, searchParams }: PagePro
   const sp = await searchParams;
   const q = typeof sp.q === "string" ? sp.q : "";
   const page = Math.max(1, Number(typeof sp.page === "string" ? sp.page : 1) || 1);
+  const filter = typeof sp.filter === "string" && (CONSTITUENT_FILTERS as readonly string[]).includes(sp.filter) ? (sp.filter as ConstituentFilter) : undefined;
   const session = await requireSession();
-  const { items, total } = await withSession(session, (tx) => listConstituents(tx, orgId, { q, limit: PAGE, offset: (page - 1) * PAGE }));
+  const { items, total } = await withSession(session, (tx) => listConstituents(tx, orgId, { q, limit: PAGE, offset: (page - 1) * PAGE, filter }));
   const base = `/app/orgs/${orgId}/constituents`;
+  const FILTER_TITLE: Record<ConstituentFilter, string> = { missing_email: "Constituents with no email", missing_address: "Constituents with no address", stale: "No gift or note in 36 months" };
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Heading variant="heading30" as="h1" noMargin>
-          Constituents
-        </Heading>
+        <div>
+          <Heading variant="heading30" as="h1" noMargin>
+            {filter ? FILTER_TITLE[filter] : "Constituents"}
+          </Heading>
+          {filter && (
+            <Link href={base} className={`${anchorClass} text-30`}>
+              Show everyone
+            </Link>
+          )}
+        </div>
         <Link href={`${base}/new`} className={buttonVariants({ size: "small" })}>
           Add constituent
         </Link>
@@ -97,7 +106,7 @@ export default async function ConstituentsPage({ params, searchParams }: PagePro
               ))}
             </TBody>
           </Table>
-          {!q && <ListPager base={base} page={page} pageCount={Math.max(1, Math.ceil(total / PAGE))} />}
+          {!q && <ListPager base={filter ? `${base}?filter=${filter}` : base} page={page} pageCount={Math.max(1, Math.ceil(total / PAGE))} />}
         </>
       )}
     </div>

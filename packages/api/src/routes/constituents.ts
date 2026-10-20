@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { withRls } from "@maple/db";
 import { constituentInput, constituentSearch, interactionInput, relationshipInput, tagInput } from "@maple/core";
+import { CONSTITUENT_FILTERS } from "@maple/core/services";
 import {
   addInteraction,
   addRelationship,
@@ -27,7 +28,7 @@ import { validate } from "../validate";
 const orgParam = z.object({ orgId: z.string().uuid() });
 const idParam = orgParam.extend({ id: z.string().uuid() });
 const subParam = idParam.extend({ subId: z.string().uuid() });
-const listQuery = constituentSearch.extend({ offset: z.coerce.number().int().min(0).default(0) });
+const listQuery = constituentSearch.extend({ offset: z.coerce.number().int().min(0).default(0), filter: z.enum(CONSTITUENT_FILTERS).optional() });
 const duplicateQuery = z.object({
   firstName: z.string().trim().max(80).optional(),
   lastName: z.string().trim().max(80).optional(),
@@ -41,8 +42,8 @@ const duplicateQuery = z.object({
 export const constituents = new Hono<ApiEnv>()
   .get("/:orgId/constituents", validate("param", orgParam), validate("query", listQuery), async (c) => {
     const { orgId } = c.req.valid("param");
-    const { q, limit, offset } = c.req.valid("query");
-    const result = await withRls(getDb(), c.get("claims"), (tx) => listConstituents(tx, orgId, { q, limit, offset }));
+    const { q, limit, offset, filter } = c.req.valid("query");
+    const result = await withRls(getDb(), c.get("claims"), (tx) => listConstituents(tx, orgId, { q, limit, offset, filter }));
     return c.json(result);
   })
   .get("/:orgId/constituents/duplicates", validate("param", orgParam), validate("query", duplicateQuery), async (c) => {

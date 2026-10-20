@@ -94,6 +94,22 @@ export async function listGiftsForConstituent(tx: Tx, orgId: string, constituent
   return rows.map((r) => mapGift(r as Record<string, unknown>));
 }
 
+export const GIFT_FILTERS = ["missing_fund", "unacknowledged"] as const;
+export type GiftFilter = (typeof GIFT_FILTERS)[number];
+
+export async function listGifts(tx: Tx, orgId: string, opts: { filter?: GiftFilter; limit?: number; offset?: number } = {}): Promise<{ items: Gift[]; total: number }> {
+  const limit = opts.limit ?? 50;
+  const offset = opts.offset ?? 0;
+  const where =
+    opts.filter === "missing_fund"
+      ? sql`and g.fund_id is null`
+      : opts.filter === "unacknowledged"
+        ? sql`and g.posted_at is not null and g.acknowledged_at is null and g.gift_type <> 'soft_credit' and g.gift_date < current_date - 14`
+        : sql``;
+  const rows = await tx.execute(sql`select ${giftSelect}, count(*) over() as total ${giftFrom} where g.org_id = ${orgId} ${where} order by g.gift_date desc, g.created_at desc limit ${limit} offset ${offset}`);
+  return { items: rows.map((r) => mapGift(r as Record<string, unknown>)), total: Number((rows[0] as { total?: number } | undefined)?.total ?? 0) };
+}
+
 export async function getGift(tx: Tx, orgId: string, id: string): Promise<Gift | null> {
   const rows = await tx.execute(sql`select ${giftSelect} ${giftFrom} where g.org_id = ${orgId} and g.id = ${id}`);
   return rows[0] ? mapGift(rows[0] as Record<string, unknown>) : null;

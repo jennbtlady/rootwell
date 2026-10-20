@@ -10,7 +10,8 @@ export function OrgNav({ orgId, canManage }: { orgId: string; canManage: boolean
   const items = [
     { href: base, label: "Overview", exact: true },
     { href: `${base}/constituents`, label: "Constituents" },
-    { href: `${base}/batches`, label: "Gifts" },
+    { href: `${base}/batches`, label: "Gifts", prefix: `${base}/batches` },
+    { href: `${base}/health`, label: "Data health", prefix: `${base}/health` },
     { href: `${base}/members`, label: "Team" },
     ...(canManage ? [{ href: `${base}/settings/coding`, label: "Settings", prefix: `${base}/settings` }] : []),
   ];
@@ -18,7 +19,9 @@ export function OrgNav({ orgId, canManage }: { orgId: string; canManage: boolean
     <nav aria-label="Organization sections" className="-mx-4 overflow-x-auto px-4">
       <ul className="flex gap-1 border-b border-border-weak">
         {items.map((it) => {
-          const active = "exact" in it && it.exact ? path === it.href : path.startsWith(("prefix" in it && it.prefix) || it.href);
+          const prefixes = "prefix" in it && it.prefix ? [it.prefix] : [it.href];
+          if (it.label === "Data health") prefixes.push(`${base}/duplicates`, `${base}/merges`, `${base}/gifts`);
+          const active = "exact" in it && it.exact ? path === it.href : prefixes.some((pre) => path.startsWith(pre));
           return (
             <li key={it.href} className="shrink-0">
               <Link
