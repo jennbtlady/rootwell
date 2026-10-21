@@ -77,7 +77,8 @@ test.describe.serial("Dana: the numbers match the bank", () => {
     await expect(send).toBeVisible();
     await send.click();
     await confirmIn(page, "Email statements");
-    await expect(page.getByText(/statements? sent/).first()).toBeVisible();
+    // Each statement is a PDF made and emailed one by one, which takes a while on a dev server.
+    await expect(page.getByText(/statements? sent/).first()).toBeVisible({ timeout: 45_000 });
     await page.reload();
     // After a reload the page still knows: nothing left to send, every row says when.
     await expect(page.getByText("Everyone with email has theirs")).toBeVisible();

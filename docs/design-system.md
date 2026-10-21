@@ -43,6 +43,37 @@ class one to one. When porting a component, read its source in the Paste reposit
 Borders on fields and buttons are box shadows, as in Paste, so the focus ring can replace
 them without a layout shift.
 
+## Brand colors
+
+Decision (Jenn, 2026-10-21): a five-color palette, set in `packages/design/overrides.css`.
+Three colors needed small changes to pass WCAG AA, and those are what the app uses.
+
+| Color | Role | Rule |
+|---|---|---|
+| Crimson Violet #500030 | Primary buttons, links, focus ring, selected states, chart "this year" | Passes everywhere: white on it 15.2:1, on Old Lace 13.5:1. Hover and pressed go deeper (#3A0023), never lighter. |
+| Air Force Blue #638494 | Decoration only, such as the chart's "last year" bars | Fails for normal text (white on it 3.99:1). When it carries text, as in information alerts, use **#567280** (5.1:1 with white, 4.5:1 on Old Lace). |
+| Lime Cream #CBEC89 | Light highlight backgrounds: "New" badges, the sample notice (as the tint #EEF8DA) | Background only, with Crimson or dark text. Never text, icons or borders that must be seen. |
+| Cherry Blossom #FFA6B5 | Light highlight backgrounds: pressed and selected tints (#FCE8EC, #FFD3DB) | Background only. Too pale for text, borders or icons. |
+| Old Lace #F8F1E2 | Page background | Cards and fields stay white and keep their border (white on Old Lace is only 1.12:1). |
+
+Supporting colors chosen to pass on Old Lace and white:
+
+| Token | Value | Check |
+|---|---|---|
+| Body text | #2A1A22 | 14.7:1 on Old Lace |
+| Weak text, icons | #645A5E | 5.9:1 on Old Lace, 6.6:1 on white |
+| Field borders | #8F7F86 | 3.4:1 on Old Lace, 3.8:1 on white (fields need 3:1) |
+| Error | #C2001F | 5.6:1 on Old Lace (Paste's #DB132A was 4.51:1) |
+| Focus ring | Crimson at 70% | 6.1:1 on Old Lace |
+
+Lime reads as "good" and pink as "bad" to many people, so neither is used for status.
+Success, warning and error keep their own colors, and always come with an icon and words.
+The app icon and the phone browser bar use Crimson Violet. The Stripe stand-in pages keep
+Stripe's blue on purpose, because they imitate Stripe.
+
+To change a color, edit `overrides.css`, rerun the contrast checks for every pair it
+touches, and run the browser suite, which scans every page with axe.
+
 ## Components
 
 | Component | After Paste | Notes |

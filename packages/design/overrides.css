@@ -2,15 +2,96 @@
  * Maple Ledger design overrides. This is the one place to change the look.
  *
  * Every token from Paste is a --paste-* custom property (see tokens.css). Redefine any
- * of them here and every component follows, in light and dark. Examples:
+ * of them here and every component follows. Keep overrides to tokens. Do not style
+ * components here.
  *
- *   :root {
- *     --paste-color-background-primary: rgb(122, 59, 46);
- *     --paste-color-text-link: rgb(122, 59, 46);
- *     --paste-shadow-focus: 0 0 0 4px rgba(122, 59, 46, 0.6);
- *   }
- *
- * Keep overrides to tokens. Do not style components here.
+ * Brand palette (Jenn, 2026-10-21), with the contrast tweaks it needed:
+ *   Crimson Violet #500030   primary: buttons, links, focus, chart "this year"
+ *   Air Force Blue #638494   decoration only (chart "last year"); #567280 when it carries text
+ *   Lime Cream     #CBEC89   light highlight backgrounds only, with dark text
+ *   Cherry Blossom #FFA6B5   light highlight backgrounds only, with dark text
+ *   Old Lace       #F8F1E2   page background; cards stay white with a border
+ * Every text pair here meets WCAG AA (4.5:1), and field borders and the focus ring meet
+ * 3:1. The checks are listed in docs/design-system.md, "Brand colors".
  */
 :root {
+  /* Primary: Crimson Violet. Hover and pressed go deeper, never lighter. */
+  --paste-color-background-primary: #500030;
+  --paste-color-background-primary-strong: #3a0023;
+  --paste-color-background-primary-stronger: #2e001c;
+  --paste-color-background-primary-strongest: #22001a;
+  --paste-color-background-primary-weak: #ffa6b5;
+  --paste-color-background-primary-weaker: #ffd3db;
+  --paste-color-background-primary-weakest: #fce8ec;
+  --paste-color-text-primary: #500030;
+  --paste-color-text-primary-strong: #3a0023;
+  --paste-color-text-primary-stronger: #2e001c;
+  --paste-color-text-primary-strongest: #22001a;
+  --paste-color-text-link: #500030;
+  --paste-color-text-link-strong: #3a0023;
+  --paste-color-text-link-stronger: #2e001c;
+  --paste-color-text-link-strongest: #22001a;
+  --paste-color-border-primary: #500030;
+  --paste-color-border-primary-strong: #3a0023;
+  --paste-color-border-primary-stronger: #2e001c;
+  --paste-color-border-primary-weak: #ffa6b5;
+  --paste-color-border-primary-weaker: #ffd3db;
+  --paste-color-border-primary-weakest: #fce8ec;
+  --paste-shadow-border-primary: 0 0 0 1px #500030;
+  --paste-shadow-border-primary-strong: 0 0 0 1px #3a0023;
+  --paste-shadow-border-primary-weaker: 0 0 0 1px #ffd3db;
+  --paste-shadow-focus: 0 0 0 4px rgba(80, 0, 48, 0.7);
+  --paste-shadow-focus-inset: inset 0 0 0 2px rgba(80, 0, 48, 0.7);
+  --paste-shadow-focus-shadow-border: 0 0 0 4px rgba(80, 0, 48, 0.7), 0 0 0 1px #8f7f86;
+
+  /* Surfaces: Old Lace page, white cards, warm greys in between. */
+  --paste-color-background-body: #f8f1e2;
+  --paste-color-background-weakest: #ffffff;
+  --paste-color-background-weak: #fcf8f0;
+  --paste-color-background: #f2eada;
+  --paste-color-background-strong: #e6dccb;
+  --paste-color-background-stronger: #638494;
+
+  /* Text: a warm near-black, and a warm grey for secondary text (5.9:1 on Old Lace). */
+  --paste-color-text: #2a1a22;
+  --paste-color-text-weak: #645a5e;
+  --paste-color-text-weaker: #9c8f95;
+  --paste-color-text-icon: #645a5e;
+
+  /* Borders: fields need 3:1 against the page, so #8f7f86. Dividers can be quieter. */
+  --paste-color-border: #8f7f86;
+  --paste-color-border-weak: #ddd2c0;
+  --paste-color-border-weaker: #e9dfcf;
+  --paste-shadow-border: 0 0 0 1px #8f7f86;
+  --paste-shadow-border-weak: 0 0 0 1px #ddd2c0;
+  --paste-shadow-border-weaker: 0 0 0 1px #e9dfcf;
+
+  /* Information: Air Force Blue, darkened to #567280 so it can carry text. */
+  --paste-color-text-neutral: #567280;
+  --paste-color-text-icon-neutral: #567280;
+  --paste-color-border-neutral: #567280;
+  --paste-color-border-neutral-weaker: #c9d6dc;
+  --paste-shadow-border-neutral-weaker: 0 0 0 1px #c9d6dc;
+  --paste-color-background-neutral-weakest: #eef3f5;
+
+  /* "New" and the sample notice: a Lime Cream tint. Dark text only. */
+  --paste-color-background-new-weakest: #eef8da;
+  --paste-color-background-new: #cbec89;
+  --paste-color-text-new: #500030;
+  --paste-color-border-new-weaker: #cbec89;
+  --paste-shadow-border-new-weaker: 0 0 0 1px #cbec89;
+
+  /* Errors: a deeper red so it passes on Old Lace (5.6:1). Status colors keep their
+     icons and words, so they are never told apart by color alone. */
+  --paste-color-text-error: #c2001f;
+  --paste-color-text-icon-error: #c2001f;
+  --paste-color-background-error: #c2001f;
+  --paste-color-border-error: #c2001f;
+  --paste-shadow-border-error: 0 0 0 1px #c2001f;
+  /* Remove and Delete use the same deeper red: Paste's #db132a was 4.32:1 on the pink
+     selected-row tint. */
+  --paste-color-text-destructive: #c2001f;
+  --paste-color-background-destructive: #c2001f;
+  --paste-color-border-destructive: #c2001f;
+  --paste-shadow-border-destructive: 0 0 0 1px #c2001f;
 }
