@@ -10,9 +10,11 @@ export default async function SettingsLayout({ params, children }: LayoutProps<"
   const org = await withSession(session, (tx) => getOrg(tx, orgId));
   if (!org || (org.role !== "owner" && org.role !== "admin")) notFound();
   return (
-    <div className="grid gap-6 sm:grid-cols-[12rem_1fr]">
+    // minmax(0, 1fr) and min-w-0 keep a wide table inside its own scroll area instead of
+    // stretching the whole page sideways on a phone.
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-6 sm:grid-cols-[12rem_minmax(0,1fr)]">
       <SettingsNav orgId={orgId} />
-      <div>{children}</div>
+      <div className="min-w-0">{children}</div>
       <p className="sr-only">
         <Link href={`/app/orgs/${orgId}`}>Back to organization</Link>
       </p>

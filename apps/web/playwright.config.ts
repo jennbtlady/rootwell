@@ -21,8 +21,12 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   projects: [
-    { name: "desktop", use: { ...devices["Desktop Chrome"] }, grepInvert: /@phone/ },
+    { name: "desktop", use: { ...devices["Desktop Chrome"] }, grepInvert: /@phone|@mobile/ },
     { name: "phone", use: { ...devices["iPhone 13"], defaultBrowserType: "chromium" }, grep: /@phone/ },
+    // The mobile browser pass (build plan, Phase 6): every form on Safari's engine at
+    // iPhone size and on Chrome at Android size. Run with: pnpm exec playwright test --grep @mobile
+    { name: "ios-safari", use: { ...devices["iPhone 13"] }, grep: /@mobile/ },
+    { name: "android-chrome", use: { ...devices["Pixel 7"] }, grep: /@mobile/ },
   ],
   webServer: {
     command: ci ? "pnpm exec next start --port 3000" : "pnpm exec next dev --port 3000",

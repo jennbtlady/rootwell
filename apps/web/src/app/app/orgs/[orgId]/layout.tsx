@@ -36,7 +36,7 @@ export default async function OrgLayout({ params, children }: LayoutProps<"/app/
       </div>
       <PrimaryNav orgId={orgId} boardOnly={boardOnly} />
       {billing && <BillingBanner orgId={orgId} billing={billing} role={org.role} />}
-      <div>{children}</div>
+      <div className="min-w-0">{children}</div>
     </div>
   );
 }

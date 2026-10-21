@@ -25,8 +25,9 @@ export function fieldBoxClass(opts: { hasError?: boolean; disabled?: boolean; re
   );
 }
 
+// 16px (text-40) on phones: iPhone Safari zooms the page into any field under 16px.
 export const fieldControlClass =
-  "block w-full min-w-0 appearance-none bg-transparent px-3 py-2 text-30 font-medium leading-5 text-text outline-none placeholder:text-text-weak disabled:cursor-not-allowed disabled:text-text-weaker read-only:text-text-weak";
+  "block w-full min-w-0 appearance-none bg-transparent px-3 py-2 text-40 font-medium sm:text-30 leading-5 text-text outline-none placeholder:text-text-weak disabled:cursor-not-allowed disabled:text-text-weaker read-only:text-text-weak";
 
 export function Input({ className, hasError, insertBefore, insertAfter, disabled, readOnly, ...props }: InputProps) {
   return (
