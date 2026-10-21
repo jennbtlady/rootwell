@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import type { ConstituentInput } from "@maple/core";
 import type { Constituent, DuplicateCandidate } from "@maple/core/services";
 import { api, errorMessage } from "@/lib/api";
+import { buttonVariants } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle, Button, Checkbox, FormField, Input, Radio, RadioGroup, Select, Textarea } from "@/components/ui";
 import { anchorClass } from "@/components/ui/text";
 
@@ -73,9 +74,22 @@ function toInput(d: Draft, existing: Constituent | null): ConstituentInput {
   };
 }
 
-export function ConstituentForm({ orgId, existing }: { orgId: string; existing: Constituent | null }) {
+/** "Ruth Goldberg" fills first and last name. One word is taken as the last name. */
+function fromName(name: string): Draft {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return EMPTY;
+  return { ...EMPTY, firstName: parts.length > 1 ? parts.slice(0, -1).join(" ") : "", lastName: parts[parts.length - 1]! };
+}
+
+/** A match this strong (same email, or same name and ZIP) needs a second look before saving. */
+const STRONG = 0.9;
+
+export function ConstituentForm({ orgId, existing, prefillName = "", returnToBatch = null }: { orgId: string; existing: Constituent | null; prefillName?: string; returnToBatch?: string | null }) {
   const router = useRouter();
-  const [d, setD] = useState<Draft>(existing ? fromConstituent(existing) : EMPTY);
+  const [d, setD] = useState<Draft>(existing ? fromConstituent(existing) : fromName(prefillName));
+  // The person has seen the strong match and said this is someone else.
+  const [confirmedNew, setConfirmedNew] = useState(false);
+  const [askDupe, setAskDupe] = useState<DuplicateCandidate | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -83,6 +97,8 @@ export function ConstituentForm({ orgId, existing }: { orgId: string; existing: 
   const dupeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setD((x) => ({ ...x, [k]: v }));
   const base = `/app/orgs/${orgId}/constituents`;
+  // Where a chosen donor goes: back to the batch being entered, or to their record.
+  const destination = (id: string) => (returnToBatch ? `/app/orgs/${orgId}/batches/${returnToBatch}?constituent=${id}` : `${base}/${id}`);
 
   // Possible duplicates, checked as the person types. Runs only when creating.
   useEffect(() => {
@@ -110,6 +126,12 @@ export function ConstituentForm({ orgId, existing }: { orgId: string; existing: 
     e.preventDefault();
     setError(null);
     setFieldErrors({});
+    const strong = !existing && !confirmedNew ? dupes.find((c) => c.score >= STRONG) : undefined;
+    if (strong) {
+      setAskDupe(strong);
+      return;
+    }
+    setAskDupe(null);
     setPending(true);
     const input = toInput(d, existing);
     const res = existing
@@ -126,7 +148,7 @@ export function ConstituentForm({ orgId, existing }: { orgId: string; existing: 
     }
     if (!res.ok) return setError(await errorMessage(res));
     const id = existing ? existing.id : ((await res.json()) as { id: string }).id;
-    router.push(`${base}/${id}`);
+    router.push(destination(id));
     router.refresh();
   }
 
@@ -169,25 +191,6 @@ export function ConstituentForm({ orgId, existing }: { orgId: string; existing: 
         </FormField>
       )}
 
-      {dupes.length > 0 && (
-        <Alert variant="warning">
-          <AlertTitle>This might already be in your database</AlertTitle>
-          <AlertDescription>
-            <ul className="mt-1 flex flex-col gap-1">
-              {dupes.map((c) => (
-                <li key={c.id}>
-                  <Link href={`${base}/${c.id}`} className={anchorClass}>
-                    {c.displayName}
-                  </Link>{" "}
-                  <span className="text-text-weak">({c.reasons.join(", ")})</span>
-                </li>
-              ))}
-            </ul>
-            <p className="mt-2">Open the match to add to it instead. If this is a different person, keep going.</p>
-          </AlertDescription>
-        </Alert>
-      )}
-
       <div className="grid gap-4 sm:grid-cols-2">
         <FormField id="email" label="Email" optional error={fe("emails")}>
           {(f) => <Input {...f} type="email" autoComplete="off" value={d.email} onChange={(e) => set("email", e.target.value)} />}
@@ -196,6 +199,26 @@ export function ConstituentForm({ orgId, existing }: { orgId: string; existing: 
           {(f) => <Input {...f} type="tel" autoComplete="off" value={d.phone} onChange={(e) => set("phone", e.target.value)} />}
         </FormField>
       </div>
+
+      {/* Below the fields that trigger it, so the field being typed in does not jump down the page. */}
+      {dupes.length > 0 && (
+        <Alert variant="warning">
+          <AlertTitle>This might already be in your database</AlertTitle>
+          <AlertDescription>
+            <ul className="mt-1 flex flex-col gap-1">
+              {dupes.map((c) => (
+                <li key={c.id}>
+                  <Link href={destination(c.id)} className={anchorClass}>
+                    {c.displayName}
+                  </Link>{" "}
+                  <span className="text-text-weak">({c.reasons.join(", ")})</span>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2">{returnToBatch ? "Choose the match to use it for this gift instead." : "Open the match to add to it instead."} If this is a different person, keep going.</p>
+          </AlertDescription>
+        </Alert>
+      )}
 
       <fieldset className="grid gap-4 sm:grid-cols-6">
         <legend className="mb-2 text-30 font-medium leading-5 text-text">Mailing address</legend>
@@ -246,6 +269,30 @@ export function ConstituentForm({ orgId, existing }: { orgId: string; existing: 
       </FormField>
 
       <div aria-live="polite">
+        {askDupe && (
+          <Alert variant="warning">
+            <AlertTitle>Is this {askDupe.displayName}, who is already in your database?</AlertTitle>
+            <AlertDescription>
+              <p>They match on {askDupe.reasons.join(" and ")}. Adding them again makes a duplicate to clean up later.</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Link href={destination(askDupe.id)} className={buttonVariants({ size: "small" })}>
+                  {returnToBatch ? `Use ${askDupe.displayName}` : `Open ${askDupe.displayName}`}
+                </Link>
+                <Button
+                  variant="secondary"
+                  size="small"
+                  onClick={() => {
+                    setConfirmedNew(true);
+                    setAskDupe(null);
+                  }}
+                >
+                  No, this is someone else
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+        {confirmedNew && !askDupe && !error && <p className="text-30 leading-5 text-text-weak">Got it. Choose {existing ? "Save changes" : "Add donor"} to save this as a new person.</p>}
         {error && (
           <Alert variant="error">
             <AlertDescription>{error}</AlertDescription>
@@ -256,7 +303,7 @@ export function ConstituentForm({ orgId, existing }: { orgId: string; existing: 
         <Button type="submit" loading={pending}>
           {existing ? "Save changes" : "Add donor"}
         </Button>
-        <Link href={existing ? `${base}/${existing.id}` : base} className="inline-flex items-center px-3 text-30 text-text-weak underline-offset-2 hover:underline">
+        <Link href={existing ? `${base}/${existing.id}` : returnToBatch ? `/app/orgs/${orgId}/batches/${returnToBatch}` : base} className="inline-flex items-center px-3 text-30 text-text-weak underline-offset-2 hover:underline">
           Cancel
         </Link>
       </div>

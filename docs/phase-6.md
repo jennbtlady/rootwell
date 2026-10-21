@@ -277,3 +277,32 @@ donor list and pulls lists for mailings.
   - The import choices case in `packages/api/test/imports.test.ts`, the mailing columns in
     `reporting.test.ts`, and a route-matrix entry for the coding route.
   - `suggestCoding` cases in `packages/core/test/import.test.ts`.
+
+## Dana's gift form fixes (2026-10-21)
+
+From the persona walkthroughs.
+
+- **Edit a gift in an open batch (D-d).**
+  - Each gift in an open batch has Edit, next to Remove.
+  - The entry form loads that gift, with "Save changes" and "Cancel editing", and the row
+    shows "Editing above".
+  - It uses the existing `PATCH /orgs/:orgId/gifts/:id`, so the gift entry rules still
+    apply. Posted gifts stay locked by the database.
+- **Adding a donor from the gift form.**
+  - The link reads "Add "name" as a new donor" and opens
+    `/constituents/new?batch=...&name=...`.
+  - The name fills first and last name. Saving, or choosing an existing match, goes back to
+    the batch with that donor chosen.
+- **A second look at likely duplicates.** When a new donor matches someone with a score of
+  0.9 or more (same email, or same name and ZIP), "Add donor" first asks "Is this X?"
+  with "Use X" or "No, this is someone else". The live warning moved below the email and
+  phone fields, so the field being typed in does not jump.
+- **Wording.**
+  - A required campaign starts on "Choose a campaign", not "None".
+  - The sample organization's Campaign hint no longer mentions appeals. This applies to
+    sample organizations created from now on.
+  - The donor page's yearly totals use the fiscal year (D-e).
+- **Duplicate reasons.** "Same name" is used when names are identical (from Marcus's fixes).
+- **No schema change.** The seed change is text only.
+- **Tests:** `apps/web/e2e/phase-6-dana-gift-form.spec.ts`. It also checks that the field
+  being typed in stays above the phone tab bar (D-f).

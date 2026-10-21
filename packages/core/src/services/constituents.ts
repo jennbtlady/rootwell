@@ -91,9 +91,12 @@ const summarySelect = sql`
 const giftJoin = sql`
   left join lateral (select max(gift_date) as last_gift_on, sum(amount) as lifetime_total, count(*) as gift_count,
                     min(gift_date) as first_gift_on,
-                    sum(amount) filter (where gift_date >= date_trunc('year', current_date)) as this_year_total,
-                    sum(amount) filter (where gift_date >= date_trunc('year', current_date) - interval '1 year' and gift_date < date_trunc('year', current_date)) as last_year_total
-               from gifts where constituent_id = c.id and gift_type <> 'soft_credit') g on true
+                    sum(amount) filter (where gift_date >= fy.s) as this_year_total,
+                    sum(amount) filter (where gift_date >= fy.s - interval '1 year' and gift_date < fy.s) as last_year_total
+               from gifts,
+                    -- "This year" is the organization's fiscal year, as on Home and the board.
+                    (select app.fiscal_year_start(current_date, o.fiscal_year_start_month) as s from organizations o where o.id = c.org_id) fy
+              where constituent_id = c.id and gift_type <> 'soft_credit') g on true
 `;
 
 function mapSummary(r: Record<string, unknown>): ConstituentSummary {

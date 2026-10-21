@@ -74,11 +74,16 @@ From Dana (executive director):
   confirm lists both totals but not the $25 difference. While working, the page shows
   only "Deposit says $1,040.00", never "$25.00 short".
 - **D-d. Gifts in an open batch cannot be edited.** The only option is Remove and retype.
+  Fixed 2026-10-21: each gift in an open batch has Edit. The entry form switches to that
+  gift, with "Save changes" and "Cancel editing", and the row shows "Editing above".
 - **D-e. "This year" means fiscal year on Home and the board, but calendar year on the
   donor page.** The same donor reads as "$900 last year, not yet this year" on Home and
   "$1,150 this year" on her record.
+  Fixed 2026-10-21: the donor page counts the fiscal year and says "This fiscal year" and
+  "Last fiscal year".
 - **D-f. Phone: the field being typed in hides behind the bottom tab bar** (Add a donor,
   Email, at 375px).
+  Fixed with the setup wizard (scroll padding under 640px). A check was added 2026-10-21.
 
 From the other journeys:
 
@@ -184,6 +189,14 @@ From the other journeys:
   - "Add a new donor" from the gift form leaves the batch and drops the typed name.
   - Saving a donor despite a strong duplicate match gets no second check, and the warning
     sits above the field being typed in.
+  - Fixed 2026-10-21:
+    - A required campaign starts on "Choose a campaign". The sample hint no longer
+      mentions appeals.
+    - "Add a new donor" says "Add "Zelda Quill" as a new donor", fills the name, and goes
+      back to the batch with that donor chosen.
+    - A strong match (same email, or same name and ZIP) asks "Is this X?" before saving,
+      with "Use X" or "No, this is someone else". The live warning now sits below the
+      email and phone fields.
 - **Board sharing is hard to find.** It sits under Settings, Connections. The Board
   dashboard page mentions board links but has no button for one.
 - **Copy link gives no visible "Copied".**

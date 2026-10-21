@@ -48,7 +48,7 @@ begin
   insert into appeals (org_id, name, code, campaign_id) values (p_org, 'April email', 'SPR-EM', v_spring) returning id into v_email;
   update organizations set gift_entry_standards = jsonb_build_object(
     'requiredFields', jsonb_build_array('campaignId'), 'checkNumberForChecks', true, 'defaultFundId', v_general, 'useBatches', true,
-    'fieldInstructions', jsonb_build_object('campaignId', 'Use the campaign printed on the reply card. If there is none, use the current appeal.', 'checkNumber', 'The number in the top right of the check.', 'notes', 'Anything the thank-you letter should mention.'),
+    'fieldInstructions', jsonb_build_object('campaignId', 'Use the campaign printed on the reply card. If there is none, choose the current campaign.', 'checkNumber', 'The number in the top right of the check.', 'notes', 'Anything the thank-you letter should mention.'),
     'conventions', E'Batches are one per deposit, named for the day the deposit is made.\nAnonymous gifts go to the constituent named "Anonymous donor".\nIn-kind gifts need a fair market value from the donor''s letter.')
   where id = p_org;
 

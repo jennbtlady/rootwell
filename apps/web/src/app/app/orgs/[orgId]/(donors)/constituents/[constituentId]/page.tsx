@@ -74,8 +74,8 @@ export default async function ConstituentPage({ params }: PageProps<"/app/orgs/[
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
           ["Lifetime", formatMoney(c.lifetimeTotal), `${c.giftCount} gift${c.giftCount === 1 ? "" : "s"}`],
-          ["This year", formatMoney(c.thisYearTotal), ""],
-          ["Last year", formatMoney(c.lastYearTotal), ""],
+          ["This fiscal year", formatMoney(c.thisYearTotal), ""],
+          ["Last fiscal year", formatMoney(c.lastYearTotal), ""],
           ["Last gift", c.lastGiftOn ? formatDate(c.lastGiftOn) : "None yet", c.firstGiftOn ? `First ${formatDate(c.firstGiftOn)}` : ""],
         ].map(([label, value, sub]) => (
           <Card key={label} className="p-4 sm:p-4">

@@ -9,6 +9,7 @@ import { api, errorMessage } from "@/lib/api";
 import { formatDate, formatMoney } from "@/lib/format";
 import { Alert, AlertDescription, AlertTitle, Button, Combobox, EmptyState, FormField, Input, Select, Table, TBody, TD, Textarea, TH, THead, TR, useToast, type ComboboxItem } from "@/components/ui";
 import { anchorClass } from "@/components/ui/text";
+import { cn } from "@/lib/cn";
 import { PostBatchDialog } from "./post-batch-dialog";
 
 type Props = {
@@ -27,6 +28,9 @@ export function BatchWorkspace({ orgId, batch, standards, funds, campaigns, appe
   const toast = useToast();
   const open = batch.status === "open";
   const [postOpen, setPostOpen] = useState(false);
+  // A gift being corrected. The entry form switches to it, so a typo is fixed in place
+  // instead of removed and retyped (Dana, in the persona walkthroughs).
+  const [editing, setEditing] = useState<Gift | null>(null);
 
   async function removeGift(g: Gift) {
     if (!window.confirm(`Remove the ${formatMoney(g.amount)} gift from ${g.constituentName}?`)) return;
@@ -39,7 +43,20 @@ export function BatchWorkspace({ orgId, batch, standards, funds, campaigns, appe
 
   return (
     <div className="flex flex-col gap-6">
-      {open && <GiftEntryForm orgId={orgId} batch={batch} standards={standards} funds={funds} campaigns={campaigns} appeals={appeals} preselected={preselected} />}
+      {open && (
+        <GiftEntryForm
+          key={editing?.id ?? "new"}
+          orgId={orgId}
+          batch={batch}
+          standards={standards}
+          funds={funds}
+          campaigns={campaigns}
+          appeals={appeals}
+          preselected={preselected}
+          editing={editing}
+          onDoneEditing={() => setEditing(null)}
+        />
+      )}
 
       <section className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -66,7 +83,7 @@ export function BatchWorkspace({ orgId, batch, standards, funds, campaigns, appe
             </THead>
             <TBody>
               {batch.gifts.map((g) => (
-                <TR key={g.id}>
+                <TR key={g.id} className={cn(editing?.id === g.id && "bg-background-primary-weakest")}>
                   <TD>
                     <Link href={`/app/orgs/${orgId}/constituents/${g.constituentId}`} className={anchorClass + " font-medium"}>
                       {g.constituentName}
@@ -82,9 +99,26 @@ export function BatchWorkspace({ orgId, batch, standards, funds, campaigns, appe
                   </TD>
                   {open && (
                     <TD align="right">
-                      <Button variant="destructive_link" size="small" onClick={() => removeGift(g)}>
-                        Remove
-                      </Button>
+                      <span className="flex justify-end gap-1">
+                        {editing?.id === g.id ? (
+                          <span className="px-2 text-30 text-text-weak">Editing above</span>
+                        ) : (
+                          <Button
+                            variant="link"
+                            size="small"
+                            aria-label={`Edit the ${formatMoney(g.amount)} gift from ${g.constituentName}`}
+                            onClick={() => {
+                              setEditing(g);
+                              document.getElementById("gift-entry-title")?.scrollIntoView({ block: "start" });
+                            }}
+                          >
+                            Edit
+                          </Button>
+                        )}
+                        <Button variant="destructive_link" size="small" aria-label={`Remove the ${formatMoney(g.amount)} gift from ${g.constituentName}`} onClick={() => removeGift(g)}>
+                          Remove
+                        </Button>
+                      </span>
                     </TD>
                   )}
                 </TR>
@@ -97,23 +131,26 @@ export function BatchWorkspace({ orgId, batch, standards, funds, campaigns, appe
   );
 }
 
-function GiftEntryForm({ orgId, batch, standards, funds, campaigns, appeals, preselected }: Omit<Props, "canPost">) {
+function GiftEntryForm({ orgId, batch, standards, funds, campaigns, appeals, preselected, editing, onDoneEditing }: Omit<Props, "canPost"> & { editing: Gift | null; onDoneEditing: () => void }) {
   const router = useRouter();
+  const toast = useToast();
+  const e0 = editing;
   const required = requiredGiftFields(standards);
   const hint = (f: GiftField) => standards.fieldInstructions[f];
-  const [donor, setDonor] = useState<ComboboxItem | null>(preselected);
+  const [donor, setDonor] = useState<ComboboxItem | null>(e0 ? { id: e0.constituentId, label: e0.constituentName, detail: null } : preselected);
   const [results, setResults] = useState<ComboboxItem[]>([]);
-  const [amount, setAmount] = useState("");
-  const [giftDate, setGiftDate] = useState(batch.batchDate);
-  const [fundId, setFundId] = useState(standards.defaultFundId ?? funds[0]?.id ?? "");
-  const [campaignId, setCampaignId] = useState(standards.defaultCampaignId && campaigns.some((c) => c.id === standards.defaultCampaignId) ? standards.defaultCampaignId : "");
-  const [appealId, setAppealId] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<(typeof PAYMENT_METHODS)[number]>("check");
-  const [giftType, setGiftType] = useState<(typeof GIFT_TYPES)[number]>("one_time");
-  const [checkNumber, setCheckNumber] = useState("");
-  const [reference, setReference] = useState("");
-  const [fmv, setFmv] = useState("");
-  const [notes, setNotes] = useState("");
+  const [query, setQuery] = useState("");
+  const [amount, setAmount] = useState(e0 ? e0.amount : "");
+  const [giftDate, setGiftDate] = useState(e0 ? e0.giftDate : batch.batchDate);
+  const [fundId, setFundId] = useState(e0 ? (e0.fundId ?? "") : (standards.defaultFundId ?? funds[0]?.id ?? ""));
+  const [campaignId, setCampaignId] = useState(e0 ? (e0.campaignId ?? "") : standards.defaultCampaignId && campaigns.some((c) => c.id === standards.defaultCampaignId) ? standards.defaultCampaignId : "");
+  const [appealId, setAppealId] = useState(e0?.appealId ?? "");
+  const [paymentMethod, setPaymentMethod] = useState<(typeof PAYMENT_METHODS)[number]>((e0?.paymentMethod as (typeof PAYMENT_METHODS)[number]) ?? "check");
+  const [giftType, setGiftType] = useState<(typeof GIFT_TYPES)[number]>((e0?.giftType as (typeof GIFT_TYPES)[number]) ?? "one_time");
+  const [checkNumber, setCheckNumber] = useState(e0?.checkNumber ?? "");
+  const [reference, setReference] = useState(e0?.reference ?? "");
+  const [fmv, setFmv] = useState(e0?.fairMarketValue ?? "");
+  const [notes, setNotes] = useState(e0?.notes ?? "");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -123,11 +160,12 @@ function GiftEntryForm({ orgId, batch, standards, funds, campaigns, appeals, pre
   const searchSeq = useRef(0);
 
   useEffect(() => {
-    if (preselected) amountRef.current?.focus();
-  }, [preselected]);
+    if (e0 || preselected) amountRef.current?.focus();
+  }, [e0, preselected]);
 
   async function search(q: string) {
     const seq = ++searchSeq.current;
+    setQuery(q.trim());
     if (!q.trim()) return setResults([]);
     const res = await api().api.v1.orgs[":orgId"].constituents.$get({ param: { orgId }, query: { q, limit: "8" } });
     if (!res.ok || seq !== searchSeq.current) return;
@@ -142,13 +180,13 @@ function GiftEntryForm({ orgId, batch, standards, funds, campaigns, appeals, pre
     setLastSaved(null);
     if (!donor) return setFieldErrors({ constituentId: "Choose who gave this gift" });
     setPending(true);
-    const res = await api().api.v1.orgs[":orgId"].gifts.$post({
-      param: { orgId },
-      json: {
-        constituentId: donor.id, batchId: batch.id, amount, giftDate, fundId: fundId || null, campaignId: campaignId || null, appealId: appealId || null,
-        paymentMethod, giftType, checkNumber: checkNumber || null, reference: reference || null, fairMarketValue: fmv || null, notes: notes || null,
-      },
-    });
+    const json = {
+      constituentId: donor.id, batchId: batch.id, amount, giftDate, fundId: fundId || null, campaignId: campaignId || null, appealId: appealId || null,
+      paymentMethod, giftType, checkNumber: checkNumber || null, reference: reference || null, fairMarketValue: fmv || null, notes: notes || null,
+    };
+    const res = e0
+      ? await api().api.v1.orgs[":orgId"].gifts[":id"].$patch({ param: { orgId, id: e0.id }, json })
+      : await api().api.v1.orgs[":orgId"].gifts.$post({ param: { orgId }, json });
     setPending(false);
     if (res.status === 400) {
       const body = (await res.json()) as { issues?: { path: string; message: string }[]; error?: string };
@@ -159,6 +197,12 @@ function GiftEntryForm({ orgId, batch, standards, funds, campaigns, appeals, pre
       return;
     }
     if (!res.ok) return setError(await errorMessage(res));
+    if (e0) {
+      toast({ type: "success", title: "Gift updated", description: `${formatMoney(amount)} from ${donor.label}.` });
+      onDoneEditing();
+      router.refresh();
+      return;
+    }
     setLastSaved(`${formatMoney(amount)} from ${donor.label} saved.`);
     // Keep date, fund, campaign, appeal and method for the next gift in the pile; clear the rest.
     setDonor(null);
@@ -179,8 +223,8 @@ function GiftEntryForm({ orgId, batch, standards, funds, campaigns, appeals, pre
   return (
     <form onSubmit={submit} className="flex flex-col gap-4 rounded-30 border border-border-weaker bg-background-weakest p-4 sm:p-6" noValidate aria-labelledby="gift-entry-title">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 id="gift-entry-title" className="text-40 font-semibold tracking-[-0.02em]">
-          Enter a gift
+        <h2 id="gift-entry-title" className="scroll-mt-4 text-40 font-semibold tracking-[-0.02em]">
+          {e0 ? `Edit the ${formatMoney(e0.amount)} gift from ${e0.constituentName}` : "Enter a gift"}
         </h2>
         <Link href={`/app/orgs/${orgId}/settings/gift-standards/print`} className={`${anchorClass} text-30`} target="_blank">
           Gift entry standards
@@ -214,9 +258,10 @@ function GiftEntryForm({ orgId, batch, standards, funds, campaigns, appeals, pre
               emptyText="No one matches. Check the spelling before adding someone new."
               hasError={f.hasError}
               aria-describedby={f["aria-describedby"]}
+              // Comes back to this batch with the new donor filled in, and keeps what was typed.
               footer={
-                <Link href={`/app/orgs/${orgId}/constituents/new`} className={`${anchorClass} text-30`}>
-                  Add a new donor
+                <Link href={`/app/orgs/${orgId}/constituents/new?${new URLSearchParams({ batch: batch.id, ...(query ? { name: query } : {}) }).toString()}`} className={`${anchorClass} text-30`}>
+                  {query ? `Add \u201c${query}\u201d as a new donor` : "Add a new donor"}
                 </Link>
               }
             />
@@ -243,7 +288,7 @@ function GiftEntryForm({ orgId, batch, standards, funds, campaigns, appeals, pre
         <FormField id="gift-campaign" label={GIFT_FIELD_LABEL.campaignId} required={required.has("campaignId")} optional={!required.has("campaignId")} error={fe("campaignId")} help={hint("campaignId")}>
           {(f) => (
             <Select {...f} value={campaignId} onChange={(e) => setCampaignId(e.target.value)}>
-              <option value="">None</option>
+              <option value="">{required.has("campaignId") ? "Choose a campaign" : "None"}</option>
               {campaigns.map((x) => (
                 <option key={x.id} value={x.id}>
                   {x.name}
@@ -320,10 +365,15 @@ function GiftEntryForm({ orgId, batch, standards, funds, campaigns, appeals, pre
           </Alert>
         )}
       </div>
-      <div>
+      <div className="flex flex-wrap gap-2">
         <Button type="submit" loading={pending}>
-          Save gift and add another
+          {e0 ? "Save changes" : "Save gift and add another"}
         </Button>
+        {e0 && (
+          <Button variant="secondary" onClick={onDoneEditing}>
+            Cancel editing
+          </Button>
+        )}
       </div>
     </form>
   );
