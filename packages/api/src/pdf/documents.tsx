@@ -116,7 +116,7 @@ export function renderStatements(org: OrgLetterhead, year: number, donors: State
           <Text style={s.para}>
             {org.name} is a tax-exempt organization under section 501(c)(3) of the Internal Revenue Code{org.ein ? `, EIN ${org.ein}` : ""}. Please keep this statement for your tax records.
           </Text>
-          <Text style={s.small}>Questions about this statement? Reply to the email it came with or call us.</Text>
+          <Text style={s.small}>Questions about this statement? Contact us at the address above.</Text>
         </Page>
       ))}
     </Document>,

@@ -38,7 +38,7 @@ export default async function StatementsPage({ params, searchParams }: PageProps
         orgId={orgId}
         year={year}
         missingEin={!data.ein}
-        donors={data.donors.map((d) => ({ constituentId: d.constituentId, name: d.name, email: d.email, doNotEmail: d.doNotEmail, hasAddress: d.addressLines.length > 0, gifts: d.gifts.length, total: d.total, deductibleTotal: d.deductibleTotal }))}
+        donors={data.donors.map((d) => ({ constituentId: d.constituentId, name: d.name, email: d.email, doNotEmail: d.doNotEmail, hasAddress: d.addressLines.length > 0, gifts: d.gifts.length, total: d.total, deductibleTotal: d.deductibleTotal, emailedAt: d.emailedAt, printedAt: d.printedAt }))}
       />
     </div>
   );

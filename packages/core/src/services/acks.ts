@@ -161,6 +161,9 @@ export type StatementDonor = {
   gifts: { date: string; amount: string; deductible: string; fund: string | null; received: string }[];
   total: string;
   deductibleTotal: string;
+  /** When this year's statement was emailed or downloaded for printing, if it was. */
+  emailedAt: string | null;
+  printedAt: string | null;
 };
 
 export async function statementDonors(tx: Tx, orgId: string, year: number, constituentIds?: string[]): Promise<StatementDonor[]> {
@@ -171,7 +174,9 @@ export async function statementDonors(tx: Tx, orgId: string, year: number, const
            (select row_to_json(a) from constituent_addresses a where a.constituent_id = c.id order by a.is_primary desc limit 1) as address,
            json_agg(json_build_object('date', g.gift_date, 'amount', g.amount::text, 'deductible', coalesce(g.deductible_amount, g.amount)::text, 'fund', f.name,
                     'received', (g.amount - coalesce(g.deductible_amount, g.amount))::text) order by g.gift_date) as gifts,
-           sum(g.amount)::text as total, sum(coalesce(g.deductible_amount, g.amount))::text as deductible_total
+           sum(g.amount)::text as total, sum(coalesce(g.deductible_amount, g.amount))::text as deductible_total,
+           (select max(s.sent_at) from statement_sends s where s.constituent_id = c.id and s.tax_year = ${year} and s.channel = 'email' and s.status = 'sent') as emailed_at,
+           (select max(s.sent_at) from statement_sends s where s.constituent_id = c.id and s.tax_year = ${year} and s.channel = 'print' and s.status = 'sent') as printed_at
       from gifts g join constituents c on c.id = g.constituent_id left join funds f on f.id = g.fund_id
      where g.org_id = ${orgId} and g.posted_at is not null and g.gift_type not in ('soft_credit', 'pledge')
        and g.gift_date >= make_date(${year}, 1, 1) and g.gift_date < make_date(${year + 1}, 1, 1) and not c.deceased ${only}
@@ -183,6 +188,27 @@ export async function statementDonors(tx: Tx, orgId: string, year: number, const
       constituentId: x.id, name: x.display_name, email: x.email ?? null, doNotEmail: Boolean(x.do_not_email),
       addressLines: a ? [a.line1, a.line2, [[a.city, a.state].filter(Boolean).join(", "), a.postal_code].filter(Boolean).join(" ")].filter((l): l is string => Boolean(l)) : [],
       gifts: x.gifts, total: x.total, deductibleTotal: x.deductible_total,
+      emailedAt: x.emailed_at ? new Date(x.emailed_at).toISOString() : null,
+      printedAt: x.printed_at ? new Date(x.printed_at).toISOString() : null,
     };
   });
+}
+
+/** Donors whose statement goes by mail: no usable email, or they asked for no email. */
+export const toPrint = (d: Pick<StatementDonor, "email" | "doNotEmail">) => !d.email || d.doNotEmail;
+
+/** Records statements that went out, one row per donor, year and channel (a resend updates it). */
+export async function recordStatementSends(
+  tx: Tx,
+  orgId: string,
+  year: number,
+  rows: { constituentId: string; channel: "email" | "print"; status: "sent" | "failed"; recipient: string | null; error: string | null }[],
+): Promise<void> {
+  for (const r of rows) {
+    await tx.execute(sql`
+      insert into statement_sends (org_id, constituent_id, tax_year, channel, status, recipient, error, sent_at)
+      values (${orgId}, ${r.constituentId}, ${year}, ${r.channel}, ${r.status}, ${r.recipient}, ${r.error}, now())
+      on conflict (org_id, constituent_id, tax_year, channel)
+      do update set status = excluded.status, recipient = excluded.recipient, error = excluded.error, sent_at = now()`);
+  }
 }

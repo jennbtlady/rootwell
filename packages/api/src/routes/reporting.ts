@@ -18,6 +18,8 @@ import {
   saveTemplate,
   setHideBoardNames,
   statementDonors,
+  recordStatementSends,
+  toPrint,
   letterhead,
 } from "@maple/core/services";
 import type { ApiEnv } from "../env";
@@ -191,20 +193,36 @@ export const reporting = new Hono<ApiEnv>()
       return statementDonors(tx, orgId, year);
     });
     if (!out) return c.json(forbidden, 403);
-    return c.json({ donors: out.map((d) => ({ constituentId: d.constituentId, name: d.name, email: d.email, doNotEmail: d.doNotEmail, hasAddress: d.addressLines.length > 0, gifts: d.gifts.length, total: d.total, deductibleTotal: d.deductibleTotal })) });
+    return c.json({ donors: out.map((d) => ({ constituentId: d.constituentId, name: d.name, email: d.email, doNotEmail: d.doNotEmail, hasAddress: d.addressLines.length > 0, gifts: d.gifts.length, total: d.total, deductibleTotal: d.deductibleTotal, emailedAt: d.emailedAt, printedAt: d.printedAt })) });
   })
-  .post("/:orgId/statements/:year/pdf", validate("param", orgParam.extend({ year: z.coerce.number().int().min(2000).max(2100) })), validate("json", z.object({ constituentIds: z.array(z.string().uuid()).max(5000).optional() })), async (c) => {
-    const { orgId, year } = c.req.valid("param");
-    const out = await withRls(getDb(), c.get("claims"), async (tx) => {
-      const { role } = await roleIn(tx, orgId);
-      if (role !== "owner" && role !== "admin") return null;
-      return { org: await letterhead(tx, orgId), donors: await statementDonors(tx, orgId, year, c.req.valid("json").constituentIds) };
-    });
-    if (!out) return c.json(forbidden, 403);
-    const pdf = await renderStatements(out.org, year, out.donors);
-    return c.body(new Uint8Array(pdf), 200, { "content-type": "application/pdf", "content-disposition": `attachment; filename="${year}-giving-statements.pdf"` });
-  })
-  .post("/:orgId/statements/:year/email", validate("param", orgParam.extend({ year: z.coerce.number().int().min(2000).max(2100) })), validate("json", z.object({ constituentIds: z.array(z.string().uuid()).max(5000).optional() })), async (c) => {
+  .post(
+    "/:orgId/statements/:year/pdf",
+    validate("param", orgParam.extend({ year: z.coerce.number().int().min(2000).max(2100) })),
+    // only "to_print": just the donors without email, and record that theirs were printed.
+    validate("json", z.object({ constituentIds: z.array(z.string().uuid()).max(5000).optional(), only: z.enum(["to_print"]).optional() })),
+    async (c) => {
+      const { orgId, year } = c.req.valid("param");
+      const body = c.req.valid("json");
+      const out = await withRls(getDb(), c.get("claims"), async (tx) => {
+        const { role } = await roleIn(tx, orgId);
+        if (role !== "owner" && role !== "admin") return null;
+        const all = await statementDonors(tx, orgId, year, body.constituentIds);
+        const donors = body.only === "to_print" ? all.filter(toPrint) : all;
+        if (body.only === "to_print" && donors.length) {
+          await recordStatementSends(tx, orgId, year, donors.map((d) => ({ constituentId: d.constituentId, channel: "print" as const, status: "sent" as const, recipient: null, error: null })));
+        }
+        return { org: await letterhead(tx, orgId), donors };
+      });
+      if (!out) return c.json(forbidden, 403);
+      if (!out.donors.length) return c.json({ error: "There are no statements to print for that year." }, 409);
+      const pdf = await renderStatements(out.org, year, out.donors);
+      const name = body.only === "to_print" ? `${year}-statements-to-print.pdf` : `${year}-giving-statements.pdf`;
+      return c.body(new Uint8Array(pdf), 200, { "content-type": "application/pdf", "content-disposition": `attachment; filename="${name}"` });
+    },
+  )
+  // Emails each donor their statement once. Donors already emailed for that year are skipped
+  // unless resend is true, so a second click never sends duplicate tax letters.
+  .post("/:orgId/statements/:year/email", validate("param", orgParam.extend({ year: z.coerce.number().int().min(2000).max(2100) })), validate("json", z.object({ constituentIds: z.array(z.string().uuid()).max(5000).optional(), resend: z.boolean().default(false) })), async (c) => {
     const { orgId, year } = c.req.valid("param");
     const out = await withRls(getDb(), c.get("claims"), async (tx) => {
       const { role } = await roleIn(tx, orgId);
@@ -213,22 +231,33 @@ export const reporting = new Hono<ApiEnv>()
     });
     if (!out) return c.json(forbidden, 403);
     const mailer = getMailer();
+    const resend = c.req.valid("json").resend;
     let sent = 0;
     let skipped = 0;
+    let alreadySent = 0;
     const failures: string[] = [];
+    const records: { constituentId: string; channel: "email"; status: "sent" | "failed"; recipient: string | null; error: string | null }[] = [];
     for (const d of out.donors) {
-      if (!d.email || d.doNotEmail) {
+      if (toPrint(d)) {
         skipped++;
+        continue;
+      }
+      if (d.emailedAt && !resend) {
+        alreadySent++;
         continue;
       }
       try {
         const pdf = await renderStatements(out.org, year, [d]);
         const text = `Dear ${d.name},\n\nAttached is your ${year} giving statement from ${out.org.name}. Thank you for your support this year.\n\nPlease keep it for your tax records.\n\n${out.org.name}`;
-        await mailer.send({ to: d.email, subject: `Your ${year} giving statement from ${out.org.name}`, text, html: textToHtml(text), attachments: [{ filename: `${year}-giving-statement.pdf`, content: pdf, contentType: "application/pdf" }] });
+        await mailer.send({ to: d.email!, subject: `Your ${year} giving statement from ${out.org.name}`, text, html: textToHtml(text), attachments: [{ filename: `${year}-giving-statement.pdf`, content: pdf, contentType: "application/pdf" }] });
         sent++;
+        records.push({ constituentId: d.constituentId, channel: "email", status: "sent", recipient: d.email, error: null });
       } catch (e) {
-        failures.push((e as Error).message.slice(0, 200));
+        const message = (e as Error).message.slice(0, 200);
+        failures.push(message);
+        records.push({ constituentId: d.constituentId, channel: "email", status: "failed", recipient: d.email, error: message });
       }
     }
-    return c.json({ sent, skipped, failed: failures.length, firstError: failures[0] ?? null });
+    if (records.length) await withRls(getDb(), c.get("claims"), (tx) => recordStatementSends(tx, orgId, year, records));
+    return c.json({ sent, skipped, alreadySent, failed: failures.length, firstError: failures[0] ?? null });
   });

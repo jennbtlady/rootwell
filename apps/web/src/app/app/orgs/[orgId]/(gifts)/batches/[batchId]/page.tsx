@@ -7,6 +7,7 @@ import { formatDate, formatMoney } from "@/lib/format";
 import { Badge, Card, Heading } from "@/components/ui";
 import { anchorClass } from "@/components/ui/text";
 import { BatchWorkspace } from "@/components/gifts/batch-workspace";
+import { depositCheck } from "@/lib/deposit-check";
 import { BatchExport } from "@/components/gifts/batch-export";
 
 export default async function BatchPage({ params, searchParams }: PageProps<"/app/orgs/[orgId]/batches/[batchId]">) {
@@ -31,7 +32,7 @@ export default async function BatchPage({ params, searchParams }: PageProps<"/ap
   if (!data || !data.org || !data.standards) notFound();
   const { batch, org } = data;
   const canPost = org.role === "owner" || org.role === "admin";
-  const matches = batch.expectedTotal == null || Number(batch.expectedTotal) === Number(batch.giftTotal);
+  const check = depositCheck(batch);
 
   return (
     <div className="flex flex-col gap-5">
@@ -58,16 +59,12 @@ export default async function BatchPage({ params, searchParams }: PageProps<"/ap
         <Card className="p-4 sm:p-4">
           <div className="text-20 font-semibold uppercase tracking-wide text-text-weak">Gifts</div>
           <div className="mt-1 text-50 font-semibold tabular-nums">{batch.giftCount}</div>
-          {batch.expectedCount != null && <div className="text-20 text-text-weak">of {batch.expectedCount} expected</div>}
+          {check.countText && <div className={`text-20 ${check.countDiff === 0 ? "text-text-success" : "text-text-warning"}`}>{check.countText}</div>}
         </Card>
         <Card className="p-4 sm:p-4">
           <div className="text-20 font-semibold uppercase tracking-wide text-text-weak">Total</div>
           <div className="mt-1 text-50 font-semibold tabular-nums">{formatMoney(batch.giftTotal)}</div>
-          {batch.expectedTotal != null && (
-            <div className={`text-20 ${matches ? "text-text-success" : "text-text-warning"}`}>
-              {matches ? "Matches the deposit" : `Deposit says ${formatMoney(batch.expectedTotal)}`}
-            </div>
-          )}
+          {check.totalText && <div className={`text-20 ${check.diff === 0 ? "text-text-success" : "text-text-warning"}`}>{check.totalText}</div>}
         </Card>
       </div>
 

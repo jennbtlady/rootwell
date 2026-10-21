@@ -71,6 +71,13 @@
       "when": 1792547815595,
       "tag": "0009_phase6_lapsed_accounts",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792588411090,
+      "tag": "0010_phase6_statement_sends",
+      "breakpoints": true
     }
   ]
 }

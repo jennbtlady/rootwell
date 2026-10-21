@@ -9,6 +9,7 @@ import { api, errorMessage } from "@/lib/api";
 import { formatDate, formatMoney } from "@/lib/format";
 import { Alert, AlertDescription, AlertTitle, Button, Combobox, EmptyState, FormField, Input, Select, Table, TBody, TD, Textarea, TH, THead, TR, useToast, type ComboboxItem } from "@/components/ui";
 import { anchorClass } from "@/components/ui/text";
+import { PostBatchDialog } from "./post-batch-dialog";
 
 type Props = {
   orgId: string;
@@ -25,21 +26,7 @@ export function BatchWorkspace({ orgId, batch, standards, funds, campaigns, appe
   const router = useRouter();
   const toast = useToast();
   const open = batch.status === "open";
-  const [posting, setPosting] = useState(false);
-  const [postError, setPostError] = useState<string | null>(null);
-
-  async function post() {
-    const expected = batch.expectedTotal != null ? ` The deposit slip says ${formatMoney(batch.expectedTotal)}.` : "";
-    if (!window.confirm(`Post ${batch.giftCount} gifts totaling ${formatMoney(batch.giftTotal)}?${expected} Posted gifts cannot be changed.`)) return;
-    setPosting(true);
-    setPostError(null);
-    const res = await api().api.v1.orgs[":orgId"].batches[":id"].post.$post({ param: { orgId, id: batch.id } });
-    setPosting(false);
-    if (!res.ok) return setPostError(await errorMessage(res));
-    const { postedCount, postedTotal } = (await res.json()) as { postedCount: number; postedTotal: string };
-    toast({ type: "success", title: "Batch posted", description: `${postedCount} gifts totaling ${formatMoney(postedTotal)} are now locked.` });
-    router.refresh();
-  }
+  const [postOpen, setPostOpen] = useState(false);
 
   async function removeGift(g: Gift) {
     if (!window.confirm(`Remove the ${formatMoney(g.amount)} gift from ${g.constituentName}?`)) return;
@@ -58,17 +45,10 @@ export function BatchWorkspace({ orgId, batch, standards, funds, campaigns, appe
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-40 font-semibold tracking-[-0.02em]">Gifts in this batch</h2>
           {open && canPost && batch.giftCount > 0 && (
-            <Button onClick={post} loading={posting}>
-              Post batch
-            </Button>
+            <Button onClick={() => setPostOpen(true)}>Post batch</Button>
           )}
         </div>
-        {postError && (
-          <Alert variant="error">
-            <AlertTitle>The batch was not posted</AlertTitle>
-            <AlertDescription>{postError}</AlertDescription>
-          </Alert>
-        )}
+        {postOpen && <PostBatchDialog orgId={orgId} batch={batch} open={postOpen} onClose={() => setPostOpen(false)} />}
         {batch.gifts.length === 0 ? (
           <EmptyState title="No gifts yet">Enter the first gift above.</EmptyState>
         ) : (

@@ -144,6 +144,19 @@ describe.skipIf(!DATABASE_URL)("acknowledgments, statements, reports", () => {
     expect(sent[0]!.attachments?.[0]?.contentType).toBe("application/pdf");
     expect((await pdfPages(sent[0]!.attachments![0]!.content)).length).toBe(1);
 
+    // A second click sends nothing: both donors already have this year's statement.
+    sent.length = 0;
+    const again = await call(owner, "POST", `/statements/${lastYear}/email`, {});
+    expect(await again.json()).toMatchObject({ sent: 0, alreadySent: 2 });
+    expect(sent).toHaveLength(0);
+    const after = (await (await call(owner, "GET", `/statements/${lastYear}`)).json()) as { donors: { emailedAt: string | null; printedAt: string | null }[] };
+    expect(after.donors.every((d) => d.emailedAt && !d.printedAt)).toBe(true);
+    // Everyone was emailed, so there is nothing to print.
+    expect((await call(owner, "POST", `/statements/${lastYear}/pdf`, { only: "to_print" })).status).toBe(409);
+    // Sending again on purpose still works.
+    const resent = await call(owner, "POST", `/statements/${lastYear}/email`, { resend: true });
+    expect(await resent.json()).toMatchObject({ sent: 2, alreadySent: 0 });
+
     const boardTry = await call(board, "GET", `/statements/${lastYear}`);
     expect(boardTry.status).toBe(403);
   });

@@ -91,6 +91,11 @@ Also this phase, at Jenn's request:
 
 ## Rollback
 
+Migration `0010_phase6_statement_sends`: drop `statement_sends` and remove
+`drizzle/custom/0012_statement_sends.sql`. The statements page goes back to emailing
+everyone on each click.
+
+
 Migration `0009_phase6_lapsed_accounts` (lapsed accounts): drop `deleted_organizations` and the
 four `organizations.lapse_*`/`last_activity_at` columns, then remove `0011_lapsed_accounts.sql`'s
 functions. The `scheduler` enum value can stay; Postgres cannot drop an enum value without
@@ -163,3 +168,29 @@ page and QuickBooks names for the new screens to show.
   - `app/icon.svg`, the browser tab icon. It replaces the Next.js placeholder.
 - To change the icon, edit `icon.svg` and `icon-maskable.svg`, then re-render the PNGs at
   the same sizes.
+
+## Dana's trust fixes (2026-10-21)
+
+From the persona walkthroughs.
+
+- **The dashboard updates when gifts are posted.** `postBatch`, `commitImport` and
+  `rollbackImport` call `app.refresh_dashboard` in the same transaction.
+- **Year-end statements go out once.**
+  - The `statement_sends` table (approved by Jenn) holds one row per donor, tax year and
+    channel.
+  - RLS is the same as other donor data: staff read, and owners and admins write. Lapsed
+    accounts are read only.
+  - A merged-away donor's rows are removed with them.
+  - The sample organization needs no seed change: statements not yet sent is the realistic
+    starting state.
+- **Deposit mismatches are explained in dollars.**
+  - The batch page shows the difference, and an in-app dialog appears before posting.
+  - `app.post_batch` raises plain-language messages.
+- **Smaller fixes:**
+  - Printed statements no longer say "Reply to the email it came with".
+  - Date and time text is identical on the server and in the browser, which fixes a
+    re-render warning on Board sharing.
+- **Tests:**
+  - `apps/web/e2e/phase-6-dana-trust.spec.ts`.
+  - The statements case in `packages/api/test/reporting.test.ts`.
+  - The updated posting step in `phase-1-acceptance.spec.ts`.

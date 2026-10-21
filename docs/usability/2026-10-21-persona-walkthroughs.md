@@ -47,15 +47,27 @@ is exactly the gap the onboarding wizard should close.
 
 From Dana (executive director):
 
-- **D-a. Numbers are a day old after posting.**
+- **D-a. Numbers are a day old after posting.** Fixed 2026-10-21: posting a batch, and
+  committing or undoing an import, recompute the dashboard at once.
   - Home, the board dashboard, and the board link kept showing the overnight figures
     after a batch was posted: "down 24%", when the real figure was "down 9%".
   - This is Dana's main fear: a board number that does not match the bank.
   - Fix: refresh when a batch is posted, and show "Updated at ..." plainly.
-- **D-b. Nothing records that year-end statements were emailed.** After sending, the page
+- **D-b. Nothing records that year-end statements were emailed.** Fixed 2026-10-21: a new
+  `statement_sends` table records each send. Emailing skips donors already emailed unless
+  "Send everyone a second copy" is chosen, "Download the N to print" leaves out emailed
+  donors, and every row shows "Emailed" or "Printed" with the date. After sending, the page
   looks the same, so a second click sends 36 duplicate tax letters. "Download all" also
   prints the emailed donors, so they get two copies.
-- **D-c. A batch that does not match the deposit posts with one OK.** The plain browser
+- **D-c. A batch that does not match the deposit posts with one OK.** Corrected
+  2026-10-21: the database already refused a mismatch, so wrong numbers were never locked.
+  The real problem was the wording.
+  - The page now says "$25.00 short of the deposit slip ($200.00)", and gives the count in
+    words.
+  - Posting opens an in-app dialog with the difference in dollars and "Go back and check"
+    as the first choice, plus "The slip was wrong" to correct the slip total and post.
+  - The database's refusal is in plain words.
+  - A matching batch gets a plain explanation of what posting does. The plain browser
   confirm lists both totals but not the $25 difference. While working, the page shows
   only "Deposit says $1,040.00", never "$25.00 short".
 - **D-d. Gifts in an open batch cannot be edited.** The only option is Remove and retype.

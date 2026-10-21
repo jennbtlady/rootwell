@@ -1,7 +1,8 @@
-import { boolean, date, index, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { boolean, date, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { ackChannel, ackStatus, rowMeta, uuidPk } from "./_shared";
 import { gifts } from "./gifts";
+import { constituents } from "./constituents";
 import { organizations } from "./organizations";
 
 /** One computed dashboard per organization per day. The page reads the latest. */
@@ -73,4 +74,30 @@ export const acknowledgments = pgTable(
     ...rowMeta,
   },
   (t) => [index("acknowledgments_gift_idx").on(t.giftId), index("acknowledgments_org_created_idx").on(t.orgId, t.createdAt)],
+);
+
+/**
+ * Year-end statements that went out: one row per donor, tax year, and way it was delivered
+ * ("email", or "print" when downloaded for mailing). Stops a second click from sending
+ * duplicate tax letters, and lets "download the ones to print" leave out those emailed.
+ */
+export const statementSends = pgTable(
+  "statement_sends",
+  {
+    id: uuidPk(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    constituentId: uuid("constituent_id")
+      .notNull()
+      .references(() => constituents.id, { onDelete: "cascade" }),
+    taxYear: integer("tax_year").notNull(),
+    channel: text("channel").notNull(),
+    status: text("status").notNull(),
+    recipient: text("recipient"),
+    error: text("error"),
+    sentAt: timestamp("sent_at", { withTimezone: true }).notNull().defaultNow(),
+    ...rowMeta,
+  },
+  (t) => [uniqueIndex("statement_sends_uq").on(t.orgId, t.constituentId, t.taxYear, t.channel), index("statement_sends_org_year_idx").on(t.orgId, t.taxYear)],
 );

@@ -87,8 +87,8 @@ test.describe.serial("phase 1 acceptance", () => {
       await page.getByRole("button", { name: "Save gift and add another" }).click();
       await expect(page.getByText(`$100.00 from Dana Rivera saved.`)).toBeVisible();
     }
-    await expect(page.getByText("of 20 expected")).toBeVisible();
-    await expect(page.getByText("Matches the deposit")).toBeVisible();
+    await expect(page.getByText("All 20 gifts on the slip")).toBeVisible();
+    await expect(page.getByText("Matches the deposit slip")).toBeVisible();
     await expect(page.getByRole("button", { name: "Post batch" })).toHaveCount(0);
     await signOut(page);
   });
@@ -96,8 +96,10 @@ test.describe.serial("phase 1 acceptance", () => {
   test("admin posts the batch and the history shows every change", async ({ page }) => {
     await signIn(page, s.owner);
     await page.goto(batchUrl);
-    page.once("dialog", (d) => d.accept());
     await page.getByRole("button", { name: "Post batch" }).click();
+    const confirm = page.getByRole("dialog", { name: "Post these 20 gifts?" });
+    await expect(confirm).toContainText("matches the deposit slip");
+    await confirm.getByRole("button", { name: "Post batch" }).click();
     await expect(page.getByText("Batch posted")).toBeVisible();
     await expect(page.getByText("Posted", { exact: true }).first()).toBeVisible();
     await expect(page.getByRole("button", { name: "Save gift and add another" })).toHaveCount(0);

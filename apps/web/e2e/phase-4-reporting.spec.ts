@@ -99,6 +99,7 @@ test.describe.serial("phase 4 dashboard, reports, thank-yous", () => {
     await expectAccessible(page, "thank-you queue");
     const rows = page.getByRole("checkbox", { name: /Select \$100\.00 from Dana Rivera/ });
     await expect(rows.first()).toBeVisible();
+    const before = await rows.count();
 
     // Email two of Dana's gifts.
     await rows.nth(0).check();
@@ -115,7 +116,10 @@ test.describe.serial("phase 4 dashboard, reports, thank-yous", () => {
     expect(msg.Text).toContain("Thank you for your gift of $100.00");
     expect(msg.Text).toContain("No goods or services were provided in exchange for this contribution.");
 
-    // Letters for the next one, downloaded and marked as thanked.
+    // Letters for the next one, downloaded and marked as thanked. Wait for the two emailed
+    // gifts to leave the list first, so only one gift is selected.
+    await expect(rows).toHaveCount(before - 2);
+    await expect(page.getByRole("checkbox", { name: /Select \$100\.00 from Dana Rivera/, checked: true })).toHaveCount(0);
     await page.getByRole("checkbox", { name: /Select \$100\.00 from Dana Rivera/ }).first().check();
     page.once("dialog", (d) => d.accept());
     const download = page.waitForEvent("download");

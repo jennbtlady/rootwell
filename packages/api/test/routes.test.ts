@@ -286,7 +286,7 @@ describe.skipIf(!DATABASE_URL)("api routes against the database", () => {
     await post(staffA, `/api/v1/orgs/${orgA}/gifts`, { constituentId: donor, batchId: batch2, amount: "40", giftDate: "2026-03-03", fundId: fund, campaignId: campaign, paymentMethod: "cash" });
     const mismatch = await post(ownerA, `/api/v1/orgs/${orgA}/batches/${batch2}/post`, {});
     expect(mismatch.status).toBe(400);
-    expect(((await mismatch.json()) as { error: string }).error).toMatch(/does not match/);
+    expect(((await mismatch.json()) as { error: string }).error).toMatch(/but the deposit slip says \$[0-9,.]+\. That is \$[0-9,.]+ (short|over)/);
   });
 
   it("scans duplicates, merges a pair, and undoes the merge through the API", async () => {

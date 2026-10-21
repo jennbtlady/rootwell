@@ -4,10 +4,10 @@ import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { accessToken, api, errorMessage } from "@/lib/api";
 import { saveResponse } from "@/lib/download";
-import { formatMoney } from "@/lib/format";
+import { formatDate, formatMoney } from "@/lib/format";
 import { Alert, AlertDescription, Badge, Button, EmptyState, FormField, Select, Table, TBody, TD, TH, THead, TR, useToast } from "@/components/ui";
 
-type Row = { constituentId: string; name: string; email: string | null; doNotEmail: boolean; hasAddress: boolean; gifts: number; total: string; deductibleTotal: string };
+type Row = { constituentId: string; name: string; email: string | null; doNotEmail: boolean; hasAddress: boolean; gifts: number; total: string; deductibleTotal: string; emailedAt: string | null; printedAt: string | null };
 
 export function StatementsPanel({ orgId, year, donors, missingEin }: { orgId: string; year: number; donors: Row[]; missingEin: boolean }) {
   const router = useRouter();
@@ -15,25 +15,39 @@ export function StatementsPanel({ orgId, year, donors, missingEin }: { orgId: st
   const toast = useToast();
   const [busy, setBusy] = useState<string | null>(null);
   const thisYear = new Date().getFullYear();
-  const emailable = donors.filter((d) => d.email && !d.doNotEmail).length;
+  const byEmail = donors.filter((d) => d.email && !d.doNotEmail);
+  const notYetEmailed = byEmail.filter((d) => !d.emailedAt);
+  const byMail = donors.filter((d) => !d.email || d.doNotEmail);
+  const printed = byMail.filter((d) => d.printedAt);
+  const lastEmailed = byEmail.map((d) => d.emailedAt).filter(Boolean).sort().at(-1) ?? null;
   const total = donors.reduce((s, d) => s + Number(d.total), 0);
 
-  async function pdf() {
-    setBusy("pdf");
-    const res = await fetch(`/api/v1/orgs/${orgId}/statements/${year}/pdf`, { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${(await accessToken()) ?? ""}` }, body: "{}" });
+  async function pdf(only?: "to_print") {
+    setBusy(only ?? "pdf");
+    const res = await fetch(`/api/v1/orgs/${orgId}/statements/${year}/pdf`, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${(await accessToken()) ?? ""}` },
+      body: JSON.stringify(only ? { only } : {}),
+    });
     setBusy(null);
     if (!res.ok) return toast({ type: "error", title: "The statements were not made", description: await errorMessage(res) });
-    await saveResponse(res, `${year}-giving-statements.pdf`);
+    await saveResponse(res, only ? `${year}-statements-to-print.pdf` : `${year}-giving-statements.pdf`);
+    if (only) router.refresh();
   }
 
-  async function email() {
-    if (!window.confirm(`Email ${emailable} statements for ${year}? Each donor gets their own PDF. Donors with no email or who asked for no email are skipped; print theirs from the PDF.`)) return;
-    setBusy("email");
-    const res = await api().api.v1.orgs[":orgId"].statements[":year"].email.$post({ param: { orgId, year: String(year) }, json: {} });
+  async function email(resend = false) {
+    const n = resend ? byEmail.length : notYetEmailed.length;
+    const question = resend
+      ? `Send ${year} statements again to all ${n} donors with email? Everyone gets a second copy.`
+      : `Email ${n} ${year} statements? Each donor gets their own PDF. Donors already emailed are not sent another.`;
+    if (!window.confirm(question)) return;
+    setBusy(resend ? "resend" : "email");
+    const res = await api().api.v1.orgs[":orgId"].statements[":year"].email.$post({ param: { orgId, year: String(year) }, json: { resend } });
     setBusy(null);
     if (!res.ok) return toast({ type: "error", title: "No statements were sent", description: await errorMessage(res) });
-    const r = (await res.json()) as { sent: number; skipped: number; failed: number; firstError: string | null };
-    toast({ type: r.failed ? "error" : "success", title: `${r.sent} statements sent${r.failed ? `, ${r.failed} failed` : ""}`, description: r.firstError ?? (r.skipped ? `${r.skipped} skipped` : undefined) });
+    const r = (await res.json()) as { sent: number; failed: number; firstError: string | null };
+    toast({ type: r.failed ? "error" : "success", title: `${r.sent} ${r.sent === 1 ? "statement" : "statements"} sent${r.failed ? `, ${r.failed} failed` : ""}`, description: r.firstError ?? undefined });
+    router.refresh();
   }
 
   return (
@@ -50,11 +64,20 @@ export function StatementsPanel({ orgId, year, donors, missingEin }: { orgId: st
             </Select>
           )}
         </FormField>
-        <Button variant="secondary" loading={busy === "pdf"} disabled={!donors.length || busy !== null} onClick={pdf}>
+        {notYetEmailed.length > 0 ? (
+          <Button loading={busy === "email"} disabled={busy !== null} onClick={() => email()}>
+            Email {notYetEmailed.length} not yet sent
+          </Button>
+        ) : (
+          byEmail.length > 0 && <Badge variant="success">Everyone with email has theirs</Badge>
+        )}
+        {byMail.length > 0 && (
+          <Button variant="secondary" loading={busy === "to_print"} disabled={busy !== null} onClick={() => pdf("to_print")}>
+            Download the {byMail.length} to print
+          </Button>
+        )}
+        <Button variant="link" size="small" loading={busy === "pdf"} disabled={!donors.length || busy !== null} onClick={() => pdf()}>
           Download all as one PDF
-        </Button>
-        <Button loading={busy === "email"} disabled={!emailable || busy !== null} onClick={email}>
-          Email {emailable} statements
         </Button>
       </div>
       {missingEin && (
@@ -67,8 +90,16 @@ export function StatementsPanel({ orgId, year, donors, missingEin }: { orgId: st
       ) : (
         <>
           <p className="text-30 text-text-weak">
-            {donors.length.toLocaleString()} donors gave {formatMoney(total)} in {year}.
+            {donors.length.toLocaleString()} donors gave {formatMoney(total)} in {year}. {byEmail.length > 0 && `Emailed: ${byEmail.length - notYetEmailed.length} of ${byEmail.length}${lastEmailed ? ` (last on ${formatDate(lastEmailed)})` : ""}.`}{" "}
+            {byMail.length > 0 && `By mail: ${printed.length} of ${byMail.length} printed.`}
           </p>
+          {byEmail.length > 0 && notYetEmailed.length === 0 && (
+            <p className="text-30">
+              <Button variant="link" size="small" loading={busy === "resend"} disabled={busy !== null} onClick={() => email(true)}>
+                Send everyone a second copy
+              </Button>
+            </p>
+          )}
           <Table label={`${year} statements`}>
             <THead>
               <TR>
@@ -86,7 +117,19 @@ export function StatementsPanel({ orgId, year, donors, missingEin }: { orgId: st
                   <TD align="right">{d.gifts}</TD>
                   <TD align="right">{formatMoney(d.total)}</TD>
                   <TD align="right">{formatMoney(d.deductibleTotal)}</TD>
-                  <TD>{d.email && !d.doNotEmail ? <Badge variant="neutral">Email</Badge> : d.hasAddress ? <Badge>Print and mail</Badge> : <Badge variant="warning">No email or address</Badge>}</TD>
+                  <TD>
+                    {d.emailedAt && d.email && !d.doNotEmail ? (
+                      <Badge variant="success">Emailed {formatDate(d.emailedAt)}</Badge>
+                    ) : d.printedAt && (!d.email || d.doNotEmail) ? (
+                      <Badge variant="success">Printed {formatDate(d.printedAt)}</Badge>
+                    ) : d.email && !d.doNotEmail ? (
+                      <Badge variant="neutral">Email, not sent</Badge>
+                    ) : d.hasAddress ? (
+                      <Badge>Print and mail</Badge>
+                    ) : (
+                      <Badge variant="warning">No email or address</Badge>
+                    )}
+                  </TD>
                 </TR>
               ))}
             </TBody>

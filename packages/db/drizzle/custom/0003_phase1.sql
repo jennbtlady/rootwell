@@ -252,10 +252,14 @@ begin
   select count(*), coalesce(sum(amount), 0) into v_count, v_total from gifts where batch_id = p_batch;
   if v_count = 0 then raise exception 'batch has no gifts' using errcode = '22023'; end if;
   if v_expected_total is not null and v_expected_total <> v_total then
-    raise exception 'batch total % does not match the expected total %', v_total, v_expected_total using errcode = '23514';
+    -- Plain words: this message is shown to the person posting.
+    raise exception 'These gifts add up to $%, but the deposit slip says $%. That is $% %. Find the gift that is off, or correct the deposit total, then post again.',
+      to_char(v_total, 'FM999,999,990.00'), to_char(v_expected_total, 'FM999,999,990.00'), to_char(abs(v_expected_total - v_total), 'FM999,999,990.00'),
+      case when v_total < v_expected_total then 'short' else 'over' end
+      using errcode = '23514';
   end if;
   if v_expected_count is not null and v_expected_count <> v_count then
-    raise exception 'batch has % gifts but % were expected', v_count, v_expected_count using errcode = '23514';
+    raise exception 'This batch has % gifts, but the deposit slip lists %. Check for a missing or extra gift, or correct the number of gifts, then post again.', v_count, v_expected_count using errcode = '23514';
   end if;
 
   -- Switch to the system actor for the same org so the lock triggers allow the stamp,

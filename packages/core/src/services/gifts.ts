@@ -218,6 +218,9 @@ export async function deleteBatch(tx: Tx, orgId: string, id: string): Promise<bo
 export async function postBatch(tx: Tx, id: string): Promise<{ postedCount: number; postedTotal: string }> {
   const r = await tx.execute(sql`select * from app.post_batch(${id})`);
   const x = r[0] as { posted_count: number; posted_total: string };
+  // Posted gifts change the totals. Recompute the dashboard now, so Home, the board
+  // dashboard and board links match the bank straight away, not after the nightly run.
+  await tx.execute(sql`select app.refresh_dashboard(b.org_id) from batches b where b.id = ${id}`);
   return { postedCount: Number(x.posted_count), postedTotal: String(x.posted_total) };
 }
 

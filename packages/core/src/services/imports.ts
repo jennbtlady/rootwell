@@ -231,11 +231,14 @@ export async function skipAllErrors(tx: Tx, orgId: string, jobId: string): Promi
 
 export async function commitImport(tx: Tx, jobId: string): Promise<Record<string, unknown>> {
   const r = await tx.execute(sql`select app.commit_import(${jobId}) as s`);
+  // Imported gifts change the totals; recompute the dashboard now (see postBatch).
+  await tx.execute(sql`select app.refresh_dashboard(j.org_id) from import_jobs j where j.id = ${jobId}`);
   return (r[0] as { s: Record<string, unknown> }).s;
 }
 
 export async function rollbackImport(tx: Tx, jobId: string): Promise<Record<string, unknown>> {
   const r = await tx.execute(sql`select app.rollback_import(${jobId}) as s`);
+  await tx.execute(sql`select app.refresh_dashboard(j.org_id) from import_jobs j where j.id = ${jobId}`);
   return (r[0] as { s: Record<string, unknown> }).s;
 }
 
