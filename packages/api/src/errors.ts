@@ -1,6 +1,17 @@
 import type { Context } from "hono";
 import { HTTPException } from "hono/http-exception";
 
+type Reporter = (err: Error, where: { path: string; method: string }) => void;
+let reporter: Reporter | undefined;
+
+/**
+ * The web app plugs error reporting in here (Sentry, scrubbed). packages/api does not depend
+ * on any reporting service, and nothing is reported when none is set.
+ */
+export function setErrorReporter(r: Reporter | undefined) {
+  reporter = r;
+}
+
 /** Postgres error code, whether the driver threw it directly or Drizzle wrapped it. */
 export function pgCode(err: unknown): string | undefined {
   const e = err as { code?: string; cause?: { code?: string } };
@@ -32,5 +43,10 @@ export function handleApiError(err: Error, c: Context) {
   }
   // Never echo error details: they can carry row data. Sentry gets the scrubbed event.
   console.error("api error", { path: c.req.path, name: err.name });
+  try {
+    reporter?.(err, { path: c.req.path, method: c.req.method });
+  } catch {
+    // Reporting must never turn one error into two.
+  }
   return c.json({ error: "Something went wrong" }, 500);
 }
