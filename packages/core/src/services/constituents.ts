@@ -86,12 +86,14 @@ const summarySelect = sql`
   (select a.state from constituent_addresses a where a.constituent_id = c.id order by a.is_primary desc, a.created_at limit 1) as state,
   g.last_gift_on, coalesce(g.lifetime_total, 0)::text as lifetime_total, coalesce(g.gift_count, 0)::int as gift_count
 `;
+// Gift totals for each donor row, looked up per row through the (constituent_id,
+// gift_date) index. Only the rows being shown are summed, never the whole gifts table.
 const giftJoin = sql`
-  left join (select constituent_id, max(gift_date) as last_gift_on, sum(amount) as lifetime_total, count(*) as gift_count,
+  left join lateral (select max(gift_date) as last_gift_on, sum(amount) as lifetime_total, count(*) as gift_count,
                     min(gift_date) as first_gift_on,
                     sum(amount) filter (where gift_date >= date_trunc('year', current_date)) as this_year_total,
                     sum(amount) filter (where gift_date >= date_trunc('year', current_date) - interval '1 year' and gift_date < date_trunc('year', current_date)) as last_year_total
-               from gifts where gift_type <> 'soft_credit' group by constituent_id) g on g.constituent_id = c.id
+               from gifts where constituent_id = c.id and gift_type <> 'soft_credit') g on true
 `;
 
 function mapSummary(r: Record<string, unknown>): ConstituentSummary {

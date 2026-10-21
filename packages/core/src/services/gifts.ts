@@ -178,7 +178,7 @@ function mapBatch(r: Record<string, unknown>): Batch {
 const batchSelect = sql`
   b.*, coalesce(g.n, 0)::int as gift_count, coalesce(g.total, 0)::text as gift_total
   from batches b
-  left join (select batch_id, count(*) as n, sum(amount) as total from gifts group by batch_id) g on g.batch_id = b.id
+  left join lateral (select count(*) as n, sum(amount) as total from gifts where batch_id = b.id) g on true
 `;
 
 export async function listBatches(tx: Tx, orgId: string, opts: { status?: "open" | "posted"; limit?: number } = {}): Promise<Batch[]> {
