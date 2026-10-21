@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
-import { buttonVariants, Heading, Paragraph } from "@/components/ui";
+import { buttonVariants, Paragraph } from "@/components/ui";
 import { anchorClass } from "@/components/ui/text";
+import { Logo } from "@/components/brand/logo";
 
 const POINTS = [
   { title: "Set up in about 30 minutes", text: "A short guide walks you through your funds, your donors and your thank-you letter. Bring a spreadsheet if you have one." },
@@ -19,9 +20,9 @@ export default async function Home() {
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-10 px-4 py-16">
       <div className="flex flex-col items-center gap-5 text-center">
-        <Heading variant="heading10" as="h1" noMargin>
-          Rootwell
-        </Heading>
+        <h1 className="m-0">
+          <Logo size="large" />
+        </h1>
         <Paragraph noMargin className="max-w-xl text-balance text-50 leading-8">
           A simple donor database for nonprofits with one to five staff. Record gifts, thank donors, and keep your board informed.
         </Paragraph>
@@ -41,7 +42,7 @@ export default async function Home() {
       <ul className="grid gap-4 sm:grid-cols-3">
         {POINTS.map((p) => (
           <li key={p.title} className="rounded-30 border border-border-weaker bg-background-weakest p-4">
-            <h2 className="text-40 font-semibold leading-6">{p.title}</h2>
+            <h2 className="font-display text-40 font-medium leading-6">{p.title}</h2>
             <p className="mt-1 text-30 leading-5 text-text-weak">{p.text}</p>
           </li>
         ))}

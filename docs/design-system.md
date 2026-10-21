@@ -18,7 +18,7 @@ app. Its tokens are plain values that both apps can read, and its guidelines are
 | Regenerate after upgrading | `pnpm --filter @maple/design build:tokens` |
 | Components | `apps/web/src/components/ui/`, exported from `@/components/ui` |
 | Living style guide | `/design` in the web app |
-| Font | Inter, loaded through `next/font` as `--font-inter` |
+| Fonts | Inter for body, labels and numbers (`--font-inter`). Fredoka Medium for titles (`--font-fredoka`, the `font-display` class), the logo's lettering (Jenn, 2026-10-21). Heading sizes 10 to 40 use Fredoka; 50 and 60 are labels and stay Inter. Both load through `next/font`. |
 
 ## How Paste names become Tailwind classes
 
@@ -77,6 +77,20 @@ darker than the dataviz validator's band for chart fills, so the plum is used th
 The pair passes color-blind separation (13.2) and normal-vision separation (22.2). Air
 Force Blue reads as a muted color, which suits its job as the "context" series. Charts
 also name series in words, so color is never the only cue.
+
+**Logo (Jenn, 2026-10-21).** The full Rootwell logo is Jenn's artwork,
+`public/brand/rootwell-logo.png` (600 by 175, transparent), shown by
+`components/brand/logo.tsx` in three sizes on the header, sign-in pages and landing page.
+Its alt text is "Rootwell", because the image carries the name. Do not re-set the name in
+type beside the mark; use the logo file. The mark alone (a lime heart of roots with a pink
+bud) is `public/brand/rootwell-mark.svg`, cropped from Jenn's `rootwell_icon.svg`, for
+square spaces.
+
+The app icons (browser tab, home screen, iPhone) put the mark on a Crimson Violet tile,
+where its pale colors stand out. The home-screen version has extra margin for phones
+that crop icons into circles. The PNGs are rendered from the SVGs. The pale mark on Old
+Lace is soft (about 1.2:1), which is fine for a logo: WCAG exempts logotypes, and the name
+carries the brand.
 
 To change a color, edit `overrides.css`, rerun the contrast checks for every pair it
 touches, and run the browser suite, which scans every page with axe.

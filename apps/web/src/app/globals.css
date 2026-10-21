@@ -8,6 +8,8 @@
 @theme inline {
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  /* Headings: Fredoka Medium, the logo's lettering. */
+  --font-display: var(--font-fredoka), ui-rounded, var(--font-inter), sans-serif;
 }
 
 @layer base {

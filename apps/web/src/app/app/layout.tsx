@@ -5,6 +5,7 @@ import { getMe, mfaRequiredFor } from "@maple/core/services";
 import { requireSession, withSession } from "@/lib/session";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { Button, ConfirmHost, ToastHost } from "@/components/ui";
+import { Logo } from "@/components/brand/logo";
 
 /**
  * Every signed-in page lives under /app. This layout is where MFA is enforced:
@@ -38,8 +39,8 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
       </a>
       <header className="border-b border-border-weaker bg-background-body">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 px-4 py-3">
-          <Link href="/app" className="rounded-20 font-semibold tracking-tight outline-none focus-visible:shadow-focus">
-            Rootwell
+          <Link href="/app" className="rounded-20 outline-none focus-visible:shadow-focus">
+            <Logo />
           </Link>
           <div className="flex items-center gap-3">
             <Link href="/app/help" className="rounded-20 text-30 text-text-link outline-none hover:underline focus-visible:shadow-focus">

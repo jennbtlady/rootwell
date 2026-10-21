@@ -24,6 +24,7 @@ import {
 } from "@/components/ui";
 import { anchorClass } from "@/components/ui/text";
 import { Composites } from "./composites";
+import { Logo } from "@/components/brand/logo";
 
 export const metadata: Metadata = { title: "Design system" };
 
@@ -144,6 +145,17 @@ export default function DesignPage() {
           <AlertTitle>The import did not finish</AlertTitle>
           <AlertDescription>Row 212 has a date we could not read. Fix it in the file and try again. Nothing was saved.</AlertDescription>
         </Alert>
+      </section>
+
+      <section className="flex flex-col gap-4">
+        <Heading variant="heading20">Logo</Heading>
+        <div className="flex flex-wrap items-end gap-8">
+          <Logo size="small" />
+          <Logo size="medium" />
+          <Logo size="large" />
+          {/* eslint-disable-next-line @next/next/no-img-element -- static brand asset preview. */}
+          <img src="/icon.svg" alt="App icon" className="size-16" />
+        </div>
       </section>
 
       <section className="flex flex-col gap-4">

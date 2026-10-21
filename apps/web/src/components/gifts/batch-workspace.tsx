@@ -61,7 +61,7 @@ export function BatchWorkspace({ orgId, batch, standards, funds, campaigns, appe
 
       <section className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-40 font-semibold tracking-[-0.02em]">Gifts in this batch</h2>
+          <h2 className="font-display text-40 font-medium">Gifts in this batch</h2>
           {open && canPost && batch.giftCount > 0 && (
             <Button onClick={() => setPostOpen(true)}>Post batch</Button>
           )}
@@ -224,7 +224,7 @@ function GiftEntryForm({ orgId, batch, standards, funds, campaigns, appeals, pre
   return (
     <form onSubmit={submit} className="flex flex-col gap-4 rounded-30 border border-border-weaker bg-background-weakest p-4 sm:p-6" noValidate aria-labelledby="gift-entry-title">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 id="gift-entry-title" className="scroll-mt-4 text-40 font-semibold tracking-[-0.02em]">
+        <h2 id="gift-entry-title" className="scroll-mt-4 font-display text-40 font-medium">
           {e0 ? `Edit the ${formatMoney(e0.amount)} gift from ${e0.constituentName}` : "Enter a gift"}
         </h2>
         <Link href={`/app/orgs/${orgId}/settings/gift-standards/print`} className={`${anchorClass} text-30`} target="_blank">

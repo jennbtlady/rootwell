@@ -114,7 +114,7 @@ export function MergeWorkbench({ orgId, a, b, canMerge }: { orgId: string; a: Co
         <>
           {differing.length > 0 && (
             <section className="flex flex-col gap-4">
-              <h2 className="text-40 font-semibold tracking-[-0.02em]">Fields that differ</h2>
+              <h2 className="font-display text-40 font-medium">Fields that differ</h2>
               <p className="text-30 leading-5 text-text-weak">Pick which value to keep. Everything else is combined: emails, phones, addresses, tags, gifts, notes and relationships all come along.</p>
               {differing.map((f) => (
                 <RadioGroup key={f.key} legend={f.label}>

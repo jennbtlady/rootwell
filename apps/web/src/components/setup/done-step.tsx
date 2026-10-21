@@ -41,7 +41,7 @@ export function DoneStep({ data }: { data: WizardData }) {
         ))}
       </ul>
       <div className="flex flex-col gap-3 border-t border-border-weaker pt-5">
-        <h2 className="text-40 font-semibold">What to do next</h2>
+        <h2 className="font-display text-40 font-medium">What to do next</h2>
         <ol className="flex flex-col gap-3">
           <li className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-30 leading-5">

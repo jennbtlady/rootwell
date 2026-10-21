@@ -25,14 +25,14 @@ export default async function PrintStandardsPage({ params }: PageProps<"/app/org
   return (
     <article className="mx-auto max-w-2xl bg-background-body p-8 text-30 leading-6 text-text print:p-0">
       <header className="mb-6 border-b border-border-weaker pb-4">
-        <h1 className="text-60 font-semibold tracking-[-0.02em]">Gift entry rules</h1>
+        <h1 className="font-display text-60 font-medium">Gift entry rules</h1>
         <p className="text-text-weak">
           {org.name} · as of {formatDate(today())}
         </p>
       </header>
 
       <section className="mb-6">
-        <h2 className="mb-2 text-40 font-semibold">How a gift gets entered</h2>
+        <h2 className="mb-2 font-display text-40 font-medium">How a gift gets entered</h2>
         <ol className="list-decimal space-y-1 pl-5">
           <li>Open or start today&apos;s batch under Gifts. One batch per deposit.</li>
           <li>Enter the expected total from the deposit slip.</li>
@@ -44,7 +44,7 @@ export default async function PrintStandardsPage({ params }: PageProps<"/app/org
       </section>
 
       <section className="mb-6">
-        <h2 className="mb-2 text-40 font-semibold">Fields</h2>
+        <h2 className="mb-2 font-display text-40 font-medium">Fields</h2>
         <table className="w-full border-collapse">
           <thead>
             <tr className="border-b border-border-weak text-left text-text-weak">
@@ -77,7 +77,7 @@ export default async function PrintStandardsPage({ params }: PageProps<"/app/org
           ] as const
         ).map(([label, rows]) => (
           <div key={label}>
-            <h2 className="mb-1 text-40 font-semibold">{label}</h2>
+            <h2 className="mb-1 font-display text-40 font-medium">{label}</h2>
             {rows.length === 0 ? (
               <p className="text-text-weak">None set up.</p>
             ) : (
@@ -96,13 +96,13 @@ export default async function PrintStandardsPage({ params }: PageProps<"/app/org
 
       {standards.conventions && (
         <section className="mb-6">
-          <h2 className="mb-2 text-40 font-semibold">Other conventions</h2>
+          <h2 className="mb-2 font-display text-40 font-medium">Other conventions</h2>
           <p className="whitespace-pre-wrap">{standards.conventions}</p>
         </section>
       )}
 
       <section>
-        <h2 className="mb-2 text-40 font-semibold">Who can do what</h2>
+        <h2 className="mb-2 font-display text-40 font-medium">Who can do what</h2>
         <ul className="space-y-0.5">
           <li>
             <strong>Staff</strong> enter donors, gifts and notes.
