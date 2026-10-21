@@ -30,7 +30,7 @@ for (const width of [1280, 375]) {
 
     // Home is the guide, not a dashboard of zeros.
     await expect(page.getByRole("heading", { name: /Welcome\. Let's get Eastside Literacy Project set up/ })).toBeVisible();
-    await expect(page.getByText("Dollars this year")).toHaveCount(0);
+    await expect(page.getByText("Dollars this fiscal year")).toHaveCount(0);
     await expectAccessible(page, "setup home");
     await noSideways(page, "setup home");
     await page.getByRole("link", { name: "Start setup" }).click();

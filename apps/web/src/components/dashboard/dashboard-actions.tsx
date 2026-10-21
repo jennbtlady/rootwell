@@ -30,7 +30,7 @@ export function DashboardActions({ orgId }: { orgId: string }) {
 
 export function PrintButton() {
   return (
-    <Button variant="secondary" size="small" className="print:hidden" onClick={() => window.print()}>
+    <Button variant="secondary" className="print:hidden" onClick={() => window.print()}>
       Print or save as PDF
     </Button>
   );

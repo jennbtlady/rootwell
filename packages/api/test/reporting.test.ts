@@ -171,6 +171,15 @@ describe.skipIf(!DATABASE_URL)("acknowledgments, statements, reports", () => {
     const csv = new TextDecoder().decode(bytes.slice(3));
     expect(csv.split("\r\n")[0]).toBe("Fund,Code,Gifts,Donors,Total");
     expect(csv).toContain("General operating");
+    // The file name says which dates it covers.
+    expect(byFund.headers.get("content-disposition")).toMatch(new RegExp(`filename=".*-${lastYear}-01-01-to-\\d{4}-\\d{2}-\\d{2}\\.csv"`));
+    // With no dates chosen, the report starts at the fiscal year start, like the dashboard.
+    const fund = (await (await call(owner, "GET", "/reports/gifts_by_fund")).json()) as { range: { from: string }; totals: { gifts: number; donors: number }; rows: { gifts: number }[] };
+    const home = (await (await call(owner, "GET", "/dashboard")).json()) as { data: { fiscalYearStart: string } };
+    expect(fund.range.from).toBe(home.data.fiscalYearStart);
+    // The total row is filled in, and a donor who gave to two funds counts once.
+    expect(fund.totals.gifts).toBe(fund.rows.reduce((n, r) => n + Number(r.gifts), 0));
+    expect(fund.totals.donors).toBeGreaterThan(0);
     expect((await call(board, "GET", "/reports/lybunt")).status).toBe(403);
     const dash = (await (await call(board, "GET", "/dashboard")).json()) as { data: { topGifts: { name: string }[] } };
     expect(dash.data.topGifts.every((g) => g.name === "A donor")).toBe(true);

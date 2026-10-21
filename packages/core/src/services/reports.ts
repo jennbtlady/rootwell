@@ -14,7 +14,9 @@ async function fy(tx: Tx, orgId: string): Promise<string> {
 /** Runs one saved report. Every query is scoped by RLS and an explicit org filter. */
 export async function runReport(tx: Tx, orgId: string, id: ReportId, p: ReportParams): Promise<ReportResult> {
   const today = new Date().toISOString().slice(0, 10);
-  const from = p.from ?? `${today.slice(0, 4)}-01-01`;
+  // Dated reports start at the beginning of the organization's fiscal year, the same period
+  // the dashboards and board link use, so a download matches what the board sees.
+  const from = p.from ?? (await fy(tx, orgId));
   const to = p.to ?? today;
   switch (id) {
     case "lybunt":
@@ -68,6 +70,7 @@ export async function runReport(tx: Tx, orgId: string, id: ReportId, p: ReportPa
         columns: [{ key: "gift_date", label: "Date", kind: "date" }, { key: "name", label: "Donor", kind: "link" }, { key: "amount", label: "Amount", kind: "money" }, { key: "fund", label: "Fund" }, { key: "campaign", label: "Campaign" }, { key: "payment_method", label: "Method" }, { key: "check_number", label: "Check" }, { key: "deductible_amount", label: "Deductible", kind: "money" }, { key: "thanked", label: "Thanked" }],
         rows: rows as Record<string, unknown>[],
         totals: { amount: total.toFixed(2), gift_date: `${rows.length} gifts` },
+        range: { from, to },
       };
     }
     case "gifts_by_fund": {
@@ -77,10 +80,16 @@ export async function runReport(tx: Tx, orgId: string, id: ReportId, p: ReportPa
          where g.org_id = ${orgId} and ${counted} and g.gift_date between ${from}::date and ${to}::date
          group by f.name, f.code order by total desc`);
       const total = rows.reduce((s, r) => s + Number((r as { total: string }).total), 0);
+      const gifts = rows.reduce((s, r) => s + Number((r as { gifts: number }).gifts), 0);
+      // A donor who gave to two funds counts once in the total row.
+      const d = await tx.execute(sql`
+        select count(distinct g.constituent_id)::int as n from gifts g
+         where g.org_id = ${orgId} and ${counted} and g.gift_date between ${from}::date and ${to}::date`);
       return {
         columns: [{ key: "fund", label: "Fund" }, { key: "code", label: "Code" }, { key: "gifts", label: "Gifts", kind: "number" }, { key: "donors", label: "Donors", kind: "number" }, { key: "total", label: "Total", kind: "money" }],
         rows: rows as Record<string, unknown>[],
-        totals: { fund: "All funds", total: total.toFixed(2) },
+        totals: { fund: "All funds", gifts, donors: (d[0] as { n: number }).n, total: total.toFixed(2) },
+        range: { from, to },
       };
     }
     case "donors_by_campaign": {

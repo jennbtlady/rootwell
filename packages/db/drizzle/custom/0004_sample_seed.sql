@@ -1,4 +1,4 @@
--- Sample organization data: funds, campaigns, appeals, 40 invented constituents, two
+-- Sample organization data: funds, campaigns, appeals, 40 invented constituents, three
 -- years of posted gifts, a few interactions and tags. Idempotent per org (skips when the
 -- org already has constituents). Called by app.create_sample_org().
 create or replace function app.seed_sample_data(p_org uuid) returns void
@@ -84,14 +84,16 @@ begin
     (p_org, v_ids[2], 'meeting', current_date - 40, 'Coffee. Interested in joining the board next year.', v_uid),
     (p_org, v_ids[37], 'email', current_date - 5, 'Sent the sponsorship packet for the gala.', v_uid);
 
-  -- Two years of monthly batches. Each has 6 to 14 gifts from a rotating set of donors.
-  for v_i in 0..23 loop
+  -- Three years of monthly batches. Each has 6 to 14 gifts from a rotating set of donors.
+  -- The set slides a quarter of the list each year: some donors stop giving and new ones
+  -- start, so retention looks like a real organization's (about 60%, not 100%).
+  for v_i in 0..35 loop
     v_month := (date_trunc('month', current_date) - (v_i || ' months')::interval)::date;
     insert into batches (org_id, batch_date, description, status, posted_at, posted_by)
     values (p_org, v_month + 9, 'Deposit ' || to_char(v_month + 9, 'Mon DD'), 'posted', v_month + 10, v_uid)
     returning id into v_batch;
     insert into gifts (org_id, constituent_id, batch_id, amount, gift_date, fund_id, campaign_id, appeal_id, payment_method, check_number, posted_at, posted_by)
-    select p_org, v_ids[1 + ((v_i * 7 + g * 11) % array_length(v_ids, 1))], v_batch,
+    select p_org, v_ids[1 + (v_i / 12) * (array_length(v_ids, 1) / 4) + ((v_i * 7 + g * 11) % (array_length(v_ids, 1) - 2 * (array_length(v_ids, 1) / 4)))], v_batch,
            v_amounts[1 + ((v_i + g) % 10)] * (case when g % 9 = 0 then 4 else 1 end),
            v_month + 2 + (g % 7),
            case when g % 5 = 0 then v_food when g % 11 = 0 then v_building else v_general end,

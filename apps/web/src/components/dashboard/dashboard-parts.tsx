@@ -45,14 +45,18 @@ export function Bars({ title, rows }: { title: string; rows: { name: string; tot
         {title}
       </Heading>
       {rows.length === 0 ? (
-        <p className="text-30 text-text-weak">No gifts yet this year.</p>
+        <p className="text-30 text-text-weak">No gifts yet this fiscal year.</p>
       ) : (
         <ul className="flex flex-col gap-2">
           {[...shown, ...(other ? [{ name: "All others", total: other, gifts: 0 }] : [])].map((r) => (
-            <li key={r.name} className="group grid grid-cols-[minmax(6rem,10rem)_1fr_auto] items-center gap-3 text-30 leading-5" title={`${r.name}: ${formatMoney(r.total)}${r.gifts ? `, ${r.gifts} gifts` : ""}`}>
-              <span className="truncate">{r.name}</span>
-              <span className="h-4 rounded-r-20 bg-background-primary transition-opacity group-hover:opacity-80" style={{ width: `${Math.max(2, (num(r.total) / max) * 100)}%` }} aria-hidden="true" />
-              <span className="tabular-nums text-text">{formatMoney(r.total)}</span>
+            // Name and amount share the first line and may wrap; the bar has a line to itself.
+            // This holds up at 200% text size, where a fixed name column pushed the amount off the card.
+            <li key={r.name} className="group flex flex-col gap-1 text-30 leading-5" title={`${r.name}: ${formatMoney(r.total)}${r.gifts ? `, ${r.gifts} gifts` : ""}`}>
+              <span className="flex flex-wrap items-baseline justify-between gap-x-3">
+                <span className="min-w-0 break-words">{r.name}</span>
+                <span className="tabular-nums text-text">{formatMoney(r.total)}</span>
+              </span>
+              <span className="h-3 rounded-r-20 bg-background-primary transition-opacity group-hover:opacity-80" style={{ width: `${Math.max(2, (num(r.total) / max) * 100)}%` }} aria-hidden="true" />
             </li>
           ))}
         </ul>
@@ -138,10 +142,10 @@ export const DEF = {
   donors: "People and organizations with at least one posted gift this fiscal year. Soft credits and pledges are not counted; pledge payments are.",
   dollars: "Total of posted gifts this fiscal year, compared with the same dates last year.",
   median: "Half of this year's gifts are larger than this and half are smaller. Less swayed by one big gift than the average.",
-  newRepeat: "New donors gave their first gift ever this fiscal year. Repeat donors had given before.",
-  overall: "Fundraising Effectiveness Project definition: donors from the earlier year who gave again in the later year, divided by donors in the earlier year. Measured over the last two completed fiscal years. Some donor tools count a donor who gives at any later time instead, which gives a higher number; the two cannot be compared.",
-  firstTime: "Fundraising Effectiveness Project definition: of donors whose first gift ever was in the earlier year, the share who gave again in the later year. The national figure has been under 20% for years. Some donor tools count a donor who gives at any later time instead, which gives a higher number; the two cannot be compared.",
-  repeat: "Fundraising Effectiveness Project definition: of donors in the earlier year who had also given before it, the share who gave again in the later year. Some donor tools count a donor who gives at any later time instead, which gives a higher number; the two cannot be compared.",
+  newRepeat: "New donors gave their first gift ever this fiscal year. Returning donors had given before.",
+  overall: "Of the donors who gave in one fiscal year, the share who gave again the next year. We compare the last two full fiscal years. Other donor tools may count this differently, so their numbers are not comparable. This is the Fundraising Effectiveness Project method.",
+  firstTime: "Of the people who gave for the first time ever in one fiscal year, the share who gave again the next year. Nationally this has been under 20% for years. This is the Fundraising Effectiveness Project method.",
+  repeat: "Of the donors who had given before, the share who gave again the next year. This is the Fundraising Effectiveness Project method.",
   lapsed: "Donors whose last gift was between 13 and 15 months ago: the window to win them back before they fall away.",
 };
 
@@ -150,9 +154,13 @@ export function retentionRate(x: { base: number; retained: number }): string {
   return p === null ? "No data" : `${p}%`;
 }
 
+/** "comparing fiscal years 2024 and 2025", or "2024-25 and 2025-26" when the year does not start in January. */
 export function retentionPeriod(data: DashboardData): string {
-  const fy = (d: string) => `FY${Number(d.slice(0, 4)) + (d.slice(5, 7) === "01" ? 0 : 1)}`;
-  return `${fy(data.retentionPeriod.earlierStart)} to ${fy(data.retentionPeriod.laterStart)}`;
+  const fy = (d: string) => {
+    const y = Number(d.slice(0, 4));
+    return d.slice(5, 7) === "01" ? `${y}` : `${y}-${String(y + 1).slice(2)}`;
+  };
+  return `comparing fiscal years ${fy(data.retentionPeriod.earlierStart)} and ${fy(data.retentionPeriod.laterStart)}`;
 }
 
 /** The answer to "are we on track?" in words, before any chart. */

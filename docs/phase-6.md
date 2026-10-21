@@ -194,3 +194,41 @@ From the persona walkthroughs.
   - `apps/web/e2e/phase-6-dana-trust.spec.ts`.
   - The statements case in `packages/api/test/reporting.test.ts`.
   - The updated posting step in `phase-1-acceptance.spec.ts`.
+
+## Ruth's fixes (2026-10-21)
+
+From the persona walkthroughs. Ruth is the board treasurer who checks the board link.
+
+- **The spreadsheet matches the board page.**
+  - Gifts by date and Gifts by fund start at the fiscal year start when no date is
+    chosen. They used to start on January 1.
+  - The report states its dates, and the filters show the dates it used.
+  - The download's file name includes the dates, for example
+    `gifts-by-fund-2026-07-01-to-2026-10-21.csv`.
+  - The total row has gift and donor counts. A donor who gave to two funds counts once.
+- **Explanations a treasurer can read.**
+  - Each one starts with a plain sentence. The Fundraising Effectiveness Project is named
+    last.
+  - The period reads "comparing fiscal years 2024 and 2025".
+  - On a phone, a tap elsewhere or Escape closes the box. Only one is open at a time.
+    Each button is 44px.
+  - On paper, the board dashboard prints them as notes at the end.
+- **The board link says who can see it.** A line says anyone with the link can see the
+  page, and whether donor names are hidden. A turned-off link shows a short page that
+  explains this, still with a 404 status.
+- **Wording and layout.**
+  - Readable dates.
+  - The fiscal year start is stated.
+  - Cards say "this fiscal year".
+  - "0 / 17" reads "0 new and 17 returning".
+  - Fund rows and Largest gifts wrap at large text sizes instead of running off the card.
+  - Print is a full-size button.
+- **Seed change.** The sample organization now has three years of gifts, and its donors
+  drift: some stop giving and new ones start. Retention used to show 100%. It now shows
+  about 65%. This only affects newly created sample organizations. It is a hand-written
+  function in `0004_sample_seed.sql`, so there is no table change and nothing to roll
+  back.
+- **Tests:**
+  - `apps/web/e2e/phase-6-ruth.spec.ts`.
+  - The report range and total row checks in `packages/api/test/reporting.test.ts`.
+  - The updated wording in `phase-4-reporting.spec.ts`.

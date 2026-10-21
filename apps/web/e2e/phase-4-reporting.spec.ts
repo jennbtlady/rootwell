@@ -30,11 +30,11 @@ test.describe.serial("phase 4 dashboard, reports, thank-yous", () => {
     await expect(page.getByRole("heading", { name: "Board dashboard", level: 1 })).toBeVisible();
     await page.getByRole("button", { name: "Refresh now" }).click();
     await expect(page.getByText(/^(Giving is (up|down|about the same)|No gifts have been recorded|\$[\d,.]+ has come in)/)).toBeVisible();
-    await expect(page.getByText("Dollars this year")).toBeVisible();
+    await expect(page.getByText("Dollars this fiscal year")).toBeVisible();
     // Board view has no to-do lists.
     await expect(page.getByRole("heading", { name: "To do" })).toHaveCount(0);
     await page.getByRole("button", { name: "How donor retention is counted" }).click();
-    await expect(page.getByText(/Fundraising Effectiveness Project definition: donors from the earlier year/)).toBeVisible();
+    await expect(page.locator('[role="tooltip"][data-state="open"]')).toHaveText(/^Of the donors who gave in one fiscal year/);
     await expectAccessible(page, "board dashboard");
   });
 
@@ -43,10 +43,10 @@ test.describe.serial("phase 4 dashboard, reports, thank-yous", () => {
     await page.goto(org);
     await expect(page.getByRole("heading", { name: "Home", level: 1 })).toBeVisible();
     await expect(page.getByRole("heading", { name: "To do" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "How this year is going" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "How this fiscal year is going" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Who to reach out to" })).toBeVisible();
     await page.getByRole("button", { name: "How first-time donor retention is counted" }).click();
-    await expect(page.getByText(/Fundraising Effectiveness Project definition: of donors whose first gift/)).toBeVisible();
+    await expect(page.locator('[role="tooltip"][data-state="open"]')).toHaveText(/^Of the people who gave for the first time ever/);
     await expectAccessible(page, "staff dashboard");
     await page.setViewportSize({ width: 375, height: 812 });
     await page.reload();
@@ -76,6 +76,8 @@ test.describe.serial("phase 4 dashboard, reports, thank-yous", () => {
     await expect(page.getByText("Off", { exact: true }).first()).toBeVisible();
     const after = await board.goto(link);
     expect(after?.status()).toBe(404);
+    await expect(board.getByRole("heading", { name: "This board link is no longer active" })).toBeVisible();
+    await expectAccessible(board, "turned-off board link");
     await anon.close();
   });
 

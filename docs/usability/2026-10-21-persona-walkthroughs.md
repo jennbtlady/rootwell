@@ -42,6 +42,9 @@ is exactly the gap the onboarding wizard should close.
    - Gifts by fund starts at January 1. The board page starts at the fiscal year start
      (July 1 in the sample): $16,025 against $5,375.
    - The download does not state its date range.
+   - Fixed 2026-10-21: dated reports start at the fiscal year start, like the board page.
+     The report says "Gifts dated ... through ...", the filters show the same dates, and the
+     file name includes them. The total row now has gift and donor counts.
 
 ## Major
 
@@ -112,11 +115,21 @@ From the other journeys:
     - The explanation leads with "Fundraising Effectiveness Project definition".
     - "FY2025 to FY2026" is unexplained.
     - The sample shows "100%, 35 of 35", next to 17 donors this year.
+    - Fixed 2026-10-21: each explanation starts with a plain sentence and names the method
+      last. The period reads "comparing fiscal years 2024 and 2025". The 100% came from
+      the sample data, which cycled every donor every year. It now covers three years and
+      lets some donors stop and others start, so retention shows about 65%.
 15. **Phone: explanation boxes don't close on a tap elsewhere.** They stack and cover the
     numbers on iPhone, because they close only on blur.
-16. **The board page never says who can see it, or that names are hidden.**
+    Fixed 2026-10-21: a tap anywhere else or Escape closes the box, and only one is open
+    at a time.
+16. **The board page never says who can see it, or that names are hidden.** Fixed
+    2026-10-21: a line under the heading says anyone with the link can see the page, and
+    whether donor names are hidden.
 17. **Large text on phones:** By fund and Largest gifts scroll sideways, and explanation
     boxes are cut off.
+    Fixed 2026-10-21: fund names and amounts wrap above their bar, and Largest gifts rows
+    wrap instead of cutting off.
 
 ## Minor
 
@@ -136,12 +149,17 @@ From the other journeys:
 - **Import silently guesses.** A junk row ("Rivera,") becomes a donor, mixed date formats
   are read without a warning, and unknown payment types become "Other".
 - **Small tap targets.** Explanation buttons are 20px, and Print is 28px. Aim for 44px.
+  Fixed 2026-10-21 for both.
 - **Dates and labels on the board page.**
   - The header date is in computer format (2026-10-21).
   - The fiscal year start is never stated.
   - Cards say "this year" while the sentence says "fiscal year".
-- **Printing loses explanations.** Definitions are hidden on print and PDF.
-- **Turned-off board links.** They show a bare 404 with no explanation.
+  - Fixed 2026-10-21: dates read "Oct 21, 2026", the page states when the fiscal year
+    started, and cards say "this fiscal year". "0 / 17" now reads "0 new and 17 returning".
+- **Printing loses explanations.** Definitions are hidden on print and PDF. Fixed
+  2026-10-21: they print as notes at the end of the board dashboard.
+- **Turned-off board links.** They show a bare 404 with no explanation. Fixed 2026-10-21:
+  a short page says the link was turned off and to ask for a new one.
 - **Thank-yous preview.** It shows only the first selected donor.
 - **Data health has no single score and no "fix this first" order.**
 - **Dana's gift form.**

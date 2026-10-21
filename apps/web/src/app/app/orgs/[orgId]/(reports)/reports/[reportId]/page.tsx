@@ -6,6 +6,7 @@ import { getOrg, listCoding, runReport } from "@maple/core/services";
 import { requireSession, withSession } from "@/lib/session";
 import { Heading } from "@/components/ui";
 import { anchorClass } from "@/components/ui/text";
+import { formatDate } from "@/lib/format";
 import { ReportFilters } from "@/components/reports/report-filters";
 import { ReportTable } from "@/components/reports/report-table";
 
@@ -26,6 +27,7 @@ export default async function ReportPage({ params, searchParams }: PageProps<"/a
     return { result: await runReport(tx, orgId, report.id as ReportId, p), campaigns };
   });
   if (!data) notFound();
+  const range = data.result.range;
   return (
     <div className="flex flex-col gap-4">
       <div>
@@ -37,7 +39,14 @@ export default async function ReportPage({ params, searchParams }: PageProps<"/a
         </Heading>
         <p className="mt-1 text-30 leading-5 text-text-weak">{report.description}</p>
       </div>
-      <ReportFilters orgId={orgId} reportId={report.id} params={report.params as readonly string[]} values={p} campaigns={data.campaigns.map((c) => ({ id: c.id, name: c.name }))} />
+      {/* The filters start from the dates the report actually used, so they never disagree. */}
+      <ReportFilters orgId={orgId} reportId={report.id} params={report.params as readonly string[]} values={{ ...p, from: range?.from ?? p.from, to: range?.to ?? p.to }} campaigns={data.campaigns.map((c) => ({ id: c.id, name: c.name }))} />
+      {range && (
+        <p className="text-30 leading-5">
+          Gifts dated {formatDate(range.from)} through {formatDate(range.to)}.{" "}
+          {!p.from && <span className="text-text-weak">This starts on the first day of your fiscal year.</span>}
+        </p>
+      )}
       <ReportTable orgId={orgId} title={report.title} result={data.result} />
     </div>
   );

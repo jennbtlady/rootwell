@@ -22,4 +22,5 @@ export const reportParams = z.object({
 export type ReportParams = z.infer<typeof reportParams>;
 
 export type ReportColumn = { key: string; label: string; kind?: "money" | "date" | "number" | "text" | "link" };
-export type ReportResult = { columns: ReportColumn[]; rows: Record<string, unknown>[]; totals?: Record<string, unknown> };
+/** range: the dates a dated report covered, so the page and the file can say so. */
+export type ReportResult = { columns: ReportColumn[]; rows: Record<string, unknown>[]; totals?: Record<string, unknown>; range?: { from: string; to: string } };

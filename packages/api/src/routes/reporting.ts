@@ -102,7 +102,9 @@ export const reporting = new Hono<ApiEnv>()
     if (format === "csv") {
       const title = REPORTS.find((r) => r.id === reportId)!.title.toLowerCase().replace(/\s+/g, "-");
       const rows = result.totals ? [...result.rows, result.totals] : result.rows;
-      return c.body(toCsv(result.columns, rows), 200, { "content-type": "text/csv; charset=utf-8", "content-disposition": `attachment; filename="${title}-${new Date().toISOString().slice(0, 10)}.csv"` });
+      // The file name says which dates the numbers cover, so it can be checked against the page.
+      const dates = result.range ? `${result.range.from}-to-${result.range.to}` : new Date().toISOString().slice(0, 10);
+      return c.body(toCsv(result.columns, rows), 200, { "content-type": "text/csv; charset=utf-8", "content-disposition": `attachment; filename="${title}-${dates}.csv"` });
     }
     return c.json(result);
   })

@@ -7,7 +7,7 @@ import { expectAccessible, signIn, state } from "./helpers";
  * dashboard reflects a posted batch straight away, not the next morning.
  */
 const dollarsThisYear = async (page: Page) => {
-  const tile = page.getByText("Dollars this year").locator("xpath=ancestor::article[1]");
+  const tile = page.getByText("Dollars this fiscal year").locator("xpath=ancestor::article[1]");
   return Number((await tile.innerText()).match(/\$([\d,]+\.\d{2})/)![1]!.replace(/,/g, ""));
 };
 

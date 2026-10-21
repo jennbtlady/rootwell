@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { withPublic } from "@maple/db";
 import { getDb } from "@maple/api";
 import { boardView } from "@maple/core/services";
-import { formatDateTime } from "@/lib/format";
+import { formatDate, formatDateTime } from "@/lib/format";
 import { Heading } from "@/components/ui";
 import { BoardDashboard } from "@/components/dashboard/board-dashboard";
 import { PrintButton } from "@/components/dashboard/dashboard-actions";
@@ -12,7 +12,8 @@ export const metadata: Metadata = { title: "Board dashboard", robots: { index: f
 
 /**
  * Read-only board link. No sign-in. The database returns only the dashboard snapshot,
- * with donor names removed when the organization hides them. A revoked link is a 404.
+ * with donor names removed when the organization hides them. A turned-off link shows
+ * not-found.tsx, which explains what happened.
  */
 export default async function BoardPage({ params }: PageProps<"/board/[token]">) {
   const { token } = await params;
@@ -28,7 +29,12 @@ export default async function BoardPage({ params }: PageProps<"/board/[token]">)
             Board dashboard
           </Heading>
           <p className="mt-1 text-30 leading-5 text-text-weak">
-            Fiscal year to date through {view.data.asOf}. Updated {formatDateTime(view.computedAt)}.
+            Fiscal year to date, {formatDate(view.data.fiscalYearStart)} through {formatDate(view.data.asOf)}. Updated {formatDateTime(view.computedAt)}.
+          </p>
+          <p className="mt-1 text-30 leading-5">
+            {view.hideNames
+              ? "Anyone with this link can see this page. Donor names are hidden."
+              : "Anyone with this link can see this page, including the names of the largest donors. Please do not forward it."}
           </p>
         </div>
         <PrintButton />

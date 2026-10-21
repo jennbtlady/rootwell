@@ -102,18 +102,18 @@ export function StaffDashboard({ base, data, live }: { base: string; data: Dashb
 
       <section aria-labelledby="how-h" className="flex flex-col gap-2">
         <Heading id="how-h" variant="heading40" as="h2" noMargin>
-          How this year is going
+          How this fiscal year is going
         </Heading>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Tile label="Dollars this year" value={formatMoney(data.dollarsYtd)} definition={DEF.dollars}>
+          <Tile label="Dollars this fiscal year" value={formatMoney(data.dollarsYtd)} definition={DEF.dollars}>
             <Delta now={num(data.dollarsYtd)} before={num(data.dollarsPriorYtd)} money />
           </Tile>
-          <Tile label="Donors this year" value={data.donorsYtd.toLocaleString()} definition={DEF.donors}>
+          <Tile label="Donors this fiscal year" value={data.donorsYtd.toLocaleString()} definition={DEF.donors}>
             <Delta now={data.donorsYtd} before={data.donorsPriorYtd} />
           </Tile>
           <Tile label="Donor retention" value={retentionRate(r.overall)} definition={DEF.overall}>
             <span className="text-30 text-text-weak">
-              {r.overall.retained} of {r.overall.base}, {period}
+              {r.overall.retained} of {r.overall.base} donors gave again, {period}
             </span>
           </Tile>
           <Tile label="First-time donor retention" value={retentionRate(r.firstTime)} definition={DEF.firstTime}>
@@ -196,7 +196,7 @@ export function StaffDashboard({ base, data, live }: { base: string; data: Dashb
         )}
       </Card>
       <p className="text-20 text-text-weak">
-        Totals count posted gifts, fiscal year to date through {formatDate(data.asOf)}. To-dos are live. The board sees a simpler view under Reports, Board dashboard.
+        Your fiscal year started {formatDate(data.fiscalYearStart)}. Totals count posted gifts through {formatDate(data.asOf)}. To-dos are live. The board sees a simpler view under Reports, Board dashboard.
       </p>
     </div>
   );

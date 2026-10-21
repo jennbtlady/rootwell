@@ -13,6 +13,7 @@ export function ReportFilters({ orgId, reportId, params, values, campaigns }: { 
   const search = useSearchParams();
   const toast = useToast();
   const thisYear = new Date().getFullYear();
+  // The page passes the dates the report used (fiscal year start by default); January 1 is only a fallback.
   const [from, setFrom] = useState(values.from ?? `${thisYear}-01-01`);
   const [to, setTo] = useState(values.to ?? new Date().toISOString().slice(0, 10));
   const [campaignId, setCampaignId] = useState(values.campaignId ?? "");
