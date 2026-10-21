@@ -24,7 +24,7 @@ export default async function Home() {
           <Logo size="large" />
         </h1>
         <Paragraph noMargin className="max-w-xl text-balance text-50 leading-8">
-          A simple donor database for nonprofits with one to five staff. Record gifts, thank donors, and keep your board informed.
+          A simple donor database for small nonprofits. Record gifts, thank donors, and keep your board informed.
         </Paragraph>
         <div className="flex flex-col items-center gap-2">
           <Link href="/sign-up" className={buttonVariants({ size: "default" })}>

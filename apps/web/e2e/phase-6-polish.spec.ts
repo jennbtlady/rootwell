@@ -8,7 +8,7 @@ import { expectAccessible, signIn, state } from "./helpers";
  */
 test("the landing page says what this is and leads with starting", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByText(/donor database for nonprofits with one to five staff/)).toBeVisible();
+  await expect(page.getByText(/donor database for small nonprofits/)).toBeVisible();
   await expect(page.getByText("Set up in about 30 minutes")).toBeVisible();
   const start = page.getByRole("link", { name: "Start your free 30-day trial" });
   await expect(start).toHaveAttribute("href", "/sign-up");
