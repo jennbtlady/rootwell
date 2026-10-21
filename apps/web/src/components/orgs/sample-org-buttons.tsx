@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, errorMessage } from "@/lib/api";
-import { Button, HelpText } from "@/components/ui";
+import { Button, HelpText, useConfirm } from "@/components/ui";
 
 export function ExploreSampleButton() {
   const router = useRouter();
@@ -37,12 +37,13 @@ export function ExploreSampleButton() {
 }
 
 export function RemoveSampleButton({ orgId }: { orgId: string }) {
+  const confirm = useConfirm();
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function remove() {
-    if (!window.confirm("Remove the sample organization and all of its demo data?")) return;
+    if (!await confirm({ title: "Remove the sample organization?", body: "All of its demo data is deleted. Your own organizations are not touched.", confirmLabel: "Remove sample", destructive: true })) return;
     setPending(true);
     setError(null);
     const res = await api().api.v1.orgs[":orgId"].$delete({ param: { orgId } });

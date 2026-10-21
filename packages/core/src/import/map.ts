@@ -139,6 +139,11 @@ export function normalizeRow(fields: FieldValues, kind: ImportKind, today = new 
   };
   // Organizations sometimes arrive with a person's name as the contact; keep the person.
   if (type === "person" && orgName && (first || last)) person.org_name = null;
+  // A lone name and nothing else ("Rivera,") is often a stray line, not a donor. Import it
+  // only if the person checks it.
+  if (type === "person" && !first && last && !person.email && !person.phone && !person.line1 && !person.postal_code) {
+    warnings.push({ field: "last_name", message: `Only "${last}" is given, with no first name, email, phone or address. Check this is a real donor.` });
+  }
 
   let gift: MappedGift | null = null;
   if (kind === "constituents_gifts") {
@@ -187,4 +192,26 @@ export function personKey(p: Pick<MappedPerson, "legacy_id" | "email" | "first_n
 export function mapRow(raw: string[], headers: string[], mapping: Partial<Record<ImportField, string>>, kind: ImportKind, today = new Date()): MappedRow {
   const fields = extractFields(raw, headers, mapping);
   return { fields, ...normalizeRow(fields, kind, today) };
+}
+
+const SLASH_DATE = /^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2}|\d{4})(?: .*)?$/;
+
+/**
+ * Dates like 2/3/2025 are read month first. If the same file also has dates that can only
+ * be day first (13/2/2025), the short ones may be wrong, so each gets a warning to check.
+ * Works across the whole file, so it runs after every row is mapped.
+ */
+export function flagDayFirstDates(rows: { fields: FieldValues; warnings: RowIssue[] }[]): number {
+  const parts = (r: { fields: FieldValues }) => SLASH_DATE.exec((r.fields.gift_date ?? "").trim());
+  const dayFirst = rows.map(parts).find((m) => m && +m[1]! > 12 && +m[2]! <= 12);
+  if (!dayFirst) return 0;
+  let n = 0;
+  for (const r of rows) {
+    const m = parts(r);
+    if (m && +m[1]! <= 12 && +m[2]! <= 12 && m[1] !== m[2]) {
+      r.warnings.push({ field: "gift_date", message: `This file also has day-first dates like ${dayFirst[0]}, so "${m[0]}" may be day first too. It was read as month first. Check it.` });
+      n++;
+    }
+  }
+  return n;
 }

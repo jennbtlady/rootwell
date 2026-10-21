@@ -26,3 +26,8 @@ export function formatDateTime(value: string | null | undefined): string {
 export function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
+
+/** "1 gift", "3 gifts", "1 person", "2 people". Counts get commas. */
+export function plural(n: number, one: string, many = `${one}s`): string {
+  return `${n.toLocaleString()} ${n === 1 ? one : many}`;
+}

@@ -3,8 +3,9 @@ import { notFound } from "next/navigation";
 import { z } from "zod";
 import { getBatch, getConstituent, getOrg, getStandards, listCoding } from "@maple/core/services";
 import { requireSession, withSession } from "@/lib/session";
-import { formatDate, formatMoney } from "@/lib/format";
+import { formatDate, formatMoney, plural } from "@/lib/format";
 import { Badge, Card, Heading } from "@/components/ui";
+import { buttonVariants } from "@/components/ui/button";
 import { anchorClass } from "@/components/ui/text";
 import { BatchWorkspace } from "@/components/gifts/batch-workspace";
 import { depositCheck } from "@/lib/deposit-check";
@@ -68,6 +69,8 @@ export default async function BatchPage({ params, searchParams }: PageProps<"/ap
         </Card>
       </div>
 
+      {batch.status === "posted" && <NextStep orgId={orgId} unthanked={batch.gifts.filter((g) => !g.acknowledgedAt).length} />}
+
       <BatchWorkspace
         orgId={orgId}
         batch={batch}
@@ -79,5 +82,23 @@ export default async function BatchPage({ params, searchParams }: PageProps<"/ap
         preselected={data.pre ? { id: data.pre.id, label: data.pre.displayName, detail: data.pre.primaryEmail } : null}
       />
     </div>
+  );
+}
+
+/** After posting, the next job is thanking these donors (persona walkthroughs: nothing said so). */
+function NextStep({ orgId, unthanked }: { orgId: string; unthanked: number }) {
+  if (unthanked === 0) return <p className="text-30 leading-5 text-text-success">Every gift in this batch has been thanked.</p>;
+  return (
+    <Card className="flex flex-wrap items-center justify-between gap-3 p-4 sm:p-5">
+      <div>
+        <div className="text-40 font-semibold leading-6">Next: thank these donors</div>
+        <p className="text-30 leading-5 text-text-weak">
+          {plural(unthanked, "gift")} from this batch {unthanked === 1 ? "is" : "are"} waiting for a thank-you. Within two days is best.
+        </p>
+      </div>
+      <Link href={`/app/orgs/${orgId}/acknowledgments`} className={buttonVariants()}>
+        Thank these donors
+      </Link>
+    </Card>
   );
 }

@@ -58,6 +58,8 @@ them without a layout shift.
 | `Alert` and parts | Alert | `neutral` (status), `error` and `warning` (alert). Page-level messages only. |
 | `Badge` | Badge | Status words. Never clickable. |
 | `Spinner` | Spinner | Pass `label` when it should be announced. |
+| `useConfirm`, `ConfirmHost` | Modal | The app's own "are you sure?" box. Never use the browser's `confirm()`. Focus starts on the safe choice; `destructive` makes the confirm button red. The app layout mounts the host. |
+| `CopyButton` | Button | Copies text and says "Copied" on the button for three seconds. Says to copy by hand if the browser blocks it. |
 
 Not yet ported, in the order Phase 1 will need them: Table, Pagination, Tabs, Modal,
 Menu, Combobox, Toast, Date picker, Checkbox, Radio, Switch, Skeleton, Empty state. Use

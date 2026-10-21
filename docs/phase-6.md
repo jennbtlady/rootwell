@@ -306,3 +306,42 @@ From the persona walkthroughs.
 - **No schema change.** The seed change is text only.
 - **Tests:** `apps/web/e2e/phase-6-dana-gift-form.spec.ts`. It also checks that the field
   being typed in stays above the phone tab bar (D-f).
+
+## Smaller walkthrough fixes (2026-10-21)
+
+Every remaining Minor finding in the walkthrough report is now fixed or confirmed fixed.
+
+- **In-app confirm.**
+  - `useConfirm()` and `ConfirmHost` (`components/ui/confirm.tsx`) replace all 16 uses of
+    the browser's `confirm()`.
+  - The buttons name the action. Focus starts on the safe choice.
+  - Browser tests use `confirmIn(page, "Remove gift")` from `e2e/helpers.ts`.
+- **Copy link.** `CopyButton` says "Copied" on itself.
+- **Landing page.** It says who the product is for and offers "Start your free 30-day
+  trial", with no card needed. Sign in is a link.
+- **Welcome.** After sign-up the page says "Welcome, first name". The header shows the
+  person's name instead of their email.
+- **Time zones.** Create organization uses the same plain names as the details screen.
+- **After posting.** A posted batch shows "Next: thank these donors" until every gift in
+  it is thanked.
+- **Grammar.** `plural()` in `lib/format.ts`.
+- **One name each.**
+  - The Donors tab "Clean up" is now "Data health".
+  - The Reports tab "Reports" is now "Lists and downloads".
+  - "Gift entry standards" is now "Gift entry rules".
+- **Merging.** The page shows "Keeping" and "Merging in", with the date each was added and
+  its gift count.
+- **Imports.**
+  - The last step lists rows with warnings, with Skip for each.
+  - New warnings: a lone name with no other details, and possibly day-first dates
+    (`flagDayFirstDates` in `packages/core/src/import/map.ts`).
+- **Thank-you preview.** Previous and Next step through every selected gift.
+- **Data health.** One line says what needs attention and where to start. Problems are
+  listed first.
+- **Board sharing.** "Share with your board" is on the Board dashboard for owners and
+  admins.
+- **No schema or seed change.**
+- **Tests:**
+  - `e2e/phase-6-polish.spec.ts`.
+  - Additions to the import, reporting, Dana trust and setup wizard specs.
+  - Import warning cases in `packages/core/test/import.test.ts`.

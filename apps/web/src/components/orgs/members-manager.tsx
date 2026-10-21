@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import type { OrgRole } from "@maple/core";
 import type { Member } from "@maple/core/services";
 import { api, errorMessage } from "@/lib/api";
-import { Alert, AlertDescription, Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, FormField, Input, Select } from "@/components/ui";
+import { Alert, AlertDescription, Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, FormField, Input, Select, useConfirm } from "@/components/ui";
 import { ROLE_HELP, ROLE_LABEL } from "./role-labels";
 
 type GrantableRole = Exclude<OrgRole, "owner">;
@@ -25,6 +25,7 @@ export function MembersManager({ orgId, myUserId, myRole, members }: Props) {
 }
 
 function MemberList({ orgId, myUserId, canManage, members }: { orgId: string; myUserId: string; canManage: boolean; members: Member[] }) {
+  const confirm = useConfirm();
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +52,7 @@ function MemberList({ orgId, myUserId, canManage, members }: { orgId: string; my
 
   async function remove(m: Member) {
     const what = m.status === "invited" ? `Cancel the invitation for ${m.email}?` : `Remove ${m.fullName ?? m.email} from this organization?`;
-    if (!window.confirm(what)) return;
+    if (!await confirm({ title: what, confirmLabel: m.status === "invited" ? "Cancel invitation" : "Remove", cancelLabel: "Keep", destructive: true })) return;
     setBusy(m.id);
     setError(null);
     const res = await api().api.v1.orgs[":orgId"].members[":memberId"].$delete({ param: { orgId, memberId: m.id } });
@@ -197,6 +198,7 @@ function InviteForm({ orgId }: { orgId: string }) {
 }
 
 function TransferOwnership({ orgId, myUserId, members }: { orgId: string; myUserId: string; members: Member[] }) {
+  const confirm = useConfirm();
   const router = useRouter();
   const candidates = members.filter((m) => m.status === "active" && m.userId && m.userId !== myUserId);
   const [toUserId, setToUserId] = useState(candidates[0]?.userId ?? "");
@@ -207,7 +209,7 @@ function TransferOwnership({ orgId, myUserId, members }: { orgId: string; myUser
     e.preventDefault();
     const target = candidates.find((m) => m.userId === toUserId);
     if (!target) return;
-    if (!window.confirm(`Make ${target.fullName ?? target.email} the owner? You will become an admin.`)) return;
+    if (!await confirm({ title: `Make ${target.fullName ?? target.email} the owner?`, body: "You will become an admin.", confirmLabel: "Transfer ownership", destructive: true })) return;
     setError(null);
     setPending(true);
     const res = await api().api.v1.orgs[":orgId"]["transfer-ownership"].$post({ param: { orgId }, json: { toUserId } });

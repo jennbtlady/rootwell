@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { readFile } from "node:fs/promises";
-import { expectAccessible, signIn, state } from "./helpers";
+import { expectAccessible, signIn, state, confirmIn } from "./helpers";
 
 const MAILPIT = "http://127.0.0.1:54324/api/v1";
 
@@ -61,6 +61,10 @@ test.describe.serial("phase 4 dashboard, reports, thank-yous", () => {
     await page.getByRole("button", { name: "Make link" }).click();
     const link = (await page.locator("p.font-mono").innerText()).trim();
     expect(link).toMatch(/\/board\/[A-Za-z0-9_-]+$/);
+    // Copying says so on the button itself.
+    await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+    await page.getByRole("button", { name: "Copy link" }).click();
+    await expect(page.getByRole("button", { name: "Copied" })).toBeVisible();
 
     const anon = await browser.newContext();
     const board = await anon.newPage();
@@ -71,8 +75,8 @@ test.describe.serial("phase 4 dashboard, reports, thank-yous", () => {
     const top = board.locator("ol li");
     if (await top.count()) await expect(top.first()).toContainText("A donor");
 
-    page.once("dialog", (d) => d.accept());
     await page.getByRole("button", { name: "Turn off" }).first().click();
+    await confirmIn(page, "Turn off link");
     await expect(page.getByText("Off", { exact: true }).first()).toBeVisible();
     const after = await board.goto(link);
     expect(after?.status()).toBe(404);
@@ -106,8 +110,17 @@ test.describe.serial("phase 4 dashboard, reports, thank-yous", () => {
     // Email two of Dana's gifts.
     await rows.nth(0).check();
     await rows.nth(1).check();
-    page.once("dialog", (d) => d.accept());
+    // The preview steps through every selected gift, not only the first.
+    await page.getByRole("button", { name: "Preview" }).first().click();
+    const preview = page.getByRole("dialog");
+    await expect(preview).toContainText("1 of 2 selected");
+    await preview.getByRole("button", { name: "Next" }).click();
+    await expect(preview).toContainText("2 of 2 selected");
+    await expect(preview.getByRole("button", { name: "Next" })).toBeDisabled();
+    await page.keyboard.press("Escape");
+    await expect(preview).toHaveCount(0);
     await page.getByRole("button", { name: "Send emails" }).click();
+    await confirmIn(page, "Send emails");
     await expect(page.getByText("2 sent")).toBeVisible();
     const search = await request.get(`${MAILPIT}/search?query=${encodeURIComponent(`to:dana-${s.run}@example.org`)}`);
     const found = (await search.json()) as { messages: { ID: string; Subject: string }[] };
@@ -123,9 +136,9 @@ test.describe.serial("phase 4 dashboard, reports, thank-yous", () => {
     await expect(rows).toHaveCount(before - 2);
     await expect(page.getByRole("checkbox", { name: /Select \$100\.00 from Dana Rivera/, checked: true })).toHaveCount(0);
     await page.getByRole("checkbox", { name: /Select \$100\.00 from Dana Rivera/ }).first().check();
-    page.once("dialog", (d) => d.accept());
     const download = page.waitForEvent("download");
     await page.getByRole("button", { name: "Download letters (PDF)" }).click();
+    await confirmIn(page, "Download and mark as thanked");
     const pages = await pdfText((await (await download).path())!);
     expect(pages).toHaveLength(1);
     expect(pages[0]).toContain(s.orgName);

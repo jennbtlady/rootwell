@@ -35,3 +35,10 @@ export async function expectAccessible(page: Page, label: string) {
   });
   expect(summary, `${label} has accessibility violations`).toEqual([]);
 }
+
+/** Chooses a button in the app's own confirm dialog (it replaced the browser's confirm box). */
+export async function confirmIn(page: Page, button: string) {
+  const dialog = page.getByRole("dialog");
+  await dialog.getByRole("button", { name: button, exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+}

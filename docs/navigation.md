@@ -11,10 +11,10 @@ a tab bar along the bottom on a phone (under 640px wide).
 | Area | Opens | Level 2 tabs | Covers |
 |---|---|---|---|
 | Home | `/app/orgs/{id}` | none | To-dos, Get set up, open batches, sample org notice |
-| Donors | `/constituents` | All donors, Possible duplicates, Clean up | Donor list and records, imports and Past imports (linked from the donor list and Clean up), duplicates, merge history, Data health |
+| Donors | `/constituents` | All donors, Possible duplicates, Data health | Donor list and records, imports and Past imports (linked from the donor list and Data health), duplicates, merge history, Data health |
 | Gifts | `/batches` | Batches, All gifts | Batches and batch entry, the gift list |
 | Thank-yous | `/acknowledgments` | links on the page: templates, statements | Thank-you queue, templates, year-end statements |
-| Reports | `/dashboard` | Dashboard, Reports | The director dashboard, saved reports |
+| Reports | `/dashboard` | Board dashboard, Lists and downloads | The board dashboard, saved reports |
 
 Board viewers see only Reports, and only the Dashboard in it.
 
@@ -56,6 +56,6 @@ Route groups keep the web addresses as they were while sharing each area's tab r
 ## Changes made on 2026-10-20
 
 - Nine main items became five. Overview is now Home. Dashboard moved under Reports.
-  Constituents is labeled Donors. Data health is Donors, Clean up. Team moved to Settings
+  Constituents is labeled Donors. Data health is Donors, Data health (it was briefly called Clean up). Team moved to Settings
   (its address is now `/settings/team`). Gifts gained an All gifts tab.
 - Settings became one grouped list and gained Team, Account and export, and Billing.

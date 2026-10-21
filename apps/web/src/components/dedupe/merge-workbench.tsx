@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import type { Constituent } from "@maple/core/services";
 import { api, errorMessage } from "@/lib/api";
 import { formatDate, formatMoney } from "@/lib/format";
-import { Alert, AlertDescription, AlertTitle, Button, Radio, RadioGroup, useToast } from "@/components/ui";
+import { Alert, AlertDescription, AlertTitle, Button, Radio, RadioGroup, useToast, useConfirm } from "@/components/ui";
 import { anchorClass } from "@/components/ui/text";
 
 type Side = "a" | "b";
@@ -31,6 +31,7 @@ const FIELDS: { key: string; label: string; get: (c: Constituent) => string }[] 
 ];
 
 export function MergeWorkbench({ orgId, a, b, canMerge }: { orgId: string; a: Constituent; b: Constituent; canMerge: boolean }) {
+  const confirm = useConfirm();
   const router = useRouter();
   const toast = useToast();
   const [survivor, setSurvivor] = useState<Side>(a.giftCount >= b.giftCount ? "a" : "b");
@@ -40,9 +41,22 @@ export function MergeWorkbench({ orgId, a, b, canMerge }: { orgId: string; a: Co
   const differing = FIELDS.filter((f) => f.get(a) !== f.get(b));
   const keep = survivor === "a" ? a : b;
   const other = survivor === "a" ? b : a;
+  // Two records often share a name ("Merge Ruth Goldberg into Ruth Goldberg"), so each is
+  // also named by when it was added and how many gifts it has.
+  const describe = (c: Constituent) => `${c.displayName}, added ${formatDate(c.createdAt)}, ${c.giftCount} ${c.giftCount === 1 ? "gift" : "gifts"}`;
+  const sameName = keep.displayName === other.displayName;
+  const mergeSummary = (
+    <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+      <dt className="font-semibold">Keeping</dt>
+      <dd>{describe(keep)}</dd>
+      <dt className="font-semibold">Merging in</dt>
+      <dd>{describe(other)}</dd>
+      <dd className="col-span-2 mt-2 text-text-weak">Gifts, notes and relationships move to the record you keep. You can undo this for 30 days.</dd>
+    </dl>
+  );
 
   async function merge() {
-    const sure = window.confirm(`Merge ${other.displayName} into ${keep.displayName}? Gifts, notes and relationships move over. You can undo this for 30 days.`);
+    const sure = await confirm({ title: "Merge these records?", body: mergeSummary, confirmLabel: "Merge", destructive: true });
     if (!sure) return;
     setPending(true);
     setError(null);
@@ -83,7 +97,7 @@ export function MergeWorkbench({ orgId, a, b, canMerge }: { orgId: string; a: Co
       </dl>
       {canMerge && (
         <div className="mt-2">
-          <Radio name="survivor" value={side} label="Keep this record" help="Its id and history stay. The other record's gifts and notes move here." checked={survivor === side} onChange={() => setSurvivor(side)} />
+          <Radio name="survivor" value={side} label={`Keep this record (added ${formatDate(c.createdAt)})`} help="Its id and history stay. The other record's gifts and notes move here." checked={survivor === side} onChange={() => setSurvivor(side)} />
         </div>
       )}
     </div>
@@ -120,9 +134,10 @@ export function MergeWorkbench({ orgId, a, b, canMerge }: { orgId: string; a: Co
               </Alert>
             )}
           </div>
+          <div className="rounded-30 border border-border-weaker bg-background-weakest p-4 text-30 leading-5">{mergeSummary}</div>
           <div className="flex flex-wrap gap-2">
             <Button loading={pending} onClick={merge}>
-              Merge {other.displayName} into {keep.displayName}
+              {sameName ? `Merge, keeping the record added ${formatDate(keep.createdAt)}` : `Merge ${other.displayName} into ${keep.displayName}`}
             </Button>
             <Link href={`/app/orgs/${orgId}/duplicates`} className="inline-flex items-center px-3 text-30 text-text-weak underline-offset-2 hover:underline">
               Back to the queue

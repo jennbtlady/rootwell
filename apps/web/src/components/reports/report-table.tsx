@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReportResult } from "@maple/core";
-import { formatDate, formatMoney } from "@/lib/format";
+import { formatDate, formatMoney, plural } from "@/lib/format";
 import { EmptyState, Table, TBody, TD, TH, THead, TR } from "@/components/ui";
 import { anchorClass } from "@/components/ui/text";
 
@@ -14,7 +14,7 @@ export function ReportTable({ orgId, title, result }: { orgId: string; title: st
   return (
     <div className="flex flex-col gap-2">
       <p className="text-30 text-text-weak">
-        {result.rows.length.toLocaleString()} rows{result.rows.length > 500 ? ". The first 500 are shown; the download has them all." : "."}
+        {plural(result.rows.length, "row")}{result.rows.length > 500 ? ". The first 500 are shown; the download has them all." : "."}
         {extra ? " The download also has first and last names, mailing addresses, and who asked not to be mailed, ready for a mail merge." : ""}
       </p>
       <Table label={title}>

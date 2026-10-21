@@ -23,6 +23,7 @@ for (const width of [1280, 375]) {
     await page.getByLabel("Password").fill(`e2e-${randomUUID()}`);
     await page.getByRole("button", { name: "Create account" }).click();
     await page.waitForURL(/\/app$/);
+    await expect(page.getByText("Welcome, Gloria")).toBeVisible();
     await page.getByRole("link", { name: "Create organization" }).or(page.getByRole("button", { name: "Create organization" })).first().click();
     await page.getByLabel("Organization name").fill("Eastside Literacy Project");
     await page.getByRole("button", { name: "Create organization" }).click();

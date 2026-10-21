@@ -23,6 +23,7 @@ import {
   Textarea,
 } from "@/components/ui";
 import { anchorClass } from "@/components/ui/text";
+import { Composites } from "./composites";
 
 export const metadata: Metadata = { title: "Design system" };
 
@@ -143,6 +144,14 @@ export default function DesignPage() {
           <AlertTitle>The import did not finish</AlertTitle>
           <AlertDescription>Row 212 has a date we could not read. Fix it in the file and try again. Nothing was saved.</AlertDescription>
         </Alert>
+      </section>
+
+      <section className="flex flex-col gap-4">
+        <Heading variant="heading20">Confirm and copy</Heading>
+        <Paragraph noMargin className="text-text-weak">
+          useConfirm() replaces the browser&apos;s confirm box. Focus starts on Cancel. CopyButton says Copied on itself.
+        </Paragraph>
+        <Composites />
       </section>
 
       <section className="flex flex-col gap-4">

@@ -32,11 +32,11 @@ export default async function DashboardPage({ params }: PageProps<"/app/orgs/[or
           </Heading>
           <p className="mt-1 max-w-2xl text-30 leading-5 text-text-weak">
             {board
-              ? `How fundraising is going this fiscal year. Updated ${formatDateTime(snap.computedAt)}; it refreshes every night.`
-              : `What your board sees, on board links and when they sign in. Updated ${formatDateTime(snap.computedAt)}; it refreshes every night.${org.hideBoardNames ? " Donor names are hidden from the board." : ""}`}
+              ? `How fundraising is going this fiscal year. Updated ${formatDateTime(snap.computedAt)}; it refreshes when gifts are posted and every night.`
+              : `What your board sees, on board links and when they sign in. Updated ${formatDateTime(snap.computedAt)}; it refreshes when gifts are posted and every night.${org.hideBoardNames ? " Donor names are hidden from the board." : ""}`}
           </p>
         </div>
-        <DashboardActions orgId={orgId} />
+        <DashboardActions orgId={orgId} canShare={org.role === "owner" || org.role === "admin"} />
       </div>
       <BoardDashboard data={snap.data} showNames={!org.hideBoardNames} />
     </div>

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { expectAccessible, signIn, state } from "./helpers";
+import { expectAccessible, signIn, state, confirmIn } from "./helpers";
 
 /**
  * Dana's trust issues from the persona walkthroughs (docs/usability/2026-10-21-persona-walkthroughs.md):
@@ -59,6 +59,9 @@ test.describe.serial("Dana: the numbers match the bank", () => {
     await dialog.getByRole("button", { name: "Correct and post" }).click();
     await expect(page.getByText(/are final\. Next: thank these donors\./)).toBeVisible();
     await expect(page.getByText("Matches the deposit slip")).toBeVisible();
+    // The posted batch points to the next job.
+    await expect(page.getByText("Next: thank these donors", { exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Thank these donors" })).toHaveAttribute("href", /acknowledgments$/);
 
     // The board dashboard shows the new gifts now, without waiting for the nightly run.
     await page.goto(`${org}/dashboard`);
@@ -72,8 +75,8 @@ test.describe.serial("Dana: the numbers match the bank", () => {
     await page.goto(`${org}/acknowledgments/statements?year=${year}`);
     const send = page.getByRole("button", { name: /^Email \d+ not yet sent$/ });
     await expect(send).toBeVisible();
-    page.once("dialog", (d) => d.accept());
     await send.click();
+    await confirmIn(page, "Email statements");
     await expect(page.getByText(/statements? sent/).first()).toBeVisible();
     await page.reload();
     // After a reload the page still knows: nothing left to send, every row says when.

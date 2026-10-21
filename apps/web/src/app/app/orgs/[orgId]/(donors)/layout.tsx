@@ -10,7 +10,7 @@ export default async function DonorsLayout({ params, children }: LayoutProps<"/a
         tabs={[
           { href: `${base}/constituents`, label: "All donors", match: [`${base}/imports`] },
           { href: `${base}/duplicates`, label: "Possible duplicates", match: [`${base}/merges`] },
-          { href: `${base}/health`, label: "Clean up" },
+          { href: `${base}/health`, label: "Data health" },
         ]}
       />
       {children}

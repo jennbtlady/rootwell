@@ -7,15 +7,16 @@ import type { AckTemplate, QueueItem } from "@maple/core/services";
 import { accessToken, api, errorMessage } from "@/lib/api";
 import { saveResponse } from "@/lib/download";
 import { formatDate, formatMoney } from "@/lib/format";
-import { Alert, AlertDescription, Badge, Button, EmptyState, FormField, Modal, Select, Table, TBody, TD, TH, THead, TR, useToast } from "@/components/ui";
+import { Alert, AlertDescription, Badge, Button, EmptyState, FormField, Modal, Select, Table, TBody, TD, TH, THead, TR, useToast, useConfirm } from "@/components/ui";
 import { anchorClass } from "@/components/ui/text";
 
 export function AckQueue({ orgId, items, total, templates }: { orgId: string; items: QueueItem[]; total: number; templates: AckTemplate[] }) {
+  const confirm = useConfirm();
   const router = useRouter();
   const toast = useToast();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState<string | null>(null);
-  const [preview, setPreview] = useState<{ subject: string | null; body: string; signature: string | null; to: string } | null>(null);
+  const [preview, setPreview] = useState<{ subject: string | null; body: string; signature: string | null; to: string; at: number; tplId: string } | null>(null);
   const emailTemplates = templates.filter((t) => t.channel === "email");
   const letterTemplates = templates.filter((t) => t.channel === "letter");
   const [emailTpl, setEmailTpl] = useState(emailTemplates[0]?.id ?? "");
@@ -34,7 +35,7 @@ export function AckQueue({ orgId, items, total, templates }: { orgId: string; it
   }
 
   async function sendEmails() {
-    if (!window.confirm(`Send ${emailable} thank-you email${emailable === 1 ? "" : "s"}? Donors with no email or who asked for no email are skipped.`)) return;
+    if (!await confirm({ title: `Send ${emailable} thank-you email${emailable === 1 ? "" : "s"}?`, body: "Donors with no email, or who asked for no email, are skipped.", confirmLabel: "Send emails" })) return;
     setBusy("email");
     const res = await api().api.v1.orgs[":orgId"].acks.email.$post({ param: { orgId }, json: { giftIds: ids, templateId: emailTpl } });
     setBusy(null);
@@ -46,7 +47,7 @@ export function AckQueue({ orgId, items, total, templates }: { orgId: string; it
   }
 
   async function letters() {
-    const mark = window.confirm("Mark these gifts as thanked by letter once the PDF downloads? Choose Cancel to download only.");
+    const mark = await confirm({ title: "Mark these gifts as thanked?", body: "Once the letters download, mark these gifts as thanked by letter. Choose Download only if you are not sending them yet.", confirmLabel: "Download and mark as thanked", cancelLabel: "Download only" });
     setBusy("letter");
     const res = await fetch(`/api/v1/orgs/${orgId}/acks/letters`, {
       method: "POST",
@@ -72,13 +73,15 @@ export function AckQueue({ orgId, items, total, templates }: { orgId: string; it
     router.refresh();
   }
 
-  async function showPreview(tplId: string) {
-    const first = ids[0];
-    if (!first) return;
-    const res = await api().api.v1.orgs[":orgId"].acks.preview.$post({ param: { orgId }, json: { giftIds: [first], templateId: tplId } });
+  // One selected gift at a time, with Previous and Next, so every letter can be checked
+  // before it goes out, not only the first one.
+  async function showPreview(tplId: string, at = 0) {
+    const id = ids[at];
+    if (!id) return;
+    const res = await api().api.v1.orgs[":orgId"].acks.preview.$post({ param: { orgId }, json: { giftIds: [id], templateId: tplId } });
     if (!res.ok) return toast({ type: "error", title: "No preview", description: await errorMessage(res) });
     const d = (await res.json()) as { subject: string | null; body: string; signature: string | null; to: { name: string } };
-    setPreview({ subject: d.subject, body: d.body, signature: d.signature, to: d.to.name });
+    setPreview({ subject: d.subject, body: d.body, signature: d.signature, to: d.to.name, at, tplId });
   }
 
   if (items.length === 0) return <EmptyState title="Everyone has been thanked">New gifts appear here as soon as their batch is posted.</EmptyState>;
@@ -187,7 +190,24 @@ export function AckQueue({ orgId, items, total, templates }: { orgId: string; it
         </TBody>
       </Table>
 
-      <Modal open={preview !== null} onOpenChange={(o) => !o && setPreview(null)} title={`Preview for ${preview?.to ?? ""}`}>
+      <Modal
+        open={preview !== null}
+        onOpenChange={(o) => !o && setPreview(null)}
+        title={`Preview for ${preview?.to ?? ""}`}
+        description={preview && ids.length > 1 ? `${preview.at + 1} of ${ids.length} selected` : undefined}
+        footer={
+          preview && ids.length > 1 ? (
+            <>
+              <Button variant="secondary" disabled={preview.at === 0} onClick={() => showPreview(preview.tplId, preview.at - 1)}>
+                Previous
+              </Button>
+              <Button variant="secondary" disabled={preview.at >= ids.length - 1} onClick={() => showPreview(preview.tplId, preview.at + 1)}>
+                Next
+              </Button>
+            </>
+          ) : undefined
+        }
+      >
         {preview && (
           <div className="flex flex-col gap-3 text-30 leading-6">
             {preview.subject && (

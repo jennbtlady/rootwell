@@ -4,12 +4,13 @@ import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { accessToken, api, errorMessage } from "@/lib/api";
 import { saveResponse } from "@/lib/download";
-import { formatDate, formatMoney } from "@/lib/format";
-import { Alert, AlertDescription, Badge, Button, EmptyState, FormField, Select, Table, TBody, TD, TH, THead, TR, useToast } from "@/components/ui";
+import { formatDate, formatMoney, plural } from "@/lib/format";
+import { Alert, AlertDescription, Badge, Button, EmptyState, FormField, Select, Table, TBody, TD, TH, THead, TR, useToast, useConfirm } from "@/components/ui";
 
 type Row = { constituentId: string; name: string; email: string | null; doNotEmail: boolean; hasAddress: boolean; gifts: number; total: string; deductibleTotal: string; emailedAt: string | null; printedAt: string | null };
 
 export function StatementsPanel({ orgId, year, donors, missingEin }: { orgId: string; year: number; donors: Row[]; missingEin: boolean }) {
+  const confirm = useConfirm();
   const router = useRouter();
   const path = usePathname();
   const toast = useToast();
@@ -38,9 +39,9 @@ export function StatementsPanel({ orgId, year, donors, missingEin }: { orgId: st
   async function email(resend = false) {
     const n = resend ? byEmail.length : notYetEmailed.length;
     const question = resend
-      ? `Send ${year} statements again to all ${n} donors with email? Everyone gets a second copy.`
-      : `Email ${n} ${year} statements? Each donor gets their own PDF. Donors already emailed are not sent another.`;
-    if (!window.confirm(question)) return;
+      ? `Send ${year} statements again to all ${plural(n, "donor")} with email? Everyone gets a second copy.`
+      : `Email ${plural(n, `${year} statement`)}? Each donor gets their own PDF. Donors already emailed are not sent another.`;
+    if (!await confirm({ title: resend ? "Send everyone a second copy?" : `Email ${plural(n, `${year} statement`)}?`, body: question, confirmLabel: resend ? "Send again" : "Email statements" })) return;
     setBusy(resend ? "resend" : "email");
     const res = await api().api.v1.orgs[":orgId"].statements[":year"].email.$post({ param: { orgId, year: String(year) }, json: { resend } });
     setBusy(null);
@@ -90,7 +91,7 @@ export function StatementsPanel({ orgId, year, donors, missingEin }: { orgId: st
       ) : (
         <>
           <p className="text-30 text-text-weak">
-            {donors.length.toLocaleString()} donors gave {formatMoney(total)} in {year}. {byEmail.length > 0 && `Emailed: ${byEmail.length - notYetEmailed.length} of ${byEmail.length}${lastEmailed ? ` (last on ${formatDate(lastEmailed)})` : ""}.`}{" "}
+            {plural(donors.length, "donor")} gave {formatMoney(total)} in {year}. {byEmail.length > 0 && `Emailed: ${byEmail.length - notYetEmailed.length} of ${byEmail.length}${lastEmailed ? ` (last on ${formatDate(lastEmailed)})` : ""}.`}{" "}
             {byMail.length > 0 && `By mail: ${printed.length} of ${byMail.length} printed.`}
           </p>
           {byEmail.length > 0 && notYetEmailed.length === 0 && (

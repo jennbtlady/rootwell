@@ -5,9 +5,10 @@ import { useRouter } from "next/navigation";
 import type { ShareLink } from "@maple/core/services";
 import { api, errorMessage } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
-import { Alert, AlertDescription, AlertTitle, Badge, Button, Card, CardContent, CardHeader, CardTitle, Checkbox, FormField, Input, Table, TBody, TD, TH, THead, TR, useToast } from "@/components/ui";
+import { Alert, AlertDescription, AlertTitle, Badge, Button, Card, CardContent, CardHeader, CardTitle, Checkbox, FormField, Input, Table, TBody, TD, TH, THead, TR, useToast, useConfirm, CopyButton } from "@/components/ui";
 
 export function BoardSharing({ orgId, hideNames, links }: { orgId: string; hideNames: boolean; links: ShareLink[] }) {
+  const confirm = useConfirm();
   const router = useRouter();
   const toast = useToast();
   const [hide, setHide] = useState(hideNames);
@@ -37,7 +38,7 @@ export function BoardSharing({ orgId, hideNames, links }: { orgId: string; hideN
   }
 
   async function revoke(l: ShareLink) {
-    if (!window.confirm(`Turn off "${l.label}"? Anyone using it will see a not-found page.`)) return;
+    if (!await confirm({ title: `Turn off "${l.label}"?`, body: "Anyone using it will see a page saying the link is no longer active.", confirmLabel: "Turn off link", destructive: true })) return;
     const res = await api().api.v1.orgs[":orgId"]["board-links"][":id"].$delete({ param: { orgId, id: l.id } });
     if (res.status === 204) router.refresh();
   }
@@ -66,9 +67,9 @@ export function BoardSharing({ orgId, hideNames, links }: { orgId: string; hideN
               <AlertDescription>
                 <p className="break-all font-mono text-20">{created}</p>
                 <p className="mt-1">It is shown once. Anyone with it can see the dashboard until you turn it off.</p>
-                <Button size="small" variant="secondary" className="mt-2" onClick={() => navigator.clipboard.writeText(created).then(() => toast({ type: "success", title: "Copied" }))}>
-                  Copy link
-                </Button>
+                <div className="mt-2">
+                  <CopyButton text={created} size="small" variant="secondary" />
+                </div>
               </AlertDescription>
             </Alert>
           )}

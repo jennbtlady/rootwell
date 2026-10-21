@@ -1,6 +1,6 @@
 import path from "node:path";
 import { expect, test, type Page } from "@playwright/test";
-import { expectAccessible, signIn, state } from "./helpers";
+import { expectAccessible, signIn, state, confirmIn } from "./helpers";
 
 /**
  * Phase 3 acceptance in the browser: upload, match columns, fix problems, review matches,
@@ -48,14 +48,17 @@ test.describe.serial("phase 3 import wizard", () => {
     await row4.getByLabel("Email").fill("tom.e2e@example.org");
     await row4.getByRole("button", { name: "Save fix" }).click();
     await expect(page.getByRole("listitem").filter({ hasText: "Row 4" })).toHaveCount(0);
-    page.once("dialog", (d) => d.accept());
     await page.getByRole("button", { name: /Skip all \d+ rows with problems/ }).click();
+    await confirmIn(page, "Skip these rows");
 
     await finishReview(page);
     await expect(page.getByRole("button", { name: /Import \d+ people/ })).toBeVisible();
 
     // Marcus's questions: old gifts were thanked already, and "General" means General operating.
     await expect(page.getByRole("heading", { name: "Two questions before importing" })).toBeVisible();
+    // Guesses are shown, not hidden: this file mixes 13/2/2025 with month-first dates.
+    await expect(page.getByText(/rows? to check before importing/)).toBeVisible();
+    await expect(page.getByText(/may be day first too/).first()).toBeVisible();
     await expect(page.getByRole("radio", { name: "Yes, gifts before a date were already thanked" })).toBeChecked();
     const general = page.getByLabel('"General" in the file is');
     await expect(general).toBeVisible();
@@ -82,8 +85,8 @@ test.describe.serial("phase 3 import wizard", () => {
     await page.getByRole("link", { name: "Past imports" }).click();
     await expect(page.getByRole("heading", { name: "Past imports", level: 1 })).toBeVisible();
     await page.getByRole("link", { name: "messy-import.csv" }).first().click();
-    page.once("dialog", (d) => d.accept());
     await page.getByRole("button", { name: "Roll back this import" }).click();
+    await confirmIn(page, "Roll back import");
     await expect(page.getByText(/was rolled back/)).toBeVisible();
     await page.goto(`${org}/constituents?q=${encodeURIComponent("dana.e2e@example.org")}`);
     await expect(page.getByText("No one matches that search")).toBeVisible();
@@ -104,8 +107,8 @@ test.describe.serial("phase 3 import wizard", () => {
     expect(seconds).toBeLessThan(120);
     await expect(page.locator("dt:text-is('Gifts') + dd")).toHaveText("5,000");
 
-    page.once("dialog", (d) => d.accept());
     await page.getByRole("button", { name: "Roll back this import" }).click();
+    await confirmIn(page, "Roll back import");
     await expect(page.getByText(/was rolled back/)).toBeVisible({ timeout: 60_000 });
   });
 });

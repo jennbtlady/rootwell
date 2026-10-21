@@ -156,20 +156,35 @@ From the other journeys:
 
 - **Landing page.** It gives no description, no "free 30-day trial", and no "set up in
   about 30 minutes". "Sign in" is the main button for new visitors.
+  Fixed 2026-10-21: it says who it is for and what it does, and the main button is "Start
+  your free 30-day trial". Sign in is a link below it.
 - **No welcome after sign-up.** The header shows the email, not the person's name.
-- **Time zones.** They read "America/New York". Use "Eastern", and so on.
+  Fixed 2026-10-21: "Welcome, Gloria" after sign-up, and the header shows the name.
+- **Time zones.** They read "America/New York". Use "Eastern", and so on. Fixed: the
+  details screen in b08f181, and the Create organization form on 2026-10-21.
 - **No next step after posting a batch.** Nothing suggests "Thank these donors now".
-- **Grammar.** "Post 1 gifts", "1 are new", "See the 1 matched people".
+  Fixed 2026-10-21: a posted batch shows "Next: thank these donors" with a button, until
+  every gift in it is thanked.
+- **Grammar.** "Post 1 gifts", "1 are new", "See the 1 matched people". Fixed 2026-10-21
+  with a `plural()` helper across import, statements, reports and Data health.
 - **Names disagree.**
   - "Clean up" versus "Data health".
   - The Reports area versus its "Reports" tab. The area opens on Board dashboard.
   - "Gift entry standards" versus "Gift entry rules".
+  - Fixed 2026-10-21: "Data health", "Lists and downloads" for the tab inside Reports, and
+    "Gift entry rules" everywhere.
 - **The merge button is ambiguous.** "Merge Ruth Goldberg into Ruth Goldberg" doesn't say
   which record survives.
+  Fixed 2026-10-21: the page and the confirm say "Keeping" and "Merging in", each with the
+  date added and gift count. With identical names the button reads "Merge, keeping the
+  record added Mar 4, 2025".
 - **The rollback message leaves things out.** It omits the funds and campaigns removed.
   Fixed 2026-10-21.
 - **Import silently guesses.** A junk row ("Rivera,") becomes a donor, mixed date formats
   are read without a warning, and unknown payment types become "Other".
+  Fixed 2026-10-21: the warnings existed but were never shown. The last import step now
+  lists "rows to check" with Skip for each. New warnings cover a lone name with no other
+  details, and month-first dates in a file that also has day-first ones.
 - **Small tap targets.** Explanation buttons are 20px, and Print is 28px. Aim for 44px.
   Fixed 2026-10-21 for both.
 - **Dates and labels on the board page.**
@@ -182,8 +197,12 @@ From the other journeys:
   2026-10-21: they print as notes at the end of the board dashboard.
 - **Turned-off board links.** They show a bare 404 with no explanation. Fixed 2026-10-21:
   a short page says the link was turned off and to ask for a new one.
-- **Thank-yous preview.** It shows only the first selected donor.
-- **Data health has no single score and no "fix this first" order.**
+- **Thank-yous preview.** It shows only the first selected donor. Fixed 2026-10-21:
+  Previous and Next step through every selected gift.
+- **Data health has no single score and no "fix this first" order.** Fixed 2026-10-21:
+  one line says how many things need attention and which to start with, and problems are
+  listed first. A made-up score was left out on purpose: a count of real problems is
+  easier to act on.
 - **Dana's gift form.**
   - Campaign is required but defaults to "None", and its hint mentions "appeal".
   - "Add a new donor" from the gift form leaves the batch and drops the typed name.
@@ -199,11 +218,16 @@ From the other journeys:
       email and phone fields.
 - **Board sharing is hard to find.** It sits under Settings, Connections. The Board
   dashboard page mentions board links but has no button for one.
-- **Copy link gives no visible "Copied".**
-- **Printed statements say "Reply to the email it came with".**
+  Fixed 2026-10-21: "Share with your board" on the Board dashboard, for owners and admins.
+- **Copy link gives no visible "Copied".** Fixed 2026-10-21: the button itself says
+  "Copied".
+- **Printed statements say "Reply to the email it came with".** Fixed with Dana's trust
+  fixes.
 - **Native browser confirm boxes for Remove, Post, and Email.** They look unlike the app
-  and are easy to click through.
-- **"Remove sample organization" is a large red button at the top of Home.**
+  and are easy to click through. Fixed 2026-10-21: all 16 now use the app's own dialog,
+  with a specific button ("Remove gift", "Roll back import") and focus on Cancel.
+- **"Remove sample organization" is a large red button at the top of Home.** Fixed in
+  b08f181: it sits at the bottom of Home under "Done exploring?".
 
 ## Scenario results
 

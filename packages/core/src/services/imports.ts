@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { CODING_FIELDS, mapRow, normalizeRow, suggestCoding, type CodingField, type FieldValues, type ImportField, type ImportKind } from "../import";
+import { CODING_FIELDS, flagDayFirstDates, mapRow, normalizeRow, suggestCoding, type CodingField, type FieldValues, type ImportField, type ImportKind } from "../import";
 import type { ImportOptions } from "../schemas/coding";
 import { listCoding } from "./coding";
 import type { Tx } from "./types";
@@ -107,6 +107,7 @@ export async function prepareImport(tx: Tx, orgId: string, jobId: string, mappin
     const m = mapRow(x.raw, job.headers, mapping, job.kind, today);
     return { n: x.row_number, fields: m.fields, mapped: m.mapped, errors: m.errors, warnings: m.warnings, key: m.personKey, action: m.errors.length ? "error" : "create" };
   });
+  flagDayFirstDates(updates);
   await tx.execute(sql`
     update import_rows r
        set fields = x.fields, mapped = x.mapped, errors = x.errors, warnings = x.warnings, person_key = x.key,
@@ -129,7 +130,7 @@ export type ImportRowView = {
 };
 
 export async function listImportRows(tx: Tx, orgId: string, jobId: string, opts: { action?: RowAction; withWarnings?: boolean; limit?: number; offset?: number } = {}): Promise<{ items: ImportRowView[]; total: number }> {
-  const where = opts.action ? sql`and action = ${opts.action}::import_row_action` : opts.withWarnings ? sql`and jsonb_array_length(warnings) > 0` : sql``;
+  const where = opts.action ? sql`and action = ${opts.action}::import_row_action` : opts.withWarnings ? sql`and jsonb_array_length(warnings) > 0 and action not in ('skip', 'error')` : sql``;
   const rows = await tx.execute(sql`
     select row_number, raw, fields, errors, warnings, action, person_key, count(*) over() as total
       from import_rows where job_id = ${jobId} and org_id = ${orgId} ${where}

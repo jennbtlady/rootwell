@@ -18,6 +18,8 @@ export * from "./empty-state";
 export * from "./checkbox";
 export * from "./radio";
 export * from "./modal";
+export * from "./confirm";
 export * from "./tabs";
 export * from "./combobox";
 export * from "./toast";
+export * from "./copy-button";

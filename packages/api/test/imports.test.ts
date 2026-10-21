@@ -82,9 +82,12 @@ describe.skipIf(!DATABASE_URL)("import wizard through the API", () => {
     expect(byRow[12]).toEqual(["gift_date"]);
     expect(Object.keys(byRow).map(Number).sort((a, b) => a - b)).toEqual([4, 5, 6, 10, 12]);
 
-    // Warnings: short phone dropped, unknown payment method.
-    const warn = (await (await call(owner, "GET", `/imports/${id}/rows?warnings=true`)).json()) as { items: { rowNumber: number }[] };
-    expect(warn.items.map((r) => r.rowNumber).sort((a, b) => a - b)).toEqual([5, 9]);
+    // Warnings on rows that will import: unknown payment method (9), and a month-first date
+    // in a file that also has day-first ones (8). Row 5's short phone waits until its error
+    // is fixed, since error rows are listed under problems instead.
+    const warn = (await (await call(owner, "GET", `/imports/${id}/rows?warnings=true`)).json()) as { items: { rowNumber: number; warnings: { message: string }[] }[] };
+    expect(warn.items.map((r) => r.rowNumber).sort((a, b) => a - b)).toEqual([8, 9]);
+    expect(warn.items.find((r) => r.rowNumber === 8)!.warnings[0]!.message).toMatch(/may be day first/);
 
     // Fix the email in place; skip the rest of the errors.
     const fix = await call(owner, "PATCH", `/imports/${id}/rows/4`, { fields: { email: "tom.m1@example.org" } });

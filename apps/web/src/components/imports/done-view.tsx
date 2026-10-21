@@ -5,8 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ImportJob } from "@maple/core/services";
 import { api, errorMessage } from "@/lib/api";
-import { formatDateTime, formatMoney } from "@/lib/format";
-import { Alert, AlertDescription, AlertTitle, Button, Card, useToast } from "@/components/ui";
+import { formatDateTime, formatMoney, plural } from "@/lib/format";
+import { Alert, AlertDescription, AlertTitle, Button, Card, useToast, useConfirm } from "@/components/ui";
 import { anchorClass } from "@/components/ui/text";
 
 type Summary = {
@@ -23,6 +23,7 @@ type Summary = {
 };
 
 export function DoneView({ orgId, job }: { orgId: string; job: ImportJob }) {
+  const confirm = useConfirm();
   const router = useRouter();
   const toast = useToast();
   const s = job.summary as Summary;
@@ -31,7 +32,7 @@ export function DoneView({ orgId, job }: { orgId: string; job: ImportJob }) {
   const base = `/app/orgs/${orgId}`;
 
   async function rollback() {
-    if (!window.confirm(`Roll back this import? ${s.gifts ?? 0} gifts and ${s.peopleCreated ?? 0} people it created will be removed. People who existed before are not touched.`)) return;
+    if (!await confirm({ title: "Roll back this import?", body: `${plural(s.gifts ?? 0, "gift")} and ${plural(s.peopleCreated ?? 0, "person", "people")} it created will be removed. People who existed before are not touched.`, confirmLabel: "Roll back import", destructive: true })) return;
     setPending(true);
     setError(null);
     const res = await api().api.v1.orgs[":orgId"].imports[":id"].rollback.$post({ param: { orgId, id: job.id } });
@@ -55,16 +56,16 @@ export function DoneView({ orgId, job }: { orgId: string; job: ImportJob }) {
         <Alert>
           <AlertTitle>This import was rolled back on {formatDateTime(job.rolledBackAt)}</AlertTitle>
           <AlertDescription>
-            Removed {s.rolledBack?.gifts ?? 0} gifts and {s.rolledBack?.people ?? 0} people
+            Removed {plural(s.rolledBack?.gifts ?? 0, "gift")} and {plural(s.rolledBack?.people ?? 0, "person", "people")}
             {s.rolledBack?.coding ? `, and ${s.rolledBack.coding} ${s.rolledBack.coding === 1 ? "fund, campaign or appeal" : "funds, campaigns and appeals"} it had added` : ""}.
-            {s.rolledBack && s.rolledBack.keptPeople.length > 0 ? ` ${s.rolledBack.keptPeople.length} people were kept because they gained gifts, notes or relationships after the import.` : ""}
+            {s.rolledBack && s.rolledBack.keptPeople.length > 0 ? ` ${s.rolledBack.keptPeople.length === 1 ? "1 person was" : `${s.rolledBack.keptPeople.length} people were`} kept because they gained gifts, notes or relationships after the import.` : ""}
           </AlertDescription>
         </Alert>
       ) : (
         <Alert>
           <AlertTitle>Imported on {formatDateTime(job.committedAt)}</AlertTitle>
           <AlertDescription>
-            New people now appear under Donors. Check Donors, Clean up, for any duplicates the import created. To undo this import later, find it under Donors, Past imports.
+            New people now appear under Donors. Check Donors, Data health, for any duplicates the import created. To undo this import later, find it under Donors, Past imports.
           </AlertDescription>
         </Alert>
       )}

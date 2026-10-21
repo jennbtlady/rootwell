@@ -6,7 +6,7 @@ import { Heading } from "@/components/ui";
 import { anchorClass } from "@/components/ui/text";
 import { StandardsForm } from "@/components/settings/standards-form";
 
-export const metadata: Metadata = { title: "Gift entry standards" };
+export const metadata: Metadata = { title: "Gift entry rules" };
 
 export default async function StandardsPage({ params }: PageProps<"/app/orgs/[orgId]/settings/gift-standards">) {
   const { orgId } = await params;
@@ -16,7 +16,7 @@ export default async function StandardsPage({ params }: PageProps<"/app/orgs/[or
     <div className="flex flex-col gap-4">
       <div>
         <Heading variant="heading30" as="h1" noMargin>
-          Gift entry standards
+          Gift entry rules
         </Heading>
         <p className="mt-1 max-w-2xl text-30 leading-5 text-text-weak">
           This is your gift entry procedure, kept where everyone uses it. The gift form enforces it and shows your instructions under each field.{" "}

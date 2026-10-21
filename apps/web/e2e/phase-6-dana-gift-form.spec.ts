@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { expectAccessible, signIn, state } from "./helpers";
+import { expectAccessible, signIn, state, confirmIn } from "./helpers";
 
 /**
  * Dana's gift form findings from the persona walkthroughs (docs/usability/2026-10-21-persona-walkthroughs.md):
@@ -97,8 +97,8 @@ test.describe.serial("Dana: the gift form", () => {
 
     // Leave the shared test organization as it was.
     await page.goto(batch);
-    page.once("dialog", (d) => d.accept());
     await page.getByRole("button", { name: /Remove the \$35\.00 gift/ }).click();
+    await confirmIn(page, "Remove gift");
     await expect(page.getByRole("cell", { name: "$35.00", exact: true })).toHaveCount(0);
   });
 });

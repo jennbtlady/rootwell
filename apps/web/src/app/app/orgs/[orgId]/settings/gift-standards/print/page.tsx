@@ -5,7 +5,7 @@ import { getOrg, getStandards, listCoding } from "@maple/core/services";
 import { requireSession, withSession } from "@/lib/session";
 import { formatDate, today } from "@/lib/format";
 
-export const metadata: Metadata = { title: "Gift entry standards" };
+export const metadata: Metadata = { title: "Gift entry rules" };
 
 /** The org's SOP as a one-page document. Styled for paper: print it or save as PDF. */
 export default async function PrintStandardsPage({ params }: PageProps<"/app/orgs/[orgId]/settings/gift-standards/print">) {
@@ -25,7 +25,7 @@ export default async function PrintStandardsPage({ params }: PageProps<"/app/org
   return (
     <article className="mx-auto max-w-2xl bg-background-body p-8 text-30 leading-6 text-text print:p-0">
       <header className="mb-6 border-b border-border-weaker pb-4">
-        <h1 className="text-60 font-semibold tracking-[-0.02em]">Gift entry standards</h1>
+        <h1 className="text-60 font-semibold tracking-[-0.02em]">Gift entry rules</h1>
         <p className="text-text-weak">
           {org.name} · as of {formatDate(today())}
         </p>

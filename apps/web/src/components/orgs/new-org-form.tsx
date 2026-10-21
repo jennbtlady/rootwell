@@ -2,19 +2,13 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { US_TIMEZONES } from "@maple/core";
 import { api, errorMessage } from "@/lib/api";
 import { Alert, AlertDescription, Button, FormField, Input, Select } from "@/components/ui";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-const TIMEZONES = [
-  "America/New_York",
-  "America/Chicago",
-  "America/Denver",
-  "America/Phoenix",
-  "America/Los_Angeles",
-  "America/Anchorage",
-  "Pacific/Honolulu",
-];
+// The same plain names the organization details screen uses: Eastern, Central, and so on.
+const TIMEZONES: readonly string[] = US_TIMEZONES.map((t) => t.id);
 
 export function NewOrgForm() {
   const router = useRouter();
@@ -40,7 +34,6 @@ export function NewOrgForm() {
     setError(await errorMessage(res));
   }
 
-  const zones = TIMEZONES.includes(timezone) ? TIMEZONES : [timezone, ...TIMEZONES];
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
@@ -61,9 +54,9 @@ export function NewOrgForm() {
       <FormField id="timezone" label="Time zone">
         {(f) => (
           <Select {...f} name="timezone" value={timezone} onChange={(e) => setTimezone(e.target.value)}>
-            {zones.map((z) => (
-              <option key={z} value={z}>
-                {z.replace("_", " ")}
+            {US_TIMEZONES.map((z) => (
+              <option key={z.id} value={z.id}>
+                {z.label}
               </option>
             ))}
           </Select>

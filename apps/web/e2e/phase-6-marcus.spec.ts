@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { expectAccessible, signIn, state } from "./helpers";
+import { expectAccessible, signIn, state, confirmIn } from "./helpers";
 
 /**
  * Marcus's findings from the persona walkthroughs (docs/usability/2026-10-21-persona-walkthroughs.md).
@@ -36,8 +36,8 @@ test.describe.serial("Marcus: the lists can be used", () => {
 
     // Leave the shared test organization as it was.
     await page.goto(batch);
-    page.once("dialog", (d) => d.accept());
     await page.getByRole("button", { name: "Remove" }).first().click();
+    await confirmIn(page, "Remove gift");
     await expect(page.getByText("$40.00 from Dana Rivera")).toHaveCount(0);
   });
 

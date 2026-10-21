@@ -7,7 +7,7 @@ import { INTERACTION_TYPES, RELATIONSHIP_TYPES } from "@maple/core";
 import type { AuditEntry, Constituent, Gift, Interaction } from "@maple/core/services";
 import { api, errorMessage } from "@/lib/api";
 import { formatDate, formatDateTime, formatMoney, today } from "@/lib/format";
-import { Alert, AlertDescription, Badge, Button, Checkbox, Combobox, EmptyState, FormField, Input, Select, Tab, TabList, TabPanel, Table, Tabs, TBody, TD, Textarea, TH, THead, TR } from "@/components/ui";
+import { Alert, AlertDescription, Badge, Button, Checkbox, Combobox, EmptyState, FormField, Input, Select, Tab, TabList, TabPanel, Table, Tabs, TBody, TD, Textarea, TH, THead, TR, useConfirm } from "@/components/ui";
 import { anchorClass } from "@/components/ui/text";
 import type { ComboboxItem } from "@/components/ui";
 
@@ -89,6 +89,7 @@ function GiftsPanel({ orgId, gifts }: { orgId: string; gifts: Gift[] }) {
 }
 
 function InteractionsPanel({ orgId, constituentId, interactions }: { orgId: string; constituentId: string; interactions: Interaction[] }) {
+  const confirm = useConfirm();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<(typeof INTERACTION_TYPES)[number]>("call");
@@ -112,7 +113,7 @@ function InteractionsPanel({ orgId, constituentId, interactions }: { orgId: stri
   }
 
   async function remove(i: Interaction) {
-    if (!window.confirm("Delete this interaction?")) return;
+    if (!await confirm({ title: "Delete this note?", confirmLabel: "Delete", destructive: true })) return;
     const res = await api().api.v1.orgs[":orgId"].constituents[":id"].interactions[":subId"].$delete({ param: { orgId, id: constituentId, subId: i.id } });
     if (res.status === 204) router.refresh();
   }

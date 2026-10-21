@@ -7,7 +7,7 @@ import { GIFT_FIELD_LABEL, GIFT_TYPES, GIFT_TYPE_LABEL, PAYMENT_METHODS, PAYMENT
 import type { Batch, CodingRow, Gift } from "@maple/core/services";
 import { api, errorMessage } from "@/lib/api";
 import { formatDate, formatMoney } from "@/lib/format";
-import { Alert, AlertDescription, AlertTitle, Button, Combobox, EmptyState, FormField, Input, Select, Table, TBody, TD, Textarea, TH, THead, TR, useToast, type ComboboxItem } from "@/components/ui";
+import { Alert, AlertDescription, AlertTitle, Button, Combobox, EmptyState, FormField, Input, Select, Table, TBody, TD, Textarea, TH, THead, TR, useToast, type ComboboxItem, useConfirm } from "@/components/ui";
 import { anchorClass } from "@/components/ui/text";
 import { cn } from "@/lib/cn";
 import { PostBatchDialog } from "./post-batch-dialog";
@@ -24,6 +24,7 @@ type Props = {
 };
 
 export function BatchWorkspace({ orgId, batch, standards, funds, campaigns, appeals, canPost, preselected }: Props) {
+  const confirm = useConfirm();
   const router = useRouter();
   const toast = useToast();
   const open = batch.status === "open";
@@ -33,7 +34,7 @@ export function BatchWorkspace({ orgId, batch, standards, funds, campaigns, appe
   const [editing, setEditing] = useState<Gift | null>(null);
 
   async function removeGift(g: Gift) {
-    if (!window.confirm(`Remove the ${formatMoney(g.amount)} gift from ${g.constituentName}?`)) return;
+    if (!await confirm({ title: `Remove the ${formatMoney(g.amount)} gift from ${g.constituentName}?`, body: "It comes out of this batch. Nothing else changes.", confirmLabel: "Remove gift", destructive: true })) return;
     const res = await api().api.v1.orgs[":orgId"].gifts[":id"].$delete({ param: { orgId, id: g.id } });
     if (res.status === 204) {
       toast({ title: "Gift removed", description: `${formatMoney(g.amount)} from ${g.constituentName}.` });
@@ -227,7 +228,7 @@ function GiftEntryForm({ orgId, batch, standards, funds, campaigns, appeals, pre
           {e0 ? `Edit the ${formatMoney(e0.amount)} gift from ${e0.constituentName}` : "Enter a gift"}
         </h2>
         <Link href={`/app/orgs/${orgId}/settings/gift-standards/print`} className={`${anchorClass} text-30`} target="_blank">
-          Gift entry standards
+          Gift entry rules
         </Link>
       </div>
 

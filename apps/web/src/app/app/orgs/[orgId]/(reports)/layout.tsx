@@ -2,7 +2,8 @@ import { getOrg } from "@maple/core/services";
 import { requireSession, withSession } from "@/lib/session";
 import { SectionTabs } from "@/components/orgs/section-tabs";
 
-/** Reports: the dashboard first, then the saved reports. Board viewers see the dashboard only. */
+/** Reports: the board dashboard first, then the lists and downloads. The tab is not also called
+ * "Reports", so the area and the tab inside it never share a name. Board viewers see the dashboard only. */
 export default async function ReportsLayout({ params, children }: LayoutProps<"/app/orgs/[orgId]">) {
   const { orgId } = await params;
   const base = `/app/orgs/${orgId}`;
@@ -15,7 +16,7 @@ export default async function ReportsLayout({ params, children }: LayoutProps<"/
           label="Reports"
           tabs={[
             { href: `${base}/dashboard`, label: "Board dashboard" },
-            { href: `${base}/reports`, label: "Reports" },
+            { href: `${base}/reports`, label: "Lists and downloads" },
           ]}
         />
       )}

@@ -1,5 +1,6 @@
 "use client";
 
+import { plural } from "@/lib/format";
 import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { FIELD_INFO, fieldsFor, suggestMapping, STARTER_MAPPINGS, type ImportField } from "@maple/core";
@@ -145,7 +146,7 @@ export function MappingStep({ orgId, job, samples, saved, onDone }: { orgId: str
       </div>
       <div>
         <Button type="submit" loading={pending} disabled={!hasName || !giftsOk}>
-          Check {job.expectedRows.toLocaleString()} rows
+          Check {plural(job.expectedRows, "row")}
         </Button>
       </div>
     </form>

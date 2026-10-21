@@ -10,7 +10,7 @@ import { Heading } from "./heading";
  * Modal after Paste's Modal, on Base UI's Dialog for focus trapping, Escape and
  * outside-click handling. Header, body and footer are separate so long bodies scroll.
  */
-export function Modal({ open, onOpenChange, title, description, size = "default", children, footer }: {
+export function Modal({ open, onOpenChange, title, description, size = "default", children, footer, initialFocus }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
@@ -18,12 +18,15 @@ export function Modal({ open, onOpenChange, title, description, size = "default"
   size?: "default" | "wide";
   children: React.ReactNode;
   footer?: React.ReactNode;
+  /** Where focus starts. Confirm boxes start on the safe choice. */
+  initialFocus?: React.RefObject<HTMLElement | null>;
 }) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Backdrop className="fixed inset-0 z-80 bg-background-overlay transition-opacity duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0" />
         <Dialog.Popup
+          initialFocus={initialFocus}
           className={cn(
             "fixed left-1/2 top-1/2 z-80 flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col rounded-30 bg-background-body shadow-elevation-top-20 outline-none",
             "transition-[opacity,transform] duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 data-[starting-style]:scale-95",

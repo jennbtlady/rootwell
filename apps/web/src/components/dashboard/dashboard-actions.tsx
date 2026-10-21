@@ -1,11 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api, errorMessage } from "@/lib/api";
 import { Button, useToast } from "@/components/ui";
+import { buttonVariants } from "@/components/ui/button";
 
-export function DashboardActions({ orgId }: { orgId: string }) {
+/** canShare: owners and admins get a way to make a board link from the page that shows what it reveals. */
+export function DashboardActions({ orgId, canShare = false }: { orgId: string; canShare?: boolean }) {
   const router = useRouter();
   const toast = useToast();
   const [pending, setPending] = useState(false);
@@ -17,7 +20,12 @@ export function DashboardActions({ orgId }: { orgId: string }) {
     router.refresh();
   }
   return (
-    <div className="flex gap-2 print:hidden">
+    <div className="flex flex-wrap gap-2 print:hidden">
+      {canShare && (
+        <Link href={`/app/orgs/${orgId}/settings/board`} className={buttonVariants({ size: "small" })}>
+          Share with your board
+        </Link>
+      )}
       <Button variant="secondary" size="small" loading={pending} onClick={refresh}>
         Refresh now
       </Button>

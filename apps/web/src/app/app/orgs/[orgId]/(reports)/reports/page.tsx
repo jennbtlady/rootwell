@@ -6,7 +6,7 @@ import { getOrg } from "@maple/core/services";
 import { requireSession, withSession } from "@/lib/session";
 import { Heading, Paragraph } from "@/components/ui";
 
-export const metadata: Metadata = { title: "Reports" };
+export const metadata: Metadata = { title: "Lists and downloads" };
 
 export default async function ReportsPage({ params }: PageProps<"/app/orgs/[orgId]/reports">) {
   const { orgId } = await params;
@@ -17,7 +17,7 @@ export default async function ReportsPage({ params }: PageProps<"/app/orgs/[orgI
     <div className="flex flex-col gap-4">
       <div>
         <Heading variant="heading30" as="h1" noMargin>
-          Reports
+          Lists and downloads
         </Heading>
         <Paragraph noMargin className="mt-1 text-text-weak">
           The lists small development offices use most. Each one opens with filters and downloads as a spreadsheet.

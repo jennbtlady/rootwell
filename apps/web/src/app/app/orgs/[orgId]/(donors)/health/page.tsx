@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { dataHealth, getOrg, integrationHealth, listImportJobs } from "@maple/core/services";
 import { requireSession, withSession } from "@/lib/session";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, plural } from "@/lib/format";
 import { Card, Heading, Paragraph } from "@/components/ui";
 import { ScanButton } from "@/components/dedupe/scan-button";
 import { IntegrationHealthPanel } from "@/components/settings/integration-health";
@@ -19,6 +19,7 @@ export default async function HealthPage({ params }: PageProps<"/app/orgs/[orgId
   const base = `/app/orgs/${orgId}`;
   const pct = (n: number) => (h.constituents ? Math.round((n / h.constituents) * 100) : 0);
 
+  const PRIORITY = ["Unthanked gifts older than 14 days", "Possible duplicates", "Gifts with no fund", "No mailing address", "No email", "Stale records"];
   const items: { label: string; count: number; detail: string; href: string; tone: "good" | "warn" | "neutral" }[] = [
     { label: "Possible duplicates", count: h.openDuplicates, detail: "Pairs that look like the same person. Compare and merge, or mark them as different.", href: `${base}/duplicates`, tone: h.openDuplicates ? "warn" : "good" },
     { label: "No email", count: h.missingEmail, detail: `${pct(h.missingEmail)}% of donors. Emails make thank-yous and Mailchimp possible.`, href: `${base}/constituents?filter=missing_email`, tone: "neutral" },
@@ -28,6 +29,12 @@ export default async function HealthPage({ params }: PageProps<"/app/orgs/[orgId
     { label: "Stale records", count: h.stale36m, detail: "No gift or note in 36 months. Worth a call, a last appeal, or a note before they fall off the list.", href: `${base}/constituents?filter=stale`, tone: "neutral" },
   ];
   const TONE = { good: "text-text-success", warn: "text-text-warning", neutral: "text-text" };
+  // Problems first, then counts worth a look. PRIORITY picks the one to start with:
+  // donors waiting for thanks and duplicates matter more than missing details.
+  const RANK = { warn: 0, neutral: 1, good: 2 };
+  const ordered = [...items].sort((x, y) => RANK[x.tone] - RANK[y.tone]);
+  const attention = items.filter((it) => it.tone === "warn");
+  const first = attention.sort((x, y) => PRIORITY.indexOf(x.label) - PRIORITY.indexOf(y.label))[0];
 
   return (
     <div className="flex flex-col gap-5">
@@ -37,14 +44,33 @@ export default async function HealthPage({ params }: PageProps<"/app/orgs/[orgId
             Data health
           </Heading>
           <Paragraph noMargin className="mt-1 text-text-weak">
-            {h.constituents} donors. Each number links to the list that fixes it.
+            {plural(h.constituents, "donor")}. Each number links to the list that fixes it.
           </Paragraph>
         </div>
         <ScanButton orgId={orgId} />
       </div>
 
+      <p className="rounded-30 border border-border-weaker bg-background-weakest p-4 text-40 leading-6">
+        {first ? (
+          <>
+            <strong>
+              {attention.length === 1 ? "1 thing needs" : `${attention.length} things need`} attention.
+            </strong>{" "}
+            Start with{" "}
+            <Link href={first.href} className="text-text-link underline">
+              {first.label.toLowerCase()}
+            </Link>
+            .
+          </>
+        ) : (
+          <>
+            <strong>Nothing urgent.</strong> The counts below are worth a look when you have time.
+          </>
+        )}
+      </p>
+
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {items.map((it) => (
+        {ordered.map((it) => (
           <Link key={it.label} href={it.href} className="block rounded-30 border border-border-weaker bg-background-weakest p-4 outline-none transition-[box-shadow] hover:shadow-border-primary focus-visible:shadow-focus">
             <div className={`text-70 font-semibold tabular-nums leading-8 ${TONE[it.tone]}`}>{it.count}</div>
             <div className="mt-1 text-30 font-semibold leading-5">{it.label}</div>

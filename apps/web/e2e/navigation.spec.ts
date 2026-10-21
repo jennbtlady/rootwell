@@ -20,7 +20,7 @@ test.describe("navigation standard", () => {
     }
     await page.goto(`${org}/health`);
     await expect(page.getByRole("navigation", { name: "Main" }).filter({ visible: true }).getByRole("link", { name: "Donors" })).toHaveAttribute("aria-current", "page");
-    await expect(page.getByRole("navigation", { name: "Donors" }).getByRole("link", { name: "Clean up" })).toHaveAttribute("aria-current", "page");
+    await expect(page.getByRole("navigation", { name: "Donors" }).getByRole("link", { name: "Data health" })).toHaveAttribute("aria-current", "page");
   });
 
   test("on a 375px phone the main areas sit in a bottom tab bar and settings is a list", async ({ page }) => {

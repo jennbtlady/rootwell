@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { listMyOrgs } from "@maple/core/services";
+import { getMe, listMyOrgs } from "@maple/core/services";
 import { requireSession, withSession } from "@/lib/session";
 import { Badge, buttonVariants, Card, CardContent, CardDescription, CardHeader, CardTitle, Heading } from "@/components/ui";
 import { ExploreSampleButton } from "@/components/orgs/sample-org-buttons";
@@ -7,15 +7,18 @@ import { ROLE_LABEL } from "@/components/orgs/role-labels";
 
 export default async function AppHome() {
   const session = await requireSession();
-  const orgs = await withSession(session, (tx) => listMyOrgs(tx));
+  const [orgs, me] = await withSession(session, (tx) => Promise.all([listMyOrgs(tx), getMe(tx, session.userId)]));
+  const firstName = me?.fullName?.trim().split(/\s+/)[0];
   const hasSample = orgs.some((o) => o.isSample);
 
   if (orgs.length === 0) {
     return (
       <Card className="mx-auto max-w-md">
         <CardHeader>
-          <CardTitle>Set up your organization</CardTitle>
-          <CardDescription>You will be its owner. You can invite your team right after.</CardDescription>
+          <CardTitle>{firstName ? `Welcome, ${firstName}` : "Welcome"}</CardTitle>
+          <CardDescription>
+            First, set up your organization. It takes about 30 minutes, and you can stop and come back. You will be its owner and can invite your team after.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Link href="/app/orgs/new" className={buttonVariants()}>

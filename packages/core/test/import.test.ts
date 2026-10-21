@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mapRow, parseAmount, parseDate, parsePaymentMethod, personKey, splitName, suggestMapping, STARTER_MAPPINGS, suggestCoding } from "../src";
+import { mapRow, parseAmount, parseDate, parsePaymentMethod, personKey, splitName, suggestMapping, STARTER_MAPPINGS, suggestCoding, flagDayFirstDates } from "../src";
 
 const TODAY = new Date("2026-10-20T12:00:00Z");
 
@@ -116,5 +116,21 @@ describe("matching fund names in a file to existing funds", () => {
   it("suggests nothing when two funds could fit, or none do", () => {
     expect(suggestCoding("Food", funds)).toEqual({ id: null, how: "none" });
     expect(suggestCoding("Garden", funds)).toEqual({ id: null, how: "none" });
+  });
+});
+
+describe("imports do not guess silently", () => {
+  it("warns about a lone last name with nothing else", () => {
+    const r = mapRow(["Rivera,"], ["Name"], { full_name: "Name" }, "constituents", TODAY);
+    expect(r.warnings.map((w) => w.message).join(" ")).toMatch(/Only "Rivera" is given/);
+    const ok = mapRow(["Rivera,", "r@example.org"], ["Name", "Email"], { full_name: "Name", email: "Email" }, "constituents", TODAY);
+    expect(ok.warnings).toEqual([]);
+  });
+  it("flags month-first dates when the same file has day-first ones", () => {
+    const rows = ["13/2/2025", "2/3/2025", "4/4/2025", "2025-05-01"].map((d) => ({ fields: { gift_date: d }, warnings: [] as { field: string; message: string }[] }));
+    expect(flagDayFirstDates(rows as never)).toBe(1);
+    expect(rows[1]!.warnings[0]!.message).toMatch(/may be day first/);
+    const plain = ["2/3/2025", "4/5/2025"].map((d) => ({ fields: { gift_date: d }, warnings: [] }));
+    expect(flagDayFirstDates(plain as never)).toBe(0);
   });
 });

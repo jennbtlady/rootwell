@@ -60,7 +60,7 @@ export function ReviewStep({ orgId, job }: { orgId: string; job: ImportJob }) {
     <div className="flex flex-col gap-4">
       <Alert>
         <AlertDescription>
-          {job.people.review.toLocaleString()} {job.people.review === 1 ? "person looks" : "people look"} like someone already in your database, but not certainly. Decide for each one. {job.people.match.toLocaleString()} matched with certainty and {job.people.create.toLocaleString()} are new.
+          {job.people.review.toLocaleString()} {job.people.review === 1 ? "person looks" : "people look"} like someone already in your database, but not certainly. Decide for each one. {job.people.match.toLocaleString()} matched with certainty and {job.people.create.toLocaleString()} {job.people.create === 1 ? "is" : "are"} new.
         </AlertDescription>
       </Alert>
       <div className="flex flex-wrap gap-2">

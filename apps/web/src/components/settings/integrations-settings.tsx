@@ -8,7 +8,7 @@ import type { Integration } from "@maple/core/services";
 import { accessToken, api, errorMessage } from "@/lib/api";
 import { downloadWithAuth } from "@/lib/download";
 import { formatDateTime } from "@/lib/format";
-import { Alert, AlertDescription, AlertTitle, Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Checkbox, FormField, Input, Select, useToast } from "@/components/ui";
+import { Alert, AlertDescription, AlertTitle, Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Checkbox, FormField, Input, Select, useToast, useConfirm } from "@/components/ui";
 
 function Status({ i }: { i: Integration | null }) {
   if (!i || i.status === "disconnected") return <Badge>Not connected</Badge>;
@@ -27,6 +27,7 @@ export function IntegrationsSettings(props: { orgId: string; stripe: Integration
 }
 
 function StripeCard({ orgId, stripe, stripeMode }: { orgId: string; stripe: Integration | null; stripeMode: "live" | "simulated" }) {
+  const confirm = useConfirm();
   const router = useRouter();
   const toast = useToast();
   const [pending, setPending] = useState<string | null>(null);
@@ -42,7 +43,7 @@ function StripeCard({ orgId, stripe, stripeMode }: { orgId: string; stripe: Inte
     window.location.assign((await res.json()).url);
   }
   async function disconnect() {
-    if (!window.confirm("Disconnect Stripe? Your giving pages stop taking gifts until you connect again. Gifts already recorded stay.")) return;
+    if (!await confirm({ title: "Disconnect Stripe?", body: "Your giving pages stop taking gifts until you connect again. Gifts already recorded stay.", confirmLabel: "Disconnect Stripe", destructive: true })) return;
     setPending("disconnect");
     const res = await api().api.v1.orgs[":orgId"].integrations.stripe.$delete({ param: { orgId } });
     setPending(null);
@@ -106,6 +107,7 @@ function StripeCard({ orgId, stripe, stripeMode }: { orgId: string; stripe: Inte
 }
 
 function MailchimpCard({ orgId, mailchimp }: { orgId: string; mailchimp: Integration | null }) {
+  const confirm = useConfirm();
   const router = useRouter();
   const toast = useToast();
   const connected = !!mailchimp && mailchimp.status !== "disconnected";
@@ -155,7 +157,7 @@ function MailchimpCard({ orgId, mailchimp }: { orgId: string; mailchimp: Integra
     router.refresh();
   }
   async function disconnect() {
-    if (!window.confirm("Disconnect Mailchimp? Nothing in Mailchimp is deleted.")) return;
+    if (!await confirm({ title: "Disconnect Mailchimp?", body: "Nothing in Mailchimp is deleted.", confirmLabel: "Disconnect Mailchimp", destructive: true })) return;
     const res = await api().api.v1.orgs[":orgId"].integrations.mailchimp.$delete({ param: { orgId } });
     if (res.status === 204) router.refresh();
   }

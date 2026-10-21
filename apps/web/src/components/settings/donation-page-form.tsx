@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import type { CodingRow, DonationPage } from "@maple/core/services";
 import { api, errorMessage } from "@/lib/api";
-import { Alert, AlertDescription, Button, Card, Checkbox, FormField, Input, Select, Textarea, useToast } from "@/components/ui";
+import { Alert, AlertDescription, Button, Card, Checkbox, FormField, Input, Select, Textarea, useToast, useConfirm } from "@/components/ui";
 
 const slugify = (s: string) =>
   s
@@ -16,6 +16,7 @@ const slugify = (s: string) =>
     .slice(0, 50);
 
 export function DonationPageForm({ orgId, funds, campaigns, page }: { orgId: string; funds: CodingRow[]; campaigns: CodingRow[]; page: DonationPage | null }) {
+  const confirm = useConfirm();
   const router = useRouter();
   const toast = useToast();
   const [title, setTitle] = useState(page?.title ?? "");
@@ -64,7 +65,7 @@ export function DonationPageForm({ orgId, funds, campaigns, page }: { orgId: str
   }
 
   async function remove() {
-    if (!page || !window.confirm(`Delete "${page.title}"? Its link stops working. Gifts already made stay.`)) return;
+    if (!page || !(await confirm({ title: `Delete "${page.title}"?`, body: "Its link stops working. Gifts already made stay.", confirmLabel: "Delete page", destructive: true }))) return;
     const res = await api().api.v1.orgs[":orgId"]["donation-pages"][":id"].$delete({ param: { orgId, id: page.id } });
     if (res.status !== 204) return setFormError(await errorMessage(res));
     router.push(back);

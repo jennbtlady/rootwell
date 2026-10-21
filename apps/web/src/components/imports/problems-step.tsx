@@ -1,15 +1,17 @@
 "use client";
 
+import { plural } from "@/lib/format";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FIELD_INFO, type ImportField } from "@maple/core";
 import type { ImportJob, ImportRowView } from "@maple/core/services";
 import { api, errorMessage } from "@/lib/api";
-import { Alert, AlertDescription, Button, FormField, Input, Pagination, Skeleton, useToast } from "@/components/ui";
+import { Alert, AlertDescription, Button, FormField, Input, Pagination, Skeleton, useToast, useConfirm } from "@/components/ui";
 
 const PAGE = 25;
 
 export function ProblemsStep({ orgId, job, onRemap }: { orgId: string; job: ImportJob; onRemap: () => void }) {
+  const confirm = useConfirm();
   const router = useRouter();
   const toast = useToast();
   const [page, setPage] = useState(1);
@@ -34,7 +36,7 @@ export function ProblemsStep({ orgId, job, onRemap }: { orgId: string; job: Impo
   }, [orgId, job.id, page, job.counts.error]);
 
   async function skipAll() {
-    if (!window.confirm(`Skip all ${job.counts.error} rows with problems? They will not be imported. You can import them later from a corrected file.`)) return;
+    if (!await confirm({ title: job.counts.error === 1 ? "Skip the row with a problem?" : `Skip all ${job.counts.error} rows with problems?`, body: "They will not be imported. You can import them later from a corrected file.", confirmLabel: "Skip these rows" })) return;
     setSkipping(true);
     const res = await api().api.v1.orgs[":orgId"].imports[":id"]["skip-errors"].$post({ param: { orgId, id: job.id } });
     setSkipping(false);
@@ -46,12 +48,12 @@ export function ProblemsStep({ orgId, job, onRemap }: { orgId: string; job: Impo
     <div className="flex flex-col gap-4">
       <Alert variant="warning">
         <AlertDescription>
-          {job.counts.error.toLocaleString()} of {job.expectedRows.toLocaleString()} rows have a problem. Fix each one here, skip it, or skip them all. If many rows have the same problem, a column may be matched to the wrong field.
+          {job.counts.error.toLocaleString()} of {plural(job.expectedRows, "row")} {job.counts.error === 1 ? "has" : "have"} a problem. Fix each one here, skip it, or skip them all. If many rows have the same problem, a column may be matched to the wrong field.
         </AlertDescription>
       </Alert>
       <div className="flex flex-wrap gap-2">
         <Button variant="secondary" size="small" loading={skipping} onClick={skipAll}>
-          Skip all {job.counts.error.toLocaleString()} rows with problems
+          {job.counts.error === 1 ? "Skip the row with a problem" : `Skip all ${job.counts.error.toLocaleString()} rows with problems`}
         </Button>
         <Button variant="link" size="small" onClick={onRemap}>
           Change the column matching

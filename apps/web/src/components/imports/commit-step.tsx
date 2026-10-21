@@ -1,5 +1,6 @@
 "use client";
 
+import { plural } from "@/lib/format";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ImportOptions } from "@maple/core";
@@ -7,6 +8,7 @@ import type { ImportJob, ReviewPerson } from "@maple/core/services";
 import { accessToken, api, errorMessage } from "@/lib/api";
 import { Alert, AlertDescription, AlertTitle, Button, Card } from "@/components/ui";
 import { BeforeImport, defaultThankedBefore } from "./before-import";
+import { RowsToCheck } from "./rows-to-check";
 import { personDetail, personLabel } from "./review-step";
 
 export function CommitStep({ orgId, job, onRemap }: { orgId: string; job: ImportJob; onRemap: () => void }) {
@@ -64,11 +66,13 @@ export function CommitStep({ orgId, job, onRemap }: { orgId: string; job: Import
         Matched people keep their current details; only their gifts are added. You can roll this import back afterwards.
       </p>
 
+      <RowsToCheck orgId={orgId} job={job} />
+
       {gifts && <BeforeImport orgId={orgId} job={job} options={options} onChange={setOptions} />}
 
       {matched.length > 0 && (
         <details className="rounded-30 border border-border-weaker bg-background-weakest p-4">
-          <summary className="cursor-pointer text-30 font-semibold leading-5">See the {job.people.match.toLocaleString()} matched people</summary>
+          <summary className="cursor-pointer text-30 font-semibold leading-5">See the {job.people.match === 1 ? "matched person" : `${job.people.match.toLocaleString()} matched people`}</summary>
           <ul className="mt-3 divide-y divide-border-weaker">
             {matched.map((p) => (
               <li key={p.personKey} className="flex flex-wrap items-center justify-between gap-2 py-2 text-30 leading-5">
@@ -95,7 +99,7 @@ export function CommitStep({ orgId, job, onRemap }: { orgId: string; job: Import
       </div>
       <div className="flex flex-wrap gap-2">
         <Button loading={pending} onClick={commit}>
-          Import {(job.people.create + job.people.match).toLocaleString()} people
+          Import {plural(job.people.create + job.people.match, "person", "people")}
         </Button>
         <Button variant="link" onClick={onRemap}>
           Change the column matching

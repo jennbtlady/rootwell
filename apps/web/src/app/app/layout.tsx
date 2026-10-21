@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { mfaEnforcementOff } from "@maple/db";
-import { mfaRequiredFor } from "@maple/core/services";
+import { getMe, mfaRequiredFor } from "@maple/core/services";
 import { requireSession, withSession } from "@/lib/session";
 import { createSupabaseServer } from "@/lib/supabase/server";
-import { Button, ToastHost } from "@/components/ui";
+import { Button, ConfirmHost, ToastHost } from "@/components/ui";
 
 /**
  * Every signed-in page lives under /app. This layout is where MFA is enforced:
@@ -13,6 +13,8 @@ import { Button, ToastHost } from "@/components/ui";
  */
 export default async function AppLayout({ children }: LayoutProps<"/app">) {
   const session = await requireSession();
+  // The header greets people by name; the email is a fallback for a profile with no name.
+  const me = await withSession(session, (tx) => getMe(tx, session.userId));
 
   if (session.aal !== "aal2" && !mfaEnforcementOff()) {
     // getUser() asks Auth for the verified user, including enrolled factors.
@@ -26,6 +28,7 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
 
   return (
     <ToastHost>
+      <ConfirmHost>
     <div className="flex min-h-full flex-1 flex-col">
       <a
         href="#main"
@@ -42,7 +45,9 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
             <Link href="/app/help" className="rounded-20 text-30 text-text-link outline-none hover:underline focus-visible:shadow-focus">
               Help
             </Link>
-            <span className="hidden text-30 text-text-weak sm:inline">{session.email}</span>
+            <span className="hidden text-30 text-text-weak sm:inline" title={session.email ?? undefined}>
+              {me?.fullName || session.email}
+            </span>
             <form action="/auth/sign-out" method="post">
               <Button type="submit" variant="link" size="small">
                 Sign out
@@ -53,6 +58,7 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
       </header>
       <main id="main" tabIndex={-1} className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 outline-none">{children}</main>
     </div>
+      </ConfirmHost>
     </ToastHost>
   );
 }

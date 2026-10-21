@@ -16,7 +16,7 @@ export function depositCheck(b: Pick<Batch, "giftTotal" | "giftCount" | "expecte
       b.expectedCount == null
         ? null
         : countDiff === 0
-          ? `All ${b.expectedCount} gifts on the slip`
+          ? (b.expectedCount === 1 ? "The 1 gift on the slip" : `All ${b.expectedCount} gifts on the slip`)
           : countDiff > 0
             ? `${countDiff} ${countDiff === 1 ? "gift" : "gifts"} fewer than the slip lists (${b.expectedCount})`
             : `${-countDiff} more ${-countDiff === 1 ? "gift" : "gifts"} than the slip lists (${b.expectedCount})`,
