@@ -3,8 +3,8 @@ import type { MetadataRoute } from "next";
 // Makes the web app installable on a phone home screen (PWA). See build plan 1.1.
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Maple Ledger",
-    short_name: "Maple",
+    name: "Rootwell",
+    short_name: "Rootwell",
     description: "A simple donor database for small nonprofits.",
     start_url: "/",
     display: "standalone",

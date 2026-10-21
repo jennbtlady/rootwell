@@ -39,7 +39,7 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
       <header className="border-b border-border-weaker bg-background-body">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 px-4 py-3">
           <Link href="/app" className="rounded-20 font-semibold tracking-tight outline-none focus-visible:shadow-focus">
-            Maple Ledger
+            Rootwell
           </Link>
           <div className="flex items-center gap-3">
             <Link href="/app/help" className="rounded-20 text-30 text-text-link outline-none hover:underline focus-visible:shadow-focus">

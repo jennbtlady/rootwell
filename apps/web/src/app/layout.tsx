@@ -7,9 +7,9 @@ const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: { default: "Maple Ledger", template: "%s | Maple Ledger" },
+  title: { default: "Rootwell", template: "%s | Rootwell" },
   description: "A simple donor database for small nonprofits.",
-  applicationName: "Maple Ledger",
+  applicationName: "Rootwell",
   appleWebApp: { capable: true, title: "Maple", statusBarStyle: "default" },
 };
 

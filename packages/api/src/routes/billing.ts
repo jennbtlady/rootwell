@@ -146,7 +146,7 @@ export const billingSim = new Hono<ApiEnv>()
     return c.html(
       page(
         "Subscribe",
-        `<h1>Subscribe: ${esc(ch.orgName)}</h1><p>Maple Ledger, billed monthly.</p>${trial}
+        `<h1>Subscribe: ${esc(ch.orgName)}</h1><p>Rootwell, billed monthly.</p>${trial}
 <form method="post" action="/api/v1/billing-sim/checkout/${esc(ch.id)}"><button type="submit">Subscribe with test card</button></form>
 <p><a href="${esc(ch.cancelUrl)}">Cancel and go back</a></p>`,
       ),
@@ -164,7 +164,7 @@ export const billingSim = new Hono<ApiEnv>()
 <form method="post" action="/api/v1/billing-sim/portal/${id}/unpaid"><button type="submit" class="secondary">Test: Stripe gives up on the payment</button></form>
 <form method="post" action="/api/v1/billing-sim/portal/${id}/active"><button type="submit" class="secondary">Test: payment goes through</button></form>`
       : "<p>No active subscription.</p>";
-    return c.html(page("Manage billing", `<h1>Manage billing</h1>${actions}<p><a href="${esc(p.returnUrl)}">Back to Maple Ledger</a></p>`));
+    return c.html(page("Manage billing", `<h1>Manage billing</h1>${actions}<p><a href="${esc(p.returnUrl)}">Back to Rootwell</a></p>`));
   })
   .post("/portal/:id/:status", async (c) => {
     const g = sim()!;

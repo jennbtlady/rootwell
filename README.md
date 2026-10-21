@@ -1,4 +1,4 @@
-# Maple Ledger (working name)
+# Rootwell
 
 A lightweight, multi-tenant donor database for tiny nonprofits. See `docs/lite-donor-crm-build-brief.md` for what and why, and `docs/build-plan.md` for how.
 

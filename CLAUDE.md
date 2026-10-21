@@ -16,7 +16,7 @@ A multi-tenant donor CRM SaaS for nonprofits with 1 to 5 staff. One person maint
 - `packages/config`: shared tsconfig.
 - `docs/`: brief, build plan, one page per phase.
 
-Package scope is `@maple/*`. The product name is not final. Renaming the scope is a find-and-replace.
+The product is called Rootwell (Jenn, 2026-10-21). The internal package scope is still `@maple/*` from the working name; users never see it, and renaming it is a find-and-replace.
 
 ## Hard rules
 

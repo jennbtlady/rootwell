@@ -10,7 +10,7 @@ export function ExportEverythingButton({ orgId }: { orgId: string }) {
   const [pending, setPending] = useState(false);
   async function go() {
     setPending(true);
-    const ok = await downloadWithAuth(`/api/v1/orgs/${orgId}/export/everything`, await accessToken(), "maple-ledger-export.zip");
+    const ok = await downloadWithAuth(`/api/v1/orgs/${orgId}/export/everything`, await accessToken(), "rootwell-export.zip");
     setPending(false);
     if (!ok) toast({ type: "error", title: "No file", description: "Only owners and admins can download everything. Please try again." });
   }

@@ -1,6 +1,6 @@
 # Lite Donor CRM: Build Brief for Claude Code
 
-Working name: TBD (placeholder: Maple Ledger). Owner: Jenn Howe, Noble Maple Consulting.
+Name: Rootwell (chosen 2026-10-21; the placeholder was Rootwell). Owner: Jenn Howe, Noble Maple Consulting.
 
 ## 1. What we are building and why
 

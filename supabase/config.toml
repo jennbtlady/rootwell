@@ -418,21 +418,21 @@ enabled = true
 # invitations sent by the server as well as links a browser asked for. Production
 # must use the same templates (Auth > Email Templates in the Supabase dashboard).
 [auth.email.template.invite]
-subject = "You have been invited to Maple Ledger"
+subject = "You have been invited to Rootwell"
 content_path = "./supabase/templates/invite.html"
 
 [auth.email.template.magic_link]
-subject = "Your Maple Ledger sign-in link"
+subject = "Your Rootwell sign-in link"
 content_path = "./supabase/templates/magic_link.html"
 
 [auth.email.template.confirmation]
-subject = "Confirm your Maple Ledger email"
+subject = "Confirm your Rootwell email"
 content_path = "./supabase/templates/confirmation.html"
 
 [auth.email.template.recovery]
-subject = "Reset your Maple Ledger password"
+subject = "Reset your Rootwell password"
 content_path = "./supabase/templates/recovery.html"
 
 [auth.email.template.email_change]
-subject = "Confirm your new email for Maple Ledger"
+subject = "Confirm your new email for Rootwell"
 content_path = "./supabase/templates/email_change.html"

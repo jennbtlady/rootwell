@@ -22,7 +22,7 @@ export function setMailer(m: Mailer | undefined) {
  */
 export function getMailer(): Mailer {
   if (override) return override;
-  const from = process.env.EMAIL_FROM ?? "Maple Ledger <no-reply@example.com>";
+  const from = process.env.EMAIL_FROM ?? "Rootwell <no-reply@example.com>";
   const key = process.env.RESEND_API_KEY;
   if (key) {
     return {

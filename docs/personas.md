@@ -1,4 +1,4 @@
-# Maple Ledger personas for usability testing
+# Rootwell personas for usability testing
 
 Three research-based personas for testing with tiny nonprofits: 1 to 5 staff, budgets under about $1M. Each persona has role realities, goals, fears, devices, accessibility notes, test scenarios, and a recruiting screener.
 

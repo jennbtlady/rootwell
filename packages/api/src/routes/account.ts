@@ -16,5 +16,5 @@ export const accountRoutes = new Hono<ApiEnv>().get("/:orgId/export/everything",
   if (!out) return c.json({ error: "Only owners and admins can download everything." }, 403);
   const zip = zipSync(Object.fromEntries(Object.entries(out.files).map(([name, text]) => [name, strToU8(text)])), { level: 6 });
   const day = new Date().toISOString().slice(0, 10);
-  return c.body(new Uint8Array(zip), 200, { "content-type": "application/zip", "content-disposition": `attachment; filename="maple-ledger-export-${day}.zip"` });
+  return c.body(new Uint8Array(zip), 200, { "content-type": "application/zip", "content-disposition": `attachment; filename="rootwell-export-${day}.zip"` });
 });

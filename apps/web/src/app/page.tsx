@@ -20,7 +20,7 @@ export default async function Home() {
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-10 px-4 py-16">
       <div className="flex flex-col items-center gap-5 text-center">
         <Heading variant="heading10" as="h1" noMargin>
-          Maple Ledger
+          Rootwell
         </Heading>
         <Paragraph noMargin className="max-w-xl text-balance text-50 leading-8">
           A simple donor database for nonprofits with one to five staff. Record gifts, thank donors, and keep your board informed.

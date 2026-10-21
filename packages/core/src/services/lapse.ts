@@ -52,7 +52,7 @@ export function lapseNoticeEmail(o: { orgName: string; deleteOn: string; daysLef
   const subject = `${o.orgName}: your donor records will be deleted on ${when}`;
   const text = `Hello,
 
-${o.orgName}'s Maple Ledger account has been read only since its subscription ended, and no one on the team has signed in for a long time.
+${o.orgName}'s Rootwell account has been read only since its subscription ended, and no one on the team has signed in for a long time.
 
 On ${when} (in ${Math.max(o.daysLeft, 0)} days), the account and all of its donor and gift records will be deleted for good.
 
@@ -67,6 +67,6 @@ Nonprofits usually need gift records for several years for tax receipts. Please 
 
 We are sending this to everyone on ${o.orgName}'s team.
 
-Maple Ledger`;
+Rootwell`;
   return { subject, text };
 }

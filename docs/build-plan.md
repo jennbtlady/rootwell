@@ -1,6 +1,6 @@
 # Build Plan: Lite Donor CRM, web and mobile
 
-Companion to `lite-donor-crm-build-brief.md`. Working name: Maple Ledger. Owner: Jenn Howe, Noble Maple Consulting. Date: 2026-10-20.
+Companion to `lite-donor-crm-build-brief.md`. Name: Rootwell (was the working name Rootwell). Owner: Jenn Howe, Noble Maple Consulting. Date: 2026-10-20.
 
 This plan keeps everything in the brief and changes one thing: mobile moves from "not in v1" to a planned phase. It explains how to build the web app so the mobile app reuses all of it.
 
@@ -28,7 +28,7 @@ Everything else in the brief stands: Supabase, Drizzle, Tailwind + shadcn/ui, In
 ### 3.1 Repo layout
 
 ```
-maple-ledger/
+rootwell/
   apps/
     web/            Next.js App Router. UI, API routes (Hono), Inngest functions, PWA manifest
     mobile/         Expo app (added in Phase 7)

@@ -42,7 +42,7 @@ export const stripeSim = new Hono<ApiEnv>()
       page(
         "Connect your Stripe account",
         `<h1>Connect your Stripe account</h1>
-<p>Maple Ledger is asking to take donations into your Stripe account and read the payments and deposits it makes.</p>
+<p>Rootwell is asking to take donations into your Stripe account and read the payments and deposits it makes.</p>
 <form method="post" action="/api/v1/stripe-sim/connect">
   <input type="hidden" name="state" value="${esc(state)}"><input type="hidden" name="redirect_uri" value="${esc(redirect)}">
   <button type="submit">Connect test account</button>

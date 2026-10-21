@@ -35,7 +35,7 @@ export default function DesignPage() {
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-10 px-4 py-10">
       <div>
-        <Heading variant="heading10">Maple Ledger design system</Heading>
+        <Heading variant="heading10">Rootwell design system</Heading>
         <Paragraph>
           Built on Twilio Paste&apos;s design tokens and component anatomy, owned here. Rules live in{" "}
           <code className="font-mono text-20">docs/design-system.md</code>. Press Tab through this page to check focus rings.
