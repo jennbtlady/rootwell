@@ -1,8 +1,8 @@
 # Lapsed accounts: keep or delete
 
-Decided (Jenn, 2026-10-20): a lapsed account stays read only after its 90 days. Being
-considered: deleting an account after a long stretch with no activity. Nothing is built
-for deletion. This page is the assessment.
+Decided (Jenn, 2026-10-20): a lapsed account stays read only. If no one on the team is
+active for 12 months, it is deleted, after emails to the whole team at 60, 30, and 7 days.
+Built on 2026-10-20 (see "How it works" at the end). The assessment that led to it follows.
 
 ## What keeping one costs
 
@@ -81,5 +81,46 @@ duplicate pairs, and some history.
    - A paying or active account is never deleted.
    - The deletion leaves no rows behind.
 
-Open question for Jenn: 12 months, or a different period? Do notices go only to owners and
-admins (suggested), or to everyone on the team?
+## How it works (built)
+
+- **Schema** (`drizzle/0009_phase6_lapsed_accounts.sql`):
+  - New columns on `organizations`: `last_activity_at`, `lapse_notices_sent`,
+    `lapse_notices_for`, and `lapse_final_notice_at`.
+  - A `deleted_organizations` table, which holds no personal information and has RLS on
+    with no policies.
+  - A new `scheduler` value for `actor_kind`, so the audit log shows the daily job's changes
+    honestly.
+- **Rules:** in `drizzle/custom/0011_lapsed_accounts.sql`, one function each:
+  - `org_last_activity`: any active member's latest sign-in or session refresh from
+    Supabase's own records, or API use.
+  - `org_lapsed_at`.
+  - `org_delete_on`: the later of the lapse and the last activity, plus 12 months.
+  - `touch_org_activity`.
+  - `lapsed_orgs_due`, `lapse_notice_recipients`, `record_lapse_notice`, and
+    `delete_lapsed_org`.
+- **Guards:** the scheduler functions refuse anyone but the scheduler.
+  `delete_lapsed_org` checks every condition again before deleting:
+  - The account is lapsed and not the sample organization.
+  - The deletion date has been reached.
+  - All three notices were sent.
+  - The last notice is at least 7 days old.
+- **The daily job:** `GET /api/v1/cron/lapsed-accounts`, run by Vercel Cron at 15:00 UTC
+  (`apps/web/vercel.json`) with `CRON_SECRET`.
+  - It emails every active member.
+  - A late run sends one notice, never several at once.
+  - Deletion still waits 7 days after that notice.
+- **Activity:** any API request for the organization by a member counts, written at most
+  once an hour and only while the account is read only. Signing in counts through
+  Supabase's own records.
+  - Known edge: someone who is on two teams and active in one also keeps the other alive,
+    because a sign-in is not tied to one organization. That errs on the side of keeping
+    data.
+- **Words:** the read-only banner, Billing, Account and export, and the billing help guide
+  all state the rule and the deletion date.
+- **Tests:**
+  - `packages/db/test/lapse.test.ts`: the guards, the clock and its reset, the order of
+    notices, and never deleting a paying account.
+  - `packages/api/test/lapse.test.ts`: the job secret, whole-team emails once each,
+    activity resetting the clock, and deletion with no rows left behind.
+- **Still to do outside the code:** say this in the terms of service and privacy policy
+  before launch.

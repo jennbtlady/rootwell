@@ -69,10 +69,10 @@ export function BillingPanel({ orgId, billing, isOwner, mode, justSubscribed }: 
             )}
             <dt className="text-text-weak">Can add and change data</dt>
             <dd>{billing.writable ? "Yes" : "No, read only"}</dd>
-            {billing.readOnlyUntil && (
+            {billing.deleteOn && (
               <>
-                <dt className="text-text-weak">Read only until at least</dt>
-                <dd>{formatDate(billing.readOnlyUntil)}</dd>
+                <dt className="text-text-weak">Deleted on, if no one signs in</dt>
+                <dd>{formatDate(billing.deleteOn)}</dd>
               </>
             )}
           </dl>

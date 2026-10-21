@@ -4,7 +4,7 @@ import { sql } from "drizzle-orm";
 export const orgRole = pgEnum("org_role", ["owner", "admin", "staff", "board_viewer"]);
 export const membershipStatus = pgEnum("membership_status", ["invited", "active", "suspended"]);
 export const auditAction = pgEnum("audit_action", ["insert", "update", "delete", "merge", "unmerge"]);
-export const actorKind = pgEnum("actor_kind", ["user", "system", "support"]);
+export const actorKind = pgEnum("actor_kind", ["user", "system", "support", "scheduler"]);
 export const ownershipEventKind = pgEnum("ownership_event_kind", ["transfer", "support_override"]);
 
 export const constituentType = pgEnum("constituent_type", ["person", "household", "organization"]);

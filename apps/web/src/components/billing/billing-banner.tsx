@@ -21,7 +21,12 @@ export function BillingBanner({ orgId, billing, role }: { orgId: string; billing
       <Alert variant="warning">
         <AlertTitle>{billing.status === "trialing" ? "Your free trial has ended" : "Your subscription has ended"}</AlertTitle>
         <AlertDescription>
-          The account is read only. You can still see and export everything{billing.readOnlyUntil ? ` until at least ${formatDate(billing.readOnlyUntil)}` : ""}, but nothing can be added or changed. {action}
+          The account is read only. You can still see and export everything, but nothing can be added or changed. {action}
+          {billing.deleteOn && (
+            <span className="mt-1 block">
+              If no one on the team signs in by {formatDate(billing.deleteOn)}, the account and its records will be deleted. Everyone on the team gets an email first.
+            </span>
+          )}
         </AlertDescription>
       </Alert>
     );

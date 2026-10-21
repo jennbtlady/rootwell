@@ -15,3 +15,4 @@ export * from "./integrations";
 export * from "./billing";
 export * from "./setup";
 export * from "./export-all";
+export * from "./lapse";

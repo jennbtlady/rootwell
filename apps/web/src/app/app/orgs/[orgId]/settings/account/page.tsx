@@ -62,11 +62,12 @@ export default async function AccountPage({ params }: PageProps<"/app/orgs/[orgI
           <CardTitle>If the subscription ends</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-2 text-30 leading-5">
-          <p>Nothing is deleted. The account becomes read only for at least 90 days: everyone can still sign in, see everything, and download everything, but nothing can be added or changed.</p>
+          <p>The account becomes read only. Everyone can still sign in, see everything, and download everything, but nothing can be added or changed.</p>
+          <p>It stays that way as long as someone on the team uses it. If no one signs in for 12 months, the account and all of its records are deleted. Everyone on the team gets an email 60, 30, and 7 days before.</p>
           <p>Restart the subscription at any time under <Link className={link} href={`${base}/billing`}>Billing</Link> and pick up where you left off.</p>
           {billing && !billing.isSample && (
             <p className="text-text-weak">
-              Right now: {billing.writable ? "everything works." : `read only${billing.readOnlyUntil ? `, at least until ${formatDate(billing.readOnlyUntil)}` : ""}.`}
+              Right now: {billing.writable ? "everything works." : `read only${billing.deleteOn ? `. If no one signs in, it will be deleted on ${formatDate(billing.deleteOn)}` : ""}.`}
             </p>
           )}
         </CardContent>

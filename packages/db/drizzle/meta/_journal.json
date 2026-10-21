@@ -64,6 +64,13 @@
       "when": 1792536476410,
       "tag": "0008_phase5_integrations",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792547815595,
+      "tag": "0009_phase6_lapsed_accounts",
+      "breakpoints": true
     }
   ]
 }

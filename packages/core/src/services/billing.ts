@@ -15,11 +15,14 @@ export type Billing = {
   isSample: boolean;
   hasSubscription: boolean;
   stripeCustomerId: string | null;
+  /** If read only: the day the account will be deleted unless someone on the team is active. */
+  deleteOn: string | null;
 };
 
 export async function getBilling(tx: Tx, orgId: string): Promise<Billing | null> {
   const r = await tx.execute(sql`
     select subscription_status, trial_ends_at, read_only_until, sample_org_enabled, stripe_customer_id, stripe_subscription_id, app.org_writable(id) as writable,
+           app.org_delete_on(id) as delete_on,
            case when trial_ends_at is not null then ceil(extract(epoch from trial_ends_at - now()) / 86400)::int end as trial_days_left
       from organizations where id = ${orgId}`);
   if (!r.length) return null;
@@ -33,6 +36,7 @@ export async function getBilling(tx: Tx, orgId: string): Promise<Billing | null>
     isSample: Boolean(x.sample_org_enabled),
     hasSubscription: x.stripe_subscription_id != null,
     stripeCustomerId: (x.stripe_customer_id as string | null) ?? null,
+    deleteOn: x.delete_on ? String(x.delete_on).slice(0, 10) : null,
   };
 }
 

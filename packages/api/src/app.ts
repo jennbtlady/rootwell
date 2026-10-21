@@ -15,6 +15,7 @@ import { publicGive } from "./routes/public-give";
 import { stripeSim } from "./routes/stripe-sim";
 import { billingRoutes, billingSim, billingWebhook, readOnlyGuard } from "./routes/billing";
 import { accountRoutes } from "./routes/account";
+import { cronRoutes, trackActivity } from "./routes/cron";
 import { handleApiError } from "./errors";
 
 /**
@@ -31,9 +32,12 @@ export const app = new Hono<ApiEnv>()
   .route("/stripe-sim", stripeSim)
   .route("/webhooks", billingWebhook)
   .route("/billing-sim", billingSim)
+  .route("/cron", cronRoutes)
   .use("*", requireUser)
   .use("/orgs/:orgId/*", readOnlyGuard)
   .use("/orgs/:orgId", readOnlyGuard)
+  .use("/orgs/:orgId/*", trackActivity)
+  .use("/orgs/:orgId", trackActivity)
   .route("/me", me)
   .route("/orgs", orgs)
   .route("/orgs", coding)

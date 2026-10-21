@@ -131,7 +131,7 @@ export const HELP: HelpArticle[] = [
     sections: [
       { text: ["Every new organization starts with a 30-day free trial. The owner can subscribe any time under Settings, Billing. Trial days left still count after you subscribe."] },
       { heading: "If a payment fails", text: ["Everything keeps working while Stripe tries the card again. The owner can update the card from Manage billing."] },
-      { heading: "If the subscription ends", text: ["Your account becomes read only for at least 90 days. You can still see and export everything, but nothing can be added or changed. Restart the subscription to pick up where you left off."] },
+      { heading: "If the subscription ends", text: ["Your account becomes read only. You can still see and export everything, but nothing can be added or changed. Restart the subscription to pick up where you left off.", "A read-only account is kept as long as someone on your team signs in now and then. If no one signs in for 12 months, the account and its records are deleted. Everyone on the team gets an email 60, 30, and 7 days before, with a link to download everything."] },
     ],
   },
   {

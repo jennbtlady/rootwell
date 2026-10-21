@@ -61,9 +61,9 @@ Also this phase, at Jenn's request:
   - Trialing: full access until the trial ends.
   - Canceled, unpaid, or a trial that ended without a subscription: read only.
 - **The read-only window:** `read_only_until` is set 90 days out the first time an account
-  lapses, and cleared when it comes back. After 90 days the account stays read only
-  (Jenn, 2026-10-20). Deleting long-inactive accounts is being considered; see
-  `docs/lapsed-accounts.md`.
+  lapses, and cleared when it comes back. After 90 days the account stays read only. After
+  12 months with no team activity, it is deleted, following notices to the whole team
+  (`docs/lapsed-accounts.md`).
 - **What still works while read only:**
   - Every read.
   - Exports.
@@ -91,7 +91,13 @@ Also this phase, at Jenn's request:
 
 ## Rollback
 
-There is no Drizzle migration this phase. To roll back:
+Migration `0009_phase6_lapsed_accounts` (lapsed accounts): drop `deleted_organizations` and the
+four `organizations.lapse_*`/`last_activity_at` columns, then remove `0011_lapsed_accounts.sql`'s
+functions. The `scheduler` enum value can stay; Postgres cannot drop an enum value without
+rebuilding the type.
+
+
+For the billing and performance SQL:
 
 - **0009_billing.sql:**
   - Drop the `*_writable_*` policies, the `guard_billing_columns` trigger, and
@@ -121,5 +127,5 @@ page and QuickBooks names for the new screens to show.
 - **Decided (Jenn, 2026-10-20):**
   - Dashboard customization starts with one layout per organization.
   - Lapsed accounts stay read only after the 90 days. Nothing is deleted.
-- **Under consideration:** deleting an account after a long stretch with no activity.
-  The assessment is in `docs/lapsed-accounts.md`. Nothing is built for it.
+  - After 12 months with no activity, a lapsed account is deleted. The whole team gets
+    emails at 60, 30, and 7 days first. Built; see `docs/lapsed-accounts.md`.
