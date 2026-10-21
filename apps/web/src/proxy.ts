@@ -38,7 +38,9 @@ export async function proxy(request: NextRequest) {
     return r;
   };
 
-  if (!signedIn && (path.startsWith("/app") || path.startsWith("/mfa") || path.startsWith("/account"))) return redirectWithCookies("/sign-in");
+  // Whole path segments only: "/apple-icon.png" must not count as "/app".
+  const under = (p: string) => path === p || path.startsWith(`${p}/`);
+  if (!signedIn && (under("/app") || under("/mfa") || under("/account"))) return redirectWithCookies("/sign-in");
   if (signedIn && (path === "/sign-in" || path === "/sign-up")) return redirectWithCookies("/app");
   return response;
 }

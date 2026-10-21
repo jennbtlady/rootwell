@@ -123,9 +123,43 @@ page and QuickBooks names for the new screens to show.
   `docs/accessibility-audit.md`.
 - **Background jobs:** move the whole-organization duplicate scan and Download everything
   to background jobs (Inngest) before any customer passes about 25,000 donors.
-- **Phase 0 leftovers that need accounts:** Sentry, icons, and Vercel.
+- **Phase 0 leftovers:**
+  - Sentry is wired in and scrubbed (below). It only needs a project's DSN.
+  - The icons are done.
+  - Vercel still needs the account.
 - **Decided (Jenn, 2026-10-20):**
   - Dashboard customization starts with one layout per organization.
   - Lapsed accounts stay read only after the 90 days. Nothing is deleted.
   - After 12 months with no activity, a lapsed account is deleted. The whole team gets
     emails at 60, 30, and 7 days first. Built; see `docs/lapsed-accounts.md`.
+
+## Error reporting (Sentry)
+
+- **When it runs:** it is off unless `SENTRY_DSN` (server) and `NEXT_PUBLIC_SENTRY_DSN`
+  (browser) are set. Local development and tests send nothing.
+- **What it never collects, at the source:** user info, cookies, request bodies, web address
+  queries, and response headers. Request headers are limited to user-agent and
+  content-type.
+- **Second layer:** every event passes `apps/web/src/lib/sentry-scrub.ts`, which drops extra
+  context and console breadcrumbs, and blanks email addresses, phone numbers, card-like
+  numbers, and street addresses in any text that is left. It is tested in
+  `apps/web/test/sentry-scrub.test.ts`.
+- **API errors:** the API answers its own errors with plain messages. Unexpected ones are
+  reported through `setErrorReporter`, with ids in the path replaced by `:id`. Expected
+  refusals, such as permission or read-only, are not reported.
+- **No session replay.** It would record donor details on screen.
+- **Source maps:** not uploaded yet. That needs `withSentryConfig` and a Sentry auth token,
+  once the account exists.
+
+## Icons
+
+- The source is `apps/web/public/icon.svg`: a white maple leaf on the brand maple brown. It
+  has no text, because the product name is not final.
+- Generated from it:
+  - `icon-192.png` and `icon-512.png`.
+  - `icon-maskable-512.png`, with extra margin for phone home screens that crop to a
+    circle.
+  - `app/apple-icon.png`, for iPhone home screens.
+  - `app/icon.svg`, the browser tab icon. It replaces the Next.js placeholder.
+- To change the icon, edit `icon.svg` and `icon-maskable.svg`, then re-render the PNGs at
+  the same sizes.

@@ -24,4 +24,16 @@ test.describe("security headers", () => {
     const rendered = framed ? await framed.locator("body").innerText().catch(() => "") : "";
     expect(blocked || !rendered.includes("Sign in")).toBe(true);
   });
+
+  test("icons load signed out, while private pages still require sign-in", async ({ request }) => {
+    for (const path of ["/apple-icon.png", "/icon.svg", "/icon-192.png", "/icon-512.png", "/icon-maskable-512.png", "/manifest.webmanifest"]) {
+      const res = await request.get(path, { maxRedirects: 0 });
+      expect(res.status(), path).toBe(200);
+    }
+    for (const path of ["/app", "/app/orgs/new", "/account", "/mfa/enroll"]) {
+      const res = await request.get(path, { maxRedirects: 0 });
+      expect(res.status(), path).toBe(307);
+      expect(res.headers().location, path).toContain("/sign-in");
+    }
+  });
 });

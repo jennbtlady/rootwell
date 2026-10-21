@@ -16,3 +16,7 @@ next-env.d.ts
 *.log
 .vercel
 supabase/.temp/
+
+# Playwright output, regenerated on every run
+apps/web/test-results/
+apps/web/playwright-report/
