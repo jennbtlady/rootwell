@@ -61,8 +61,9 @@ Also this phase, at Jenn's request:
   - Trialing: full access until the trial ends.
   - Canceled, unpaid, or a trial that ended without a subscription: read only.
 - **The read-only window:** `read_only_until` is set 90 days out the first time an account
-  lapses, and cleared when it comes back. After 90 days nothing changes automatically yet.
-  What happens then (keep read only, or delete after notice) is a decision for Jenn.
+  lapses, and cleared when it comes back. After 90 days the account stays read only
+  (Jenn, 2026-10-20). Deleting long-inactive accounts is being considered; see
+  `docs/lapsed-accounts.md`.
 - **What still works while read only:**
   - Every read.
   - Exports.
@@ -117,6 +118,8 @@ page and QuickBooks names for the new screens to show.
 - **Background jobs:** move the whole-organization duplicate scan and Download everything
   to background jobs (Inngest) before any customer passes about 25,000 donors.
 - **Phase 0 leftovers that need accounts:** Sentry, icons, and Vercel.
-- **Decisions for Jenn:**
-  - What happens after the 90 read-only days.
-  - Whether dashboard customization is one layout per organization or one per person.
+- **Decided (Jenn, 2026-10-20):**
+  - Dashboard customization starts with one layout per organization.
+  - Lapsed accounts stay read only after the 90 days. Nothing is deleted.
+- **Under consideration:** deleting an account after a long stretch with no activity.
+  The assessment is in `docs/lapsed-accounts.md`. Nothing is built for it.

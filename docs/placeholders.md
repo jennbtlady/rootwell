@@ -67,7 +67,6 @@ does nothing.
 - "Reset to the standard layout" is always available.
 - Cards come from the existing dashboard computation, so no new numbers are invented.
 
-**Data model:** this needs a place to save the layout. Most likely that is one jsonb column
-on `organizations`, or a small `dashboard_layouts` table if each person gets their own.
-Ask Jenn which: one layout for the organization (simpler, what the board sees) or one per
-person.
+**Data model:** one layout per organization to start (Jenn, 2026-10-20). That is one jsonb
+column on `organizations`, edited by owners and admins, and seen by everyone, including
+board links. Per-person layouts can come later as a separate table if people ask.
