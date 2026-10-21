@@ -179,8 +179,8 @@ function MailchimpCard({ orgId, mailchimp }: { orgId: string; mailchimp: Integra
         )}
         {!connected ? (
           <form onSubmit={saveKey} className="flex flex-wrap items-end gap-2" noValidate>
-            <FormField id="mc-key" label="Mailchimp API key" error={keyError} help="In Mailchimp, open your profile, then Extras, then API keys. Make a key and paste it here. It is stored encrypted.">
-              {(f) => <Input {...f} type="password" autoComplete="off" className="w-80 max-w-full" value={key} onChange={(e) => setKey(e.target.value)} />}
+            <FormField id="mc-key" className="w-full sm:w-80" label="Mailchimp API key" error={keyError} help="In Mailchimp, open your profile, then Extras, then API keys. Make a key and paste it here. It is stored encrypted.">
+              {(f) => <Input {...f} type="password" autoComplete="off" value={key} onChange={(e) => setKey(e.target.value)} />}
             </FormField>
             <Button type="submit" loading={pending === "key"} disabled={key.trim().length < 10}>
               Connect

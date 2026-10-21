@@ -27,6 +27,12 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
   return (
     <ToastHost>
     <div className="flex min-h-full flex-1 flex-col">
+      <a
+        href="#main"
+        className="sr-only rounded-30 bg-background-body px-4 py-2 text-30 font-semibold text-text-link shadow-focus focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-50"
+      >
+        Skip to main content
+      </a>
       <header className="border-b border-border-weaker bg-background-body">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 px-4 py-3">
           <Link href="/app" className="rounded-20 font-semibold tracking-tight outline-none focus-visible:shadow-focus">
@@ -45,7 +51,7 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
           </div>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">{children}</main>
+      <main id="main" tabIndex={-1} className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 outline-none">{children}</main>
     </div>
     </ToastHost>
   );
