@@ -53,20 +53,47 @@ per person may be needed so it stops opening on its own. Ask before adding it.
   - Whether answers are logged, and for how long.
   - A support contact for when it cannot help.
 
-## 3. Customizable director dashboard
+## 3. Two dashboards, staff and board, each customizable
 
-**On screen now:** nothing yet. The dashboard (Reports, Dashboard) is the same for everyone.
-This is a placeholder in this document only, so the screen does not show a control that
-does nothing.
+Direction (Jenn, 2026-10-20): a staff view for the executive director and development
+director, and a separate board dashboard. Each can be customized, with one layout per
+organization to start.
 
-**The build:**
-- A "Customize" button on the dashboard, for owners and admins.
-- It lets them choose which cards show, put them in order, and pick a default date range:
-  this fiscal year, last 12 months, or this calendar year.
-- Board links and board viewers see the organization's chosen layout.
-- "Reset to the standard layout" is always available.
-- Cards come from the existing dashboard computation, so no new numbers are invented.
+**On screen now:**
+- One dashboard (Reports, Dashboard) is shared by staff, board viewers, and board links.
+- Home has a few staff to-dos.
 
-**Data model:** one layout per organization to start (Jenn, 2026-10-20). That is one jsonb
-column on `organizations`, edited by owners and admins, and seen by everyone, including
-board links. Per-person layouts can come later as a separate table if people ask.
+**Proposal, built from `docs/personas.md`:**
+
+- **Staff dashboard, on Home (Dana and Marcus: "what do I do next, and how are we doing").**
+  - To-dos, each linking to the list that clears it:
+    - Gifts to thank, with gifts of $250 or more that legally need a letter called out.
+    - Batches waiting to post.
+    - Online gifts waiting for their deposit.
+    - Possible duplicates.
+    - Refunds to handle.
+  - This year so far against last year so far: dollars and donors.
+  - Donor retention, and first-time donor retention, where a quick thank-you call matters
+    most.
+  - Lists that lead to action:
+    - LYBUNT (gave last year, not yet this year).
+    - Lapsed donors.
+    - Top donors who have not given this year.
+  - Campaign goals, and recent gifts.
+  - Donor names are shown.
+- **Board dashboard, Reports, Dashboard (Ruth: "are we on track", in two minutes, no
+  login).**
+  - A sentence first, such as "Giving is up 12% compared with this time last year".
+  - Then the comparison, campaign goals, the monthly trend with its table, giving by fund,
+    and retention with plain definitions.
+  - No to-do lists. Donor names hidden unless the organization turns them on, as today.
+  - It fits on one printed page.
+  - It is what board links and board viewers see. Staff can open it to see exactly what the
+    board sees.
+- **Navigation:** this keeps the five main areas, per the navigation standard. Home becomes
+  the staff view, and Reports, Dashboard becomes the board view. No new level.
+- **Customize:** owners and admins choose which cards show, and in what order, separately
+  for each view.
+
+**Data model:** one jsonb column on `organizations`, for example
+`dashboard_layouts = { "staff": [...], "board": [...] }`.
