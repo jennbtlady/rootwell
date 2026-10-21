@@ -16,7 +16,7 @@ export function ConstituentSearch({ base, initial }: { base: string; initial: st
     <form onSubmit={submit} role="search" className="flex max-w-xl items-end gap-2">
       <div className="flex-1">
         <Label htmlFor="constituent-q" className="sr-only">
-          Search constituents
+          Search donors
         </Label>
         <Input id="constituent-q" type="search" placeholder="Search by name, email or phone" value={q} onChange={(e) => setQ(e.target.value)} insertBefore={<Search className="size-4" aria-hidden="true" />} />
       </div>

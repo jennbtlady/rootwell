@@ -35,6 +35,10 @@ Package scope is `@maple/*`. The product name is not final. Renaming the scope i
 
 Read `docs/design-system.md` before touching UI. It is short and it is the whole contract: build screens from `@/components/ui`, use Paste token names (`bg-background-primary`, `text-text-weak`, `text-30`, `rounded-30`, `shadow-focus`), never Tailwind palette colors or `text-sm`. Design changes go in `packages/design/overrides.css`, not in components. Merge classes with `cn()` from `@/lib/cn` only. New components are ported from Paste's source using the mapping table in that doc. Check `/design` in the browser when you add or change one.
 
+## Navigation
+
+`docs/navigation-standard.md` is binding for every nav, sidebar, tab row, menu, or page header. `docs/navigation.md` maps how the app follows it: five main areas named for tasks, always visible, at most three levels deep, admin behind a labeled Settings link. When a request conflicts with the standard, follow the standard and flag the conflict.
+
 ## Next.js note
 
 `apps/web` is on Next.js 16. Its conventions differ from older versions. Read `apps/web/node_modules/next/dist/docs/` before writing Next-specific code, as `apps/web/AGENTS.md` says.

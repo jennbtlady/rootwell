@@ -6,7 +6,7 @@ import { requireSession, withSession } from "@/lib/session";
 import { Heading } from "@/components/ui";
 import { ConstituentForm } from "@/components/constituents/constituent-form";
 
-export const metadata: Metadata = { title: "Edit constituent" };
+export const metadata: Metadata = { title: "Edit donor" };
 
 export default async function EditConstituentPage({ params }: PageProps<"/app/orgs/[orgId]/constituents/[constituentId]/edit">) {
   const { orgId, constituentId } = await params;

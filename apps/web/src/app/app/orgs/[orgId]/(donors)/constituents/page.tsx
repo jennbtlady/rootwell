@@ -8,7 +8,7 @@ import { anchorClass } from "@/components/ui/text";
 import { ConstituentSearch } from "@/components/constituents/constituent-search";
 import { ListPager } from "@/components/constituents/list-pager";
 
-export const metadata: Metadata = { title: "Constituents" };
+export const metadata: Metadata = { title: "Donors" };
 const PAGE = 50;
 
 export default async function ConstituentsPage({ params, searchParams }: PageProps<"/app/orgs/[orgId]/constituents">) {
@@ -21,14 +21,14 @@ export default async function ConstituentsPage({ params, searchParams }: PagePro
   const [{ items, total }, org] = await withSession(session, (tx) => Promise.all([listConstituents(tx, orgId, { q, limit: PAGE, offset: (page - 1) * PAGE, filter }), getOrg(tx, orgId)]));
   const canImport = org?.role === "owner" || org?.role === "admin";
   const base = `/app/orgs/${orgId}/constituents`;
-  const FILTER_TITLE: Record<ConstituentFilter, string> = { missing_email: "Constituents with no email", missing_address: "Constituents with no address", stale: "No gift or note in 36 months" };
+  const FILTER_TITLE: Record<ConstituentFilter, string> = { missing_email: "Donors with no email", missing_address: "Donors with no address", stale: "No gift or note in 36 months" };
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <Heading variant="heading30" as="h1" noMargin>
-            {filter ? FILTER_TITLE[filter] : "Constituents"}
+            {filter ? FILTER_TITLE[filter] : "All donors"}
           </Heading>
           {filter && (
             <Link href={base} className={`${anchorClass} text-30`}>
@@ -43,7 +43,7 @@ export default async function ConstituentsPage({ params, searchParams }: PagePro
             </Link>
           )}
           <Link href={`${base}/new`} className={buttonVariants({ size: "small" })}>
-            Add constituent
+            Add a donor
           </Link>
         </div>
       </div>
@@ -54,10 +54,10 @@ export default async function ConstituentsPage({ params, searchParams }: PagePro
           <EmptyState title="No one matches that search">Try fewer letters, or search by email or phone.</EmptyState>
         ) : (
           <EmptyState
-            title="No constituents yet"
+            title="No donors yet"
             action={
               <Link href={`${base}/new`} className={buttonVariants()}>
-                Add your first constituent
+                Add your first donor
               </Link>
             }
           >
@@ -67,9 +67,9 @@ export default async function ConstituentsPage({ params, searchParams }: PagePro
       ) : (
         <>
           <p className="text-30 leading-5 text-text-weak">
-            {q ? `${total} match${total === 1 ? "" : "es"}` : `${total} constituent${total === 1 ? "" : "s"}`}
+            {q ? `${total} match${total === 1 ? "" : "es"}` : `${total} donor${total === 1 ? "" : "s"}`}
           </p>
-          <Table label="Constituents">
+          <Table label="Donors">
             <THead>
               <TR>
                 <TH>Name</TH>

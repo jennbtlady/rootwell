@@ -61,7 +61,7 @@ export function DoneView({ orgId, job }: { orgId: string; job: ImportJob }) {
       ) : (
         <Alert>
           <AlertTitle>Imported on {formatDateTime(job.committedAt)}</AlertTitle>
-          <AlertDescription>New people now appear in Constituents. Check Data health for any duplicates the import created.</AlertDescription>
+          <AlertDescription>New people now appear under Donors. Check Donors, Clean up, for any duplicates the import created.</AlertDescription>
         </Alert>
       )}
       <Card>

@@ -46,7 +46,7 @@ test.describe.serial("phase 1 acceptance", () => {
     await page.getByLabel("First name").fill("Dana");
     await page.getByLabel("Last name").fill("Rivera");
     await page.getByRole("textbox", { name: /^Email/ }).fill(`dana-${s.run}@example.org`);
-    await page.getByRole("button", { name: "Add constituent" }).click();
+    await page.getByRole("button", { name: "Add donor" }).click();
     await page.waitForURL(/\/constituents\/[0-9a-f-]{36}$/);
     await expect(page.getByRole("heading", { name: "Dana Rivera" })).toBeVisible();
     await expectAccessible(page, "constituent profile");
@@ -114,7 +114,7 @@ test.describe.serial("phase 1 acceptance", () => {
     await page.goto(`${org}/constituents/new`);
     await page.getByLabel("First name").fill("Tom");
     await page.getByLabel("Last name").fill("Okafor");
-    await page.getByRole("button", { name: "Add constituent" }).click();
+    await page.getByRole("button", { name: "Add donor" }).click();
     await page.waitForURL(/\/constituents\/[0-9a-f-]{36}$/);
 
     await page.goto(`${org}/constituents?q=okafor`);

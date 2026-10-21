@@ -254,7 +254,7 @@ export function ConstituentForm({ orgId, existing }: { orgId: string; existing: 
       </div>
       <div className="flex gap-2">
         <Button type="submit" loading={pending}>
-          {existing ? "Save changes" : "Add constituent"}
+          {existing ? "Save changes" : "Add donor"}
         </Button>
         <Link href={existing ? `${base}/${existing.id}` : base} className="inline-flex items-center px-3 text-30 text-text-weak underline-offset-2 hover:underline">
           Cancel

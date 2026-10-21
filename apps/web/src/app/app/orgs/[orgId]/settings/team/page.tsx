@@ -8,7 +8,7 @@ import { Heading } from "@/components/ui";
 
 export const metadata: Metadata = { title: "Team" };
 
-export default async function MembersPage({ params }: PageProps<"/app/orgs/[orgId]/members">) {
+export default async function MembersPage({ params }: PageProps<"/app/orgs/[orgId]/settings/team">) {
   const { orgId } = await params;
   if (!z.string().uuid().safeParse(orgId).success) notFound();
 

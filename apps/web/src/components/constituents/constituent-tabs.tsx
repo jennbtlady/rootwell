@@ -26,7 +26,7 @@ type Props = {
 export function ConstituentTabs({ orgId, constituent: c, gifts, interactions, audit, allTags }: Props) {
   return (
     <Tabs defaultValue="gifts">
-      <TabList aria-label="Constituent details">
+      <TabList aria-label="Donor details">
         <Tab value="gifts">Gifts ({gifts.length})</Tab>
         <Tab value="interactions">Interactions ({interactions.length})</Tab>
         <Tab value="relationships">Relationships ({c.relationships.length})</Tab>

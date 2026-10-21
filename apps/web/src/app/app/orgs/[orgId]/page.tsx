@@ -61,8 +61,8 @@ export default async function OrgPage({ params }: PageProps<"/app/orgs/[orgId]">
       <div className="grid gap-4 sm:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Constituents</CardTitle>
-            <CardDescription>{data.constituentCount === 0 ? "No one yet." : `${data.constituentCount} people, households and organizations.`}</CardDescription>
+            <CardTitle>Donors</CardTitle>
+            <CardDescription>{data.constituentCount === 0 ? "No one yet." : `${data.constituentCount} donors: people, households and organizations.`}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
@@ -70,7 +70,7 @@ export default async function OrgPage({ params }: PageProps<"/app/orgs/[orgId]">
                 Open list
               </Link>
               <Link href={`${base}/constituents/new`} className={buttonVariants({ size: "small" })}>
-                Add constituent
+                Add a donor
               </Link>
             </div>
           </CardContent>

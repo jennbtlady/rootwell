@@ -223,7 +223,7 @@ function GiftEntryForm({ orgId, batch, standards, funds, campaigns, appeals, pre
               aria-describedby={f["aria-describedby"]}
               footer={
                 <Link href={`/app/orgs/${orgId}/constituents/new`} className={`${anchorClass} text-30`}>
-                  Add a new constituent
+                  Add a new donor
                 </Link>
               }
             />

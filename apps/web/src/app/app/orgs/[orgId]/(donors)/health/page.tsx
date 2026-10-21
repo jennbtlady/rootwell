@@ -18,8 +18,8 @@ export default async function HealthPage({ params }: PageProps<"/app/orgs/[orgId
 
   const items: { label: string; count: number; detail: string; href: string; tone: "good" | "warn" | "neutral" }[] = [
     { label: "Possible duplicates", count: h.openDuplicates, detail: "Pairs that look like the same person. Compare and merge, or mark them as different.", href: `${base}/duplicates`, tone: h.openDuplicates ? "warn" : "good" },
-    { label: "No email", count: h.missingEmail, detail: `${pct(h.missingEmail)}% of constituents. Emails make thank-yous and Mailchimp possible.`, href: `${base}/constituents?filter=missing_email`, tone: "neutral" },
-    { label: "No mailing address", count: h.missingAddress, detail: `${pct(h.missingAddress)}% of constituents. Needed for letters and year-end statements.`, href: `${base}/constituents?filter=missing_address`, tone: "neutral" },
+    { label: "No email", count: h.missingEmail, detail: `${pct(h.missingEmail)}% of donors. Emails make thank-yous and Mailchimp possible.`, href: `${base}/constituents?filter=missing_email`, tone: "neutral" },
+    { label: "No mailing address", count: h.missingAddress, detail: `${pct(h.missingAddress)}% of donors. Needed for letters and year-end statements.`, href: `${base}/constituents?filter=missing_address`, tone: "neutral" },
     { label: "Gifts with no fund", count: h.giftsMissingFund, detail: "Every gift needs a fund for the dashboard and the bookkeeping export.", href: `${base}/gifts?filter=missing_fund`, tone: h.giftsMissingFund ? "warn" : "good" },
     { label: "Unthanked gifts older than 14 days", count: h.unacknowledged14d, detail: "Posted gifts with no acknowledgment yet. Donors who are thanked quickly give again.", href: `${base}/gifts?filter=unacknowledged`, tone: h.unacknowledged14d ? "warn" : "good" },
     { label: "Stale records", count: h.stale36m, detail: "No gift or note in 36 months. Worth a call, a last appeal, or a note before they fall off the list.", href: `${base}/constituents?filter=stale`, tone: "neutral" },
@@ -34,7 +34,7 @@ export default async function HealthPage({ params }: PageProps<"/app/orgs/[orgId
             Data health
           </Heading>
           <Paragraph noMargin className="mt-1 text-text-weak">
-            {h.constituents} constituents. Each number links to the list that fixes it.
+            {h.constituents} donors. Each number links to the list that fixes it.
           </Paragraph>
         </div>
         <ScanButton orgId={orgId} />
