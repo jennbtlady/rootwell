@@ -78,6 +78,7 @@ describe.skipIf(!DATABASE_URL)("api routes against the database", () => {
   it("hides org B from org A's people on every org route", async () => {
     for (const [method, path, body] of [
       ["GET", `/api/v1/orgs/${orgB}`, undefined],
+      ["PATCH", `/api/v1/orgs/${orgB}`, { name: "Taken over", fiscalYearStartMonth: 1, timezone: "America/Chicago" }],
       ["GET", `/api/v1/orgs/${orgB}/members`, undefined],
       ["POST", `/api/v1/orgs/${orgB}/members`, { email: "x@test.invalid", role: "staff" }],
       ["PATCH", `/api/v1/orgs/${orgB}/members/${randomUUID()}`, { role: "admin" }],
@@ -140,6 +141,23 @@ describe.skipIf(!DATABASE_URL)("api routes against the database", () => {
       expect(text).not.toContain(orgB);
       expect(text).not.toContain("Route Org B");
     }
+  });
+
+  it("owners save the organization's details; staff cannot; bad EIN and ZIP get plain errors", async () => {
+    const body = { name: "Route Org A", ein: "123456789", address: { line1: "100 Main St", city: "Springfield", state: "il", postalCode: "62701" }, fiscalYearStartMonth: 7, timezone: "America/Chicago" };
+    const ok = await app.request(`/api/v1/orgs/${orgA}`, { method: "PATCH", headers: { ...auth(ownerA), ...json }, body: JSON.stringify(body) });
+    expect(ok.status).toBe(200);
+    const org = (await (await app.request(`/api/v1/orgs/${orgA}`, { headers: auth(ownerA) })).json()) as { ein: string; address: Record<string, string>; fiscalYearStartMonth: number; timezone: string };
+    expect(org).toMatchObject({ ein: "12-3456789", fiscalYearStartMonth: 7, timezone: "America/Chicago", address: { line1: "100 Main St", state: "IL", postalCode: "62701" } });
+    const staff = await app.request(`/api/v1/orgs/${orgA}`, { method: "PATCH", headers: { ...auth(staffA), ...json }, body: JSON.stringify(body) });
+    expect(staff.status).toBe(403);
+    const bad = await app.request(`/api/v1/orgs/${orgA}`, { method: "PATCH", headers: { ...auth(ownerA), ...json }, body: JSON.stringify({ ...body, ein: "12-34", address: { postalCode: "abc" } }) });
+    expect(bad.status).toBe(400);
+    const issues = ((await bad.json()) as { issues: { message: string }[] }).issues.map((i) => i.message);
+    expect(issues).toEqual(expect.arrayContaining(["An EIN looks like 12-3456789", "A ZIP code looks like 62701"]));
+    // Clearing the EIN is allowed.
+    const cleared = await app.request(`/api/v1/orgs/${orgA}`, { method: "PATCH", headers: { ...auth(ownerA), ...json }, body: JSON.stringify({ ...body, ein: "" }) });
+    expect(cleared.status).toBe(200);
   });
 
   it("staff can see members but cannot invite, and MFA is required to invite", async () => {

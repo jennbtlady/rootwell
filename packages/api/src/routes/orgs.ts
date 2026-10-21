@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { withRls } from "@maple/db";
-import { createOrganizationInput, inviteMemberInput, setMemberRoleInput, transferOwnershipInput } from "@maple/core";
+import { createOrganizationInput, inviteMemberInput, orgProfileInput, setMemberRoleInput, transferOwnershipInput } from "@maple/core";
 import {
   createOrg,
   createSampleOrg,
@@ -13,6 +13,7 @@ import {
   removeMember,
   setMemberRole,
   transferOwnership,
+  updateOrgProfile,
 } from "@maple/core/services";
 import type { ApiEnv } from "../env";
 import { getDb } from "../db";
@@ -42,6 +43,13 @@ export const orgs = new Hono<ApiEnv>()
     // RLS hides other orgs' rows, so a wrong id and a foreign id look the same: not found.
     if (!org) return c.json({ error: "Not found" }, 404);
     return c.json(org);
+  })
+  // The organization's own details: name, EIN, mailing address, fiscal year, time zone.
+  .patch("/:orgId", validate("param", idParam), validate("json", orgProfileInput), async (c) => {
+    const { orgId } = c.req.valid("param");
+    const ok = await withRls(getDb(), c.get("claims"), (tx) => updateOrgProfile(tx, orgId, c.req.valid("json")));
+    if (!ok) return c.json({ error: "Only owners and admins can change the organization's details." }, 403);
+    return c.json({ ok: true });
   })
   .delete("/:orgId", validate("param", idParam), async (c) => {
     const { orgId } = c.req.valid("param");

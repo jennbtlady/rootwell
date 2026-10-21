@@ -27,6 +27,7 @@ export type OrgDetail = {
   id: string;
   name: string;
   ein: string | null;
+  address: { line1?: string; line2?: string; city?: string; state?: string; postalCode?: string };
   fiscalYearStartMonth: number;
   timezone: string;
   hideBoardNames: boolean;
