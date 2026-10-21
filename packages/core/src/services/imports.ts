@@ -1,5 +1,7 @@
 import { sql } from "drizzle-orm";
-import { mapRow, normalizeRow, type FieldValues, type ImportField, type ImportKind } from "../import";
+import { CODING_FIELDS, mapRow, normalizeRow, suggestCoding, type CodingField, type FieldValues, type ImportField, type ImportKind } from "../import";
+import type { ImportOptions } from "../schemas/coding";
+import { listCoding } from "./coding";
 import type { Tx } from "./types";
 
 export type ImportStatus = "uploading" | "ready" | "committed" | "rolled_back";
@@ -16,6 +18,7 @@ export type ImportJob = {
   mapping: Partial<Record<ImportField, string>>;
   batchId: string | null;
   summary: Record<string, unknown>;
+  options: Partial<ImportOptions>;
   counts: Record<RowAction, number>;
   people: Record<RowAction, number>;
   /** Rows that will become gifts (create or match, with a gift). */
@@ -40,6 +43,7 @@ function mapJob(r: Record<string, unknown>): ImportJob {
     mapping: (r.mapping as ImportJob["mapping"]) ?? {},
     batchId: (r.batch_id as string | null) ?? null,
     summary: (r.summary as Record<string, unknown>) ?? {},
+    options: (r.options as Partial<ImportOptions>) ?? {},
     counts,
     people,
     giftRows: Number(r.gift_rows ?? 0),
@@ -178,8 +182,11 @@ export type ReviewPerson = {
   action: RowAction;
   matchId: string | null;
   person: Record<string, unknown>;
-  candidates: { id: string; displayName: string; score: number; reasons: string[] }[];
+  candidates: { id: string; displayName: string; score: number; reasons: string[]; details?: CandidateDetails }[];
 };
+
+/** What the existing record holds, so the person can compare it with the row in the file. */
+export type CandidateDetails = { email: string | null; phone: string | null; address: string | null; giftCount: number; lastGift: string | null };
 
 /** People in the file, grouped. `scope` "review" shows only open decisions. */
 export async function listImportPeople(tx: Tx, orgId: string, jobId: string, scope: "review" | "match" | "create" | "skip", limit = 50, offset = 0): Promise<{ items: ReviewPerson[]; total: number }> {
@@ -194,13 +201,27 @@ export async function listImportPeople(tx: Tx, orgId: string, jobId: string, sco
         from import_rows where job_id = ${jobId} and org_id = ${orgId} and person_key is not null and action = ${scope}::import_row_action
        group by person_key)
     select *, count(*) over() as total from g order by first_row limit ${limit} offset ${offset}`);
-  return {
-    items: rows.map((r) => {
-      const x = r as Record<string, unknown>;
-      return { personKey: x.person_key as string, firstRow: Number(x.first_row), rowCount: Number(x.row_count), giftTotal: String(x.gift_total), action: x.action as RowAction, matchId: (x.match_id as string | null) ?? null, person: (x.person as Record<string, unknown>) ?? {}, candidates: (x.candidates as ReviewPerson["candidates"]) ?? [] };
-    }),
-    total: Number((rows[0] as { total?: number } | undefined)?.total ?? 0),
-  };
+  const items: ReviewPerson[] = rows.map((r) => {
+    const x = r as Record<string, unknown>;
+    return { personKey: x.person_key as string, firstRow: Number(x.first_row), rowCount: Number(x.row_count), giftTotal: String(x.gift_total), action: x.action as RowAction, matchId: (x.match_id as string | null) ?? null, person: (x.person as Record<string, unknown>) ?? {}, candidates: (x.candidates as ReviewPerson["candidates"]) ?? [] };
+  });
+  const ids = [...new Set(items.flatMap((p) => p.candidates.map((c) => c.id)))];
+  if (ids.length) {
+    const found = await tx.execute(sql`
+      select c.id,
+             (select e.email from constituent_emails e where e.constituent_id = c.id order by e.is_primary desc limit 1) as email,
+             (select p.phone from constituent_phones p where p.constituent_id = c.id order by p.is_primary desc limit 1) as phone,
+             (select concat_ws(', ', nullif(a.line1, ''), nullif(a.city, ''), nullif(a.postal_code, '')) from constituent_addresses a where a.constituent_id = c.id order by a.is_primary desc limit 1) as address,
+             (select count(*) from gifts g where g.constituent_id = c.id)::int as gift_count,
+             (select max(g.gift_date)::text from gifts g where g.constituent_id = c.id) as last_gift
+        from constituents c where c.org_id = ${orgId} and c.id in (${sql.join(ids.map((id) => sql`${id}::uuid`), sql`, `)})`);
+    const byId = new Map(found.map((f) => {
+      const d = f as Record<string, unknown>;
+      return [d.id as string, { email: (d.email as string) ?? null, phone: (d.phone as string) ?? null, address: (d.address as string) || null, giftCount: Number(d.gift_count), lastGift: (d.last_gift as string) ?? null }];
+    }));
+    for (const p of items) for (const c of p.candidates) c.details = byId.get(c.id);
+  }
+  return { items, total: Number((rows[0] as { total?: number } | undefined)?.total ?? 0) };
 }
 
 /** Sets the decision for every row of one person. */
@@ -229,7 +250,37 @@ export async function skipAllErrors(tx: Tx, orgId: string, jobId: string): Promi
   return r.count;
 }
 
-export async function commitImport(tx: Tx, jobId: string): Promise<Record<string, unknown>> {
+export type ImportCodingValue = { field: CodingField; value: string; rows: number; choice: string; how: "exact" | "similar" | "none" | "chosen" };
+export type ImportCoding = { values: ImportCodingValue[]; existing: Record<CodingField, { id: string; name: string }[]> };
+
+/**
+ * The fund, campaign and appeal names in the file, each with what it will become: an
+ * existing one (by name, by a close match, or by the person's earlier choice) or a new one.
+ */
+export async function listImportCoding(tx: Tx, orgId: string, jobId: string): Promise<ImportCoding | null> {
+  const job = await getImportJob(tx, orgId, jobId);
+  if (!job) return null;
+  const vals = await tx.execute(sql`
+    select k as field, trim(mapped->'gift'->>k) as value, count(*)::int as rows
+      from import_rows, unnest(array['fund', 'campaign', 'appeal']) k
+     where job_id = ${jobId} and org_id = ${orgId} and action in ('create', 'match') and coalesce(trim(mapped->'gift'->>k), '') <> ''
+     group by 1, 2 order by 1, 3 desc`);
+  const lists = await Promise.all((["funds", "campaigns", "appeals"] as const).map((k) => listCoding(tx, k, orgId, { includeInactive: true })));
+  const existing = Object.fromEntries(CODING_FIELDS.map((f, i) => [f, lists[i]!.map((c) => ({ id: c.id, name: c.name, code: c.code ?? null }))])) as Record<CodingField, { id: string; name: string; code: string | null }[]>;
+  const saved = job.options.coding ?? { fund: {}, campaign: {}, appeal: {} };
+  const values = vals.map((r) => {
+    const x = r as { field: CodingField; value: string; rows: number };
+    const chosen = saved[x.field]?.[x.value];
+    if (chosen) return { ...x, choice: chosen, how: "chosen" as const };
+    const s = suggestCoding(x.value, existing[x.field]);
+    return { ...x, choice: s.id ?? "new", how: s.how };
+  });
+  return { values, existing: Object.fromEntries(CODING_FIELDS.map((f) => [f, existing[f].map(({ id, name }) => ({ id, name }))])) as ImportCoding["existing"] };
+}
+
+/** Saves the choices from the last step, then runs the import. */
+export async function commitImport(tx: Tx, jobId: string, options?: ImportOptions): Promise<Record<string, unknown>> {
+  if (options) await tx.execute(sql`update import_jobs set options = ${JSON.stringify(options)}::jsonb where id = ${jobId}`);
   const r = await tx.execute(sql`select app.commit_import(${jobId}) as s`);
   // Imported gifts change the totals; recompute the dashboard now (see postBatch).
   await tx.execute(sql`select app.refresh_dashboard(j.org_id) from import_jobs j where j.id = ${jobId}`);

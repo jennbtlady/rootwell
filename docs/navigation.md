@@ -11,7 +11,7 @@ a tab bar along the bottom on a phone (under 640px wide).
 | Area | Opens | Level 2 tabs | Covers |
 |---|---|---|---|
 | Home | `/app/orgs/{id}` | none | To-dos, Get set up, open batches, sample org notice |
-| Donors | `/constituents` | All donors, Possible duplicates, Clean up | Donor list and records, imports, duplicates, merge history, Data health |
+| Donors | `/constituents` | All donors, Possible duplicates, Clean up | Donor list and records, imports and Past imports (linked from the donor list and Clean up), duplicates, merge history, Data health |
 | Gifts | `/batches` | Batches, All gifts | Batches and batch entry, the gift list |
 | Thank-yous | `/acknowledgments` | links on the page: templates, statements | Thank-you queue, templates, year-end statements |
 | Reports | `/dashboard` | Dashboard, Reports | The director dashboard, saved reports |
@@ -26,7 +26,7 @@ Inside, one grouped list:
 
 - Your organization: Team, Account and export, Billing
 - Gifts: Funds, campaigns, appeals; Gift entry rules; Giving pages
-- Connections: Stripe, Mailchimp, QuickBooks; Board sharing; Imports
+- Connections: Stripe, Mailchimp, QuickBooks; Board sharing; Past imports
 
 Help is a visible "Help" link in the top bar on every signed-in page.
 

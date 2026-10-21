@@ -134,7 +134,7 @@ describe.skipIf(!hasDb)("phase 1: constituents, batches, gifts", () => {
     expect(byPhone[0]?.reasons).toEqual(["same phone"]);
 
     const byName = await as(db, a.staff, async (tx) => (await tx.execute(sql`select * from app.find_duplicates(${a.id}, 'Dana', 'Rivera')`)) as unknown as { reasons: string[]; score: number }[]);
-    expect(byName[0]?.reasons).toContain("similar name");
+    expect(byName[0]?.reasons).toContain("same name");
 
     const byPostal = await as(db, a.staff, async (tx) => (await tx.execute(sql`select * from app.find_duplicates(${a.id}, 'Marco', 'Rivera', null, null, '62701')`)) as unknown as { reasons: string[] }[]);
     expect(byPostal[0]?.reasons).toContain("same last name and ZIP");

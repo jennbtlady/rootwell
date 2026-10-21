@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import type { ImportOptions } from "@maple/core";
 import type { ImportJob, ReviewPerson } from "@maple/core/services";
-import { api, errorMessage } from "@/lib/api";
+import { accessToken, api, errorMessage } from "@/lib/api";
 import { Alert, AlertDescription, AlertTitle, Button, Card } from "@/components/ui";
+import { BeforeImport, defaultThankedBefore } from "./before-import";
 import { personDetail, personLabel } from "./review-step";
 
 export function CommitStep({ orgId, job, onRemap }: { orgId: string; job: ImportJob; onRemap: () => void }) {
@@ -12,7 +14,8 @@ export function CommitStep({ orgId, job, onRemap }: { orgId: string; job: Import
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [matched, setMatched] = useState<ReviewPerson[]>([]);
-  const gifts = job.kind === "constituents_gifts";
+  const gifts = job.kind === "constituents_gifts" && job.giftRows > 0;
+  const [options, setOptions] = useState<ImportOptions>({ thankedBefore: defaultThankedBefore(), coding: { fund: {}, campaign: {}, appeal: {} } });
 
   useEffect(() => {
     void (async () => {
@@ -24,7 +27,13 @@ export function CommitStep({ orgId, job, onRemap }: { orgId: string; job: Import
   async function commit() {
     setPending(true);
     setError(null);
-    const res = await api().api.v1.orgs[":orgId"].imports[":id"].commit.$post({ param: { orgId, id: job.id } });
+    // Plain fetch: the body is optional on this route, so the typed client does not know it.
+    const token = await accessToken();
+    const res = await fetch(`/api/v1/orgs/${orgId}/imports/${job.id}/commit`, {
+      method: "POST",
+      headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify(gifts ? { options } : {}),
+    });
     setPending(false);
     if (!res.ok) return setError(await errorMessage(res));
     router.refresh();
@@ -51,9 +60,11 @@ export function CommitStep({ orgId, job, onRemap }: { orgId: string; job: Import
         {stat("Rows skipped", job.counts.skip)}
       </div>
       <p className="max-w-3xl text-30 leading-5 text-text-weak">
-        {gifts ? "Gifts go into one posted batch named for this file. Funds and campaigns that do not exist yet are created by name. " : ""}
+        {gifts ? "Gifts go into one posted batch named for this file. " : ""}
         Matched people keep their current details; only their gifts are added. You can roll this import back afterwards.
       </p>
+
+      {gifts && <BeforeImport orgId={orgId} job={job} options={options} onChange={setOptions} />}
 
       {matched.length > 0 && (
         <details className="rounded-30 border border-border-weaker bg-background-weakest p-4">

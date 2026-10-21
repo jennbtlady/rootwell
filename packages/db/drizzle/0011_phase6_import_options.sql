@@ -1,0 +1,1 @@
+ALTER TABLE "import_jobs" ADD COLUMN "options" jsonb DEFAULT '{}'::jsonb NOT NULL;

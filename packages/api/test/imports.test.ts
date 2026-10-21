@@ -131,6 +131,47 @@ describe.skipIf(!DATABASE_URL)("import wizard through the API", () => {
     expect(after[0]).toEqual({ people: 1, gifts: 0, funds: 0, campaigns: 0, batches: 0 });
   });
 
+  it("asks the right questions: which fund a name means, what was already thanked, and who an existing donor is", async () => {
+    const general = ((await (await call(owner, "POST", "/coding/funds", { name: "General operating" })).json()) as { id: string }).id;
+    const row = (v: Partial<Record<(typeof HEADERS)[number], string>>) => HEADERS.map((k) => v[k] ?? "");
+    const old = "2024-03-15";
+    const recent = new Date(Date.now() - 3 * 86400_000).toISOString().slice(0, 10);
+    const id = await upload("constituents_gifts", "lgl.csv", [
+      row({ "First Name": "Ana", "Last Name": "Ruiz", Amount: "50", Date: old, Fund: "General" }),
+      row({ "First Name": "Ana", "Last Name": "Ruiz", Amount: "75", Date: recent, Fund: "General" }),
+      row({ "First Name": "Bo", "Last Name": "Park", Amount: "20", Date: recent, Fund: "Garden" }),
+      // Same name as the existing donor, no email: a review case.
+      row({ "First Name": "Marcus", "Last Name": "Chen", Amount: "30", Date: old, Fund: "General" }),
+    ]);
+    expect((await call(owner, "PUT", `/imports/${id}/mapping`, { mapping })).status).toBe(200);
+
+    // The review card says "same name" and shows what the existing record holds.
+    const review = (await (await call(owner, "GET", `/imports/${id}/people?scope=review`)).json()) as { items: { personKey: string; candidates: { id: string; reasons: string[]; details: { email: string | null; giftCount: number } }[] }[] };
+    const marcus = review.items[0]!;
+    expect(marcus.candidates[0]!.reasons).toContain("same name");
+    expect(marcus.candidates[0]!.details.email).toBe("marcus.m1@example.org");
+    await call(owner, "POST", `/imports/${id}/decisions`, { personKey: marcus.personKey, action: "match", matchId: marcus.candidates[0]!.id });
+
+    // "General" is suggested as "General operating"; "Garden" has no match and will be new.
+    const coding = (await (await call(owner, "GET", `/imports/${id}/coding`)).json()) as { values: { field: string; value: string; choice: string; how: string }[] };
+    expect(coding.values.find((v) => v.value === "General")).toMatchObject({ field: "fund", choice: general, how: "similar" });
+    expect(coding.values.find((v) => v.value === "Garden")).toMatchObject({ choice: "new", how: "none" });
+
+    const thankedBefore = new Date(Date.now() - 30 * 86400_000).toISOString().slice(0, 10);
+    const commit = await call(owner, "POST", `/imports/${id}/commit`, { options: { thankedBefore, coding: { fund: { General: general, Garden: "new" } } } });
+    expect(commit.status).toBe(200);
+    expect(await commit.json()).toMatchObject({ gifts: 4, thankedBefore: 2, fundsCreated: 1 });
+    const funds = await db.execute(sql`select name from funds where org_id = ${orgId} order by name`);
+    expect(funds.map((f) => f.name)).toEqual(["Garden", "General operating"]);
+    // Older gifts are thanked as of their gift date; recent ones wait in the thank-you queue.
+    const gifts = await db.execute(sql`select gift_date::text as d, acknowledged_at::date::text as a, acknowledgment_method as m from gifts where org_id = ${orgId} order by gift_date, amount`);
+    expect(gifts.filter((g) => g.d === old).every((g) => g.a === old && g.m === "before_import")).toBe(true);
+    expect(gifts.filter((g) => g.d === recent).every((g) => g.a === null)).toBe(true);
+
+    expect((await call(owner, "POST", `/imports/${id}/rollback`)).status).toBe(200);
+    await db.execute(sql`delete from funds where id = ${general}`);
+  });
+
   it("5,000 rows of constituents plus gifts import in under two minutes, and rollback removes every created row", async () => {
     const started = Date.now();
     const rows = bigFile(5000, 11, "big");

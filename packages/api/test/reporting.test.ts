@@ -164,6 +164,9 @@ describe.skipIf(!DATABASE_URL)("acknowledgments, statements, reports", () => {
   it("reports: LYBUNT, CSV safety, and board viewers kept out", async () => {
     const lybunt = (await (await call(owner, "GET", "/reports/lybunt")).json()) as { rows: { name: string }[] };
     expect(lybunt.rows).toEqual([]); // both gave last year and again this year
+    // The download is ready for a mail merge: name parts, address, and do-not-mail.
+    const lyCsv = (await (await call(owner, "GET", "/reports/lybunt?format=csv")).text()).replace(/^\uFEFF/, "");
+    expect(lyCsv.split("\r\n")[0]).toBe("Name,Email,Phone,Last fiscal year,Last gift,Lifetime,First name,Last name,Organization,Address line 1,Address line 2,City,State,ZIP code,Do not mail");
     const byFund = await call(owner, "GET", `/reports/gifts_by_fund?from=${lastYear}-01-01&format=csv`);
     expect(byFund.headers.get("content-type")).toContain("text/csv");
     const bytes = new Uint8Array(await byFund.arrayBuffer());

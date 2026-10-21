@@ -36,11 +36,16 @@ export default async function ConstituentsPage({ params, searchParams }: PagePro
             </Link>
           )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {canImport && (
-            <Link href={`/app/orgs/${orgId}/imports/new`} className={buttonVariants({ variant: "secondary", size: "small" })}>
-              Import a spreadsheet
-            </Link>
+            <>
+              <Link href={`/app/orgs/${orgId}/imports`} className={`${anchorClass} self-center text-30`}>
+                Past imports
+              </Link>
+              <Link href={`/app/orgs/${orgId}/imports/new`} className={buttonVariants({ variant: "secondary", size: "small" })}>
+                Import a spreadsheet
+              </Link>
+            </>
           )}
           <Link href={`${base}/new`} className={buttonVariants({ size: "small" })}>
             Add a donor

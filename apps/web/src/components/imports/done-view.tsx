@@ -18,6 +18,7 @@ type Summary = {
   fundsCreated?: number;
   campaignsCreated?: number;
   appealsCreated?: number;
+  thankedBefore?: number;
   rolledBack?: { gifts: number; people: number; coding: number; keptPeople: string[] };
 };
 
@@ -54,14 +55,17 @@ export function DoneView({ orgId, job }: { orgId: string; job: ImportJob }) {
         <Alert>
           <AlertTitle>This import was rolled back on {formatDateTime(job.rolledBackAt)}</AlertTitle>
           <AlertDescription>
-            Removed {s.rolledBack?.gifts ?? 0} gifts and {s.rolledBack?.people ?? 0} people.
+            Removed {s.rolledBack?.gifts ?? 0} gifts and {s.rolledBack?.people ?? 0} people
+            {s.rolledBack?.coding ? `, and ${s.rolledBack.coding} ${s.rolledBack.coding === 1 ? "fund, campaign or appeal" : "funds, campaigns and appeals"} it had added` : ""}.
             {s.rolledBack && s.rolledBack.keptPeople.length > 0 ? ` ${s.rolledBack.keptPeople.length} people were kept because they gained gifts, notes or relationships after the import.` : ""}
           </AlertDescription>
         </Alert>
       ) : (
         <Alert>
           <AlertTitle>Imported on {formatDateTime(job.committedAt)}</AlertTitle>
-          <AlertDescription>New people now appear under Donors. Check Donors, Clean up, for any duplicates the import created.</AlertDescription>
+          <AlertDescription>
+            New people now appear under Donors. Check Donors, Clean up, for any duplicates the import created. To undo this import later, find it under Donors, Past imports.
+          </AlertDescription>
         </Alert>
       )}
       <Card>
@@ -70,6 +74,7 @@ export function DoneView({ orgId, job }: { orgId: string; job: ImportJob }) {
           {row("Matched to existing people", s.peopleMatched)}
           {row("Gifts", s.gifts)}
           {row("Gift total", s.giftTotal ? formatMoney(s.giftTotal) : undefined)}
+          {row("Gifts marked as already thanked", s.thankedBefore)}
           {row("Rows skipped", s.skipped)}
           {row("Funds created", s.fundsCreated)}
           {row("Campaigns created", s.campaignsCreated)}

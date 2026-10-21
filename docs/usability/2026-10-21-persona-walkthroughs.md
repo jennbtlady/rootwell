@@ -99,18 +99,34 @@ From the other journeys:
 8. **Imported past gifts flood the thank-you queue.** Old gifts arrive "unthanked". The
    only ways out are thanking people again or logging false phone calls. That buries the
    real queue and makes Data health look worse after an import.
+   Fixed 2026-10-21: the last import step asks "Were these gifts already thanked?" It
+   defaults to yes for gifts more than 30 days old. Those gifts are recorded as thanked on
+   their gift date, with the method "before import".
 9. **Import creates funds and campaigns by name with no review.** "General" in a file
    became a second fund next to "General operating".
+   Fixed 2026-10-21: the last step lists each fund, campaign and appeal name in the file,
+   matched to an existing one. "General" is suggested as "General operating" and marked
+   "Close match, please check". New ones are created only if the person chooses that.
 10. **Gifts that are not yet posted are invisible where people look for them.**
     - This week's gifts are not in Thank-yous, with no explanation.
     - The "gave last year, not this year" list includes people who gave this week.
+    - Fixed 2026-10-21: Thank-yous says how many gifts wait in batches that are not posted,
+      with a link. The list leaves out anyone with a gift this year, posted or not.
 11. **People-list downloads cannot be used for a mailing.** There are no address columns,
     no separate first name, and no do-not-mail flag.
+    Fixed 2026-10-21 for the three people lists (gave last year, gave before, lapsed). The
+    download adds first and last name, organization, address, and "Do not mail". The page
+    stays narrow and says the file has them.
 12. **Rollback is hard to find.** Past imports live only under Settings, Connections,
     Imports.
+    Fixed 2026-10-21: a "Past imports" link on the donor list, on the import page, and on
+    Data health. The list says which imports can be undone.
 13. **The import's "Review matches" step gives too little to decide on.** Every card says
     "70% similar name", even for identical names. There are no details of the existing
     record.
+    Fixed 2026-10-21: identical names say "Same name", and the percentage is gone. Each
+    card shows the row from the file next to the existing record's email, phone, address,
+    and gift count with the last gift date.
 14. **Retention is jargon, and the sample data makes it look broken.**
     - The explanation leads with "Fundraising Effectiveness Project definition".
     - "FY2025 to FY2026" is unexplained.
@@ -146,6 +162,7 @@ From the other journeys:
 - **The merge button is ambiguous.** "Merge Ruth Goldberg into Ruth Goldberg" doesn't say
   which record survives.
 - **The rollback message leaves things out.** It omits the funds and campaigns removed.
+  Fixed 2026-10-21.
 - **Import silently guesses.** A junk row ("Rivera,") becomes a donor, mixed date formats
   are read without a warning, and unknown payment types become "Other".
 - **Small tap targets.** Explanation buttons are 20px, and Print is 28px. Aim for 44px.

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { dataHealth, getOrg, integrationHealth } from "@maple/core/services";
+import { dataHealth, getOrg, integrationHealth, listImportJobs } from "@maple/core/services";
 import { requireSession, withSession } from "@/lib/session";
+import { formatDateTime } from "@/lib/format";
 import { Card, Heading, Paragraph } from "@/components/ui";
 import { ScanButton } from "@/components/dedupe/scan-button";
 import { IntegrationHealthPanel } from "@/components/settings/integration-health";
@@ -12,7 +13,9 @@ export const metadata: Metadata = { title: "Data health" };
 export default async function HealthPage({ params }: PageProps<"/app/orgs/[orgId]/health">) {
   const { orgId } = await params;
   const session = await requireSession();
-  const [h, org, ih] = await withSession(session, (tx) => Promise.all([dataHealth(tx, orgId), getOrg(tx, orgId), integrationHealth(tx, orgId)]));
+  const [h, org, ih, imports] = await withSession(session, (tx) => Promise.all([dataHealth(tx, orgId), getOrg(tx, orgId), integrationHealth(tx, orgId), listImportJobs(tx, orgId)]));
+  const canImport = org?.role === "owner" || org?.role === "admin";
+  const lastImport = imports.find((j) => j.status === "committed");
   const base = `/app/orgs/${orgId}`;
   const pct = (n: number) => (h.constituents ? Math.round((n / h.constituents) * 100) : 0);
 
@@ -64,6 +67,21 @@ export default async function HealthPage({ params }: PageProps<"/app/orgs/[orgId
           </Link>
         </div>
       </Card>
+      {canImport && (
+        <Card>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div className="text-30 font-semibold leading-5">Imports</div>
+              <div className="text-30 leading-5 text-text-weak">
+                {lastImport ? `Last import: ${lastImport.fileName}, ${formatDateTime(lastImport.committedAt)}. An import that went wrong can be undone.` : "No imports yet."}
+              </div>
+            </div>
+            <Link href={`${base}/imports`} className="text-30 text-text-link underline-offset-2 hover:underline">
+              Past imports
+            </Link>
+          </div>
+        </Card>
+      )}
       <IntegrationHealthPanel orgId={orgId} health={ih} canResolve={org?.role === "owner" || org?.role === "admin"} />
     </div>
   );

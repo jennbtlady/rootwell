@@ -91,6 +91,10 @@ Also this phase, at Jenn's request:
 
 ## Rollback
 
+Migration `0011_phase6_import_options`: drop `import_jobs.options`, then restore
+`app.commit_import` and the "similar name" wording from git history (`0005_dedupe.sql`,
+`0006_imports.sql`). Gifts already imported keep their "before import" thank-you.
+
 Migration `0010_phase6_statement_sends`: drop `statement_sends` and remove
 `drizzle/custom/0012_statement_sends.sql`. The statements page goes back to emailing
 everyone on each click.
@@ -232,3 +236,44 @@ From the persona walkthroughs. Ruth is the board treasurer who checks the board 
   - `apps/web/e2e/phase-6-ruth.spec.ts`.
   - The report range and total row checks in `packages/api/test/reporting.test.ts`.
   - The updated wording in `phase-4-reporting.spec.ts`.
+
+## Marcus's fixes (2026-10-21)
+
+From the persona walkthroughs. Marcus is the development associate who imports the old
+donor list and pulls lists for mailings.
+
+- **The import asks two questions before it runs.** They are on the last step, "Import".
+  - "Were these gifts already thanked in your old system?" Yes is the default, for gifts
+    more than 30 days old, and the date can be changed. Those gifts are recorded as thanked
+    on their gift date, with the method `before_import`. They stay out of Thank-yous and
+    out of the Data health unthanked count.
+  - "Which of your funds and campaigns do these mean?" Each name in the file is matched to
+    an existing fund, campaign or appeal. Same name or code is an exact match. If exactly
+    one existing name shares its words, that is suggested and marked "Close match, please
+    check". Otherwise the choice is "Add as a new fund". The logic is `suggestCoding` in
+    `packages/core/src/import/coding.ts`.
+  - The answers are sent with the import request and saved in the new
+    `import_jobs.options` column (approved by Jenn). `app.commit_import` reads them.
+  - `GET /orgs/:orgId/imports/:id/coding` lists the names and suggestions. `POST .../commit`
+    takes an optional `{ options }` body. An empty body keeps the old behavior.
+- **Review matches gives enough to decide.** Identical names say "Same name", not "similar
+  name", and the percentage is gone. Each card shows the existing record's email, phone,
+  address, gift count and last gift date.
+- **Past imports are easy to find.** They are linked from the donor list, the import page
+  and Data health. The list is titled "Past imports" and says which imports can be undone.
+  The rollback message now counts the funds and campaigns it removed.
+- **Gifts not yet posted.** Thank-yous says how many gifts wait in unposted batches, with a
+  link. The "gave last year, not this year" list leaves out anyone who gave this year, even
+  if the gift is not posted yet.
+- **People lists work for a mailing.** The downloads of the gave last year, gave before and
+  lapsed lists add first name, last name, organization, address lines, city, state, ZIP
+  and "Do not mail". These columns are marked `fileOnly`, so the on-screen table stays
+  narrow.
+- **Sample organization:** no seed change. Its open batch already shows the Thank-yous
+  note, and the import questions appear on any import.
+- **Tests:**
+  - `apps/web/e2e/phase-6-marcus.spec.ts`.
+  - The import questions, "Past imports" link and 375px check in `phase-3-import.spec.ts`.
+  - The import choices case in `packages/api/test/imports.test.ts`, the mailing columns in
+    `reporting.test.ts`, and a route-matrix entry for the coding route.
+  - `suggestCoding` cases in `packages/core/test/import.test.ts`.

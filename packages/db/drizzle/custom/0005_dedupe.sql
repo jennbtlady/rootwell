@@ -42,7 +42,7 @@ language sql stable security invoker as $$
          array_remove(array[
            case when same_email then 'same email' end,
            case when same_phone then 'same phone' end,
-           case when name_sim >= 0.6 then 'similar name' end,
+           case when name_sim >= 0.99 then 'same name' when name_sim >= 0.6 then 'similar name' end,
            case when same_last_postal then 'same last name and ZIP' end
          ], null)
     from f

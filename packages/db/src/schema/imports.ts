@@ -21,6 +21,9 @@ export const importJobs = pgTable(
     /** ids of funds, campaigns and appeals the commit created, for rollback. */
     created: jsonb("created").notNull().default({}),
     summary: jsonb("summary").notNull().default({}),
+    // Choices made while reviewing the file: { thankedBefore: "YYYY-MM-DD" | null,
+    // coding: { fund: { "<value in file>": "<id>" | "new" }, campaign: {...}, appeal: {...} } }.
+    options: jsonb("options").notNull().default({}),
     committedAt: timestamp("committed_at", { withTimezone: true }),
     rolledBackAt: timestamp("rolled_back_at", { withTimezone: true }),
     ...rowMeta,

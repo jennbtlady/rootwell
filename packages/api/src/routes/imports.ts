@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { withRls } from "@maple/db";
-import { IMPORT_FIELDS } from "@maple/core";
+import { IMPORT_FIELDS, importOptions } from "@maple/core";
 import {
   appendImportRows,
   commitImport,
@@ -11,6 +11,7 @@ import {
   deleteImportJob,
   fixImportRow,
   getImportJob,
+  listImportCoding,
   listImportJobs,
   listImportPeople,
   listImportRows,
@@ -27,6 +28,7 @@ import { validate } from "../validate";
 
 const orgParam = z.object({ orgId: z.string().uuid() });
 const jobParam = orgParam.extend({ id: z.string().uuid() });
+const commitBody = z.object({ options: importOptions.optional() });
 const rowParam = jobParam.extend({ row: z.coerce.number().int().min(1) });
 const kind = z.enum(["constituents", "constituents_gifts"]);
 const field = z.enum(IMPORT_FIELDS as [string, ...string[]]);
@@ -115,9 +117,22 @@ export const imports = new Hono<ApiEnv>()
     if (!result) return c.json({ error: "Not found" }, 404);
     return c.json(result);
   })
+  .get("/:orgId/imports/:id/coding", validate("param", jobParam), async (c) => {
+    const { orgId, id } = c.req.valid("param");
+    const result = await withRls(getDb(), c.get("claims"), (tx) => listImportCoding(tx, orgId, id));
+    if (!result) return c.json({ error: "Not found" }, 404);
+    return c.json(result);
+  })
+  // The body carries the last step's choices: were older gifts already thanked, and which
+  // existing fund each name in the file means. An empty body keeps the earlier choices.
   .post("/:orgId/imports/:id/commit", validate("param", jobParam), async (c) => {
     const { orgId, id } = c.req.valid("param");
-    const summary = await withRls(getDb(), c.get("claims"), async (tx) => ((await getImportJob(tx, orgId, id)) ? commitImport(tx, id) : null));
+    // Read by hand: the body is optional, and the JSON validator rejects a request without one.
+    const raw: unknown = c.req.header("content-type")?.includes("json") ? ((await c.req.json().catch(() => null)) ?? {}) : {};
+    const parsed = commitBody.safeParse(raw);
+    if (!parsed.success) return c.json({ error: "Invalid input", issues: parsed.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })) }, 400);
+    const { options } = parsed.data;
+    const summary = await withRls(getDb(), c.get("claims"), async (tx) => ((await getImportJob(tx, orgId, id)) ? commitImport(tx, id, options) : null));
     if (!summary) return c.json({ error: "Not found" }, 404);
     return c.json(summary);
   })

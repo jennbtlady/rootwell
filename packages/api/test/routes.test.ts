@@ -106,6 +106,7 @@ describe.skipIf(!DATABASE_URL)("api routes against the database", () => {
       ["GET", `/api/v1/orgs/${orgB}/imports`, undefined],
       ["POST", `/api/v1/orgs/${orgB}/imports`, { kind: "constituents", fileName: "x.csv", headers: ["a"], expectedRows: 1 }],
       ["GET", `/api/v1/orgs/${orgB}/imports/${randomUUID()}`, undefined],
+      ["GET", `/api/v1/orgs/${orgB}/imports/${randomUUID()}/coding`, undefined],
       ["POST", `/api/v1/orgs/${orgB}/imports/${randomUUID()}/commit`, undefined],
       ["POST", `/api/v1/orgs/${orgB}/imports/${randomUUID()}/rollback`, undefined],
       ["GET", `/api/v1/orgs/${orgB}/integrations`, undefined],

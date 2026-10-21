@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mapRow, parseAmount, parseDate, parsePaymentMethod, personKey, splitName, suggestMapping, STARTER_MAPPINGS } from "../src";
+import { mapRow, parseAmount, parseDate, parsePaymentMethod, personKey, splitName, suggestMapping, STARTER_MAPPINGS, suggestCoding } from "../src";
 
 const TODAY = new Date("2026-10-20T12:00:00Z");
 
@@ -95,5 +95,26 @@ describe("mapRow", () => {
 
   it("keys by legacy id first", () => {
     expect(personKey({ legacy_id: "A-17", email: "x@y.org", first_name: null, last_name: null, org_name: null, postal_code: null })).toBe("id:a-17");
+  });
+});
+
+describe("matching fund names in a file to existing funds", () => {
+  const funds = [
+    { id: "gen", name: "General operating", code: "GEN" },
+    { id: "bld", name: "Building fund", code: null },
+    { id: "food", name: "Food pantry", code: "FP" },
+    { id: "foodx", name: "Food rescue", code: null },
+  ];
+  it("matches the same name or code exactly, ignoring case", () => {
+    expect(suggestCoding("general operating", funds)).toEqual({ id: "gen", how: "exact" });
+    expect(suggestCoding("FP", funds)).toEqual({ id: "food", how: "exact" });
+  });
+  it("suggests one clear close match, such as General for General operating", () => {
+    expect(suggestCoding("General", funds)).toEqual({ id: "gen", how: "similar" });
+    expect(suggestCoding("Building", funds)).toEqual({ id: "bld", how: "similar" });
+  });
+  it("suggests nothing when two funds could fit, or none do", () => {
+    expect(suggestCoding("Food", funds)).toEqual({ id: null, how: "none" });
+    expect(suggestCoding("Garden", funds)).toEqual({ id: null, how: "none" });
   });
 });

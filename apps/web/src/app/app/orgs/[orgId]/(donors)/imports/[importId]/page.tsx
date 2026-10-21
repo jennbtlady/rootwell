@@ -28,7 +28,7 @@ export default async function ImportPage({ params }: PageProps<"/app/orgs/[orgId
     <div className="flex flex-col gap-4">
       <div>
         <Link href={`/app/orgs/${orgId}/imports`} className={`${anchorClass} text-30`}>
-          Imports
+          Past imports
         </Link>
         <Heading variant="heading30" as="h1" noMargin className="mt-1">
           {data.job.fileName}

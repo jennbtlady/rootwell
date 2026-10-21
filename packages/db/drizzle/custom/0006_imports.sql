@@ -45,7 +45,7 @@ begin
          array_remove(array[
            case when same_email then 'same email' end,
            case when same_phone then 'same phone' end,
-           case when name_sim >= 0.6 then 'similar name' end,
+           case when name_sim >= 0.99 then 'same name' when name_sim >= 0.6 then 'similar name' end,
            case when same_last_postal then 'same last name and ZIP' end
          ], null) as reasons
     from cand
@@ -144,7 +144,8 @@ create or replace function app.commit_import(p_job uuid) returns jsonb
 language plpgsql security definer set search_path = public as $$
 declare
   j import_jobs; v_claims jsonb := app.jwt(); v_uid uuid := app.uid();
-  v_open int; v_batch uuid; v_default_fund uuid; v_name text; v_id uuid;
+  v_open int; v_batch uuid; v_default_fund uuid; v_name text; v_id uuid; v_choice text;
+  v_thanked_before date; v_thanked int := 0;
   v_funds jsonb := '{}'; v_campaigns jsonb := '{}'; v_appeals jsonb := '{}';
   v_created jsonb := jsonb_build_object('funds', '[]'::jsonb, 'campaigns', '[]'::jsonb, 'appeals', '[]'::jsonb, 'tags', '[]'::jsonb);
   r record; g record; v_p jsonb; v_cid uuid; v_gid uuid; v_tag text; v_tag_id uuid;
@@ -162,7 +163,14 @@ begin
 
   -- Gift coding by name or code. Missing ones are created and remembered for rollback.
   for v_name in select distinct trim(mapped->'gift'->>'fund') from import_rows where job_id = p_job and action in ('create', 'match') and coalesce(trim(mapped->'gift'->>'fund'), '') <> '' loop
-    select f.id into v_id from funds f where f.org_id = j.org_id and (lower(f.name) = lower(v_name) or lower(coalesce(f.code, '')) = lower(v_name)) limit 1;
+    -- The person's choice from the review step wins: an existing fund, or "new" to create one.
+    v_choice := j.options->'coding'->'fund'->>v_name;
+    v_id := null;
+    if v_choice is not null and v_choice <> 'new' then
+      select f.id into v_id from funds f where f.org_id = j.org_id and f.id = v_choice::uuid;
+    elsif v_choice is null then
+      select f.id into v_id from funds f where f.org_id = j.org_id and (lower(f.name) = lower(v_name) or lower(coalesce(f.code, '')) = lower(v_name)) limit 1;
+    end if;
     if v_id is null then
       insert into funds (org_id, name) values (j.org_id, v_name) returning id into v_id;
       v_created := jsonb_set(v_created, '{funds}', (v_created->'funds') || to_jsonb(v_id));
@@ -170,7 +178,14 @@ begin
     v_funds := v_funds || jsonb_build_object(lower(v_name), v_id);
   end loop;
   for v_name in select distinct trim(mapped->'gift'->>'campaign') from import_rows where job_id = p_job and action in ('create', 'match') and coalesce(trim(mapped->'gift'->>'campaign'), '') <> '' loop
-    select c.id into v_id from campaigns c where c.org_id = j.org_id and (lower(c.name) = lower(v_name) or lower(coalesce(c.code, '')) = lower(v_name)) limit 1;
+    -- The person's choice from the review step wins: an existing campaign, or "new" to create one.
+    v_choice := j.options->'coding'->'campaign'->>v_name;
+    v_id := null;
+    if v_choice is not null and v_choice <> 'new' then
+      select c.id into v_id from campaigns c where c.org_id = j.org_id and c.id = v_choice::uuid;
+    elsif v_choice is null then
+      select c.id into v_id from campaigns c where c.org_id = j.org_id and (lower(c.name) = lower(v_name) or lower(coalesce(c.code, '')) = lower(v_name)) limit 1;
+    end if;
     if v_id is null then
       insert into campaigns (org_id, name) values (j.org_id, v_name) returning id into v_id;
       v_created := jsonb_set(v_created, '{campaigns}', (v_created->'campaigns') || to_jsonb(v_id));
@@ -178,7 +193,14 @@ begin
     v_campaigns := v_campaigns || jsonb_build_object(lower(v_name), v_id);
   end loop;
   for v_name in select distinct trim(mapped->'gift'->>'appeal') from import_rows where job_id = p_job and action in ('create', 'match') and coalesce(trim(mapped->'gift'->>'appeal'), '') <> '' loop
-    select a.id into v_id from appeals a where a.org_id = j.org_id and (lower(a.name) = lower(v_name) or lower(coalesce(a.code, '')) = lower(v_name)) limit 1;
+    -- The person's choice from the review step wins: an existing appeal, or "new" to create one.
+    v_choice := j.options->'coding'->'appeal'->>v_name;
+    v_id := null;
+    if v_choice is not null and v_choice <> 'new' then
+      select a.id into v_id from appeals a where a.org_id = j.org_id and a.id = v_choice::uuid;
+    elsif v_choice is null then
+      select a.id into v_id from appeals a where a.org_id = j.org_id and (lower(a.name) = lower(v_name) or lower(coalesce(a.code, '')) = lower(v_name)) limit 1;
+    end if;
     if v_id is null then
       insert into appeals (org_id, name) values (j.org_id, v_name) returning id into v_id;
       v_created := jsonb_set(v_created, '{appeals}', (v_created->'appeals') || to_jsonb(v_id));
@@ -186,6 +208,9 @@ begin
     v_appeals := v_appeals || jsonb_build_object(lower(v_name), v_id);
   end loop;
   select nullif(gift_entry_standards->>'defaultFundId', '')::uuid into v_default_fund from organizations where id = j.org_id;
+  -- Gifts dated before this were already thanked in the old system. They are recorded as
+  -- thanked on their gift date, so they do not flood the thank-you queue.
+  v_thanked_before := nullif(j.options->>'thankedBefore', '')::date;
 
   if exists (select 1 from import_rows where job_id = p_job and action in ('create', 'match') and jsonb_typeof(mapped->'gift') = 'object') then
     insert into batches (org_id, batch_date, description, status, posted_at, posted_by, notes)
@@ -243,15 +268,19 @@ begin
        order by row_number
     loop
       insert into gifts (org_id, constituent_id, batch_id, amount, gift_date, fund_id, campaign_id, appeal_id, payment_method, gift_type,
-                         check_number, reference, notes, external_source, external_id, deductible_amount, posted_at, posted_by)
+                         check_number, reference, notes, external_source, external_id, deductible_amount, posted_at, posted_by,
+                         acknowledged_at, acknowledgment_method)
       values (j.org_id, v_cid, v_batch, (g.gift->>'amount')::numeric, (g.gift->>'gift_date')::date,
               coalesce((v_funds->>lower(coalesce(trim(g.gift->>'fund'), '')))::uuid, v_default_fund),
               (v_campaigns->>lower(coalesce(trim(g.gift->>'campaign'), '')))::uuid,
               (v_appeals->>lower(coalesce(trim(g.gift->>'appeal'), '')))::uuid,
               coalesce(g.gift->>'payment_method', 'other')::payment_method, 'one_time',
               g.gift->>'check_number', g.gift->>'reference', g.gift->>'notes', 'import', p_job::text || ':' || g.row_number,
-              (g.gift->>'amount')::numeric, now(), v_uid)
+              (g.gift->>'amount')::numeric, now(), v_uid,
+              case when (g.gift->>'gift_date')::date < v_thanked_before then (g.gift->>'gift_date')::date::timestamptz end,
+              case when (g.gift->>'gift_date')::date < v_thanked_before then 'before_import' end)
       returning id into v_gid;
+      if (g.gift->>'gift_date')::date < v_thanked_before then v_thanked := v_thanked + 1; end if;
       update import_rows set created_gift_id = v_gid where job_id = p_job and row_number = g.row_number;
       v_gifts := v_gifts + 1;
       v_total := v_total + (g.gift->>'amount')::numeric;
@@ -266,6 +295,7 @@ begin
   update import_jobs
      set status = 'committed', committed_at = now(), batch_id = v_batch, created = v_created,
          summary = summary || jsonb_build_object('peopleCreated', v_people_created, 'peopleMatched', v_people_matched, 'gifts', v_gifts, 'giftTotal', v_total,
+                   'thankedBefore', v_thanked,
                    'skipped', (select count(*) from import_rows where job_id = p_job and action = 'skip'),
                    'fundsCreated', jsonb_array_length(v_created->'funds'), 'campaignsCreated', jsonb_array_length(v_created->'campaigns'), 'appealsCreated', jsonb_array_length(v_created->'appeals'))
    where id = p_job;

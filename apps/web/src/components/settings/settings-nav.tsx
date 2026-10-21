@@ -31,7 +31,7 @@ export function SettingsNav({ orgId }: { orgId: string }) {
       items: [
         { href: `${base}/integrations`, label: "Stripe, Mailchimp, QuickBooks" },
         { href: `${base}/board`, label: "Board sharing" },
-        { href: `/app/orgs/${orgId}/imports`, label: "Imports" },
+        { href: `/app/orgs/${orgId}/imports`, label: "Past imports" },
       ],
     },
   ];

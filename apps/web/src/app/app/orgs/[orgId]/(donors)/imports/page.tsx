@@ -7,12 +7,12 @@ import { formatDateTime } from "@/lib/format";
 import { Badge, buttonVariants, EmptyState, Heading, Paragraph, Table, TBody, TD, TH, THead, TR } from "@/components/ui";
 import { anchorClass } from "@/components/ui/text";
 
-export const metadata: Metadata = { title: "Imports" };
+export const metadata: Metadata = { title: "Past imports" };
 
 const STATUS: Record<string, { label: string; variant: "neutral" | "warning" | "success" | "default" }> = {
   uploading: { label: "Uploading", variant: "neutral" },
   ready: { label: "Waiting for review", variant: "warning" },
-  committed: { label: "Imported", variant: "success" },
+  committed: { label: "Imported, can be undone", variant: "success" },
   rolled_back: { label: "Rolled back", variant: "default" },
 };
 
@@ -28,10 +28,10 @@ export default async function ImportsPage({ params }: PageProps<"/app/orgs/[orgI
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <Heading variant="heading30" as="h1" noMargin>
-            Imports
+            Past imports
           </Heading>
           <Paragraph noMargin className="mt-1 max-w-2xl text-text-weak">
-            Bring in a spreadsheet of people, or people with their gift history. Nothing is saved until you review it, and every import can be rolled back.
+            Every spreadsheet brought in, newest first. To undo one, open it and choose Roll back this import. Nothing is saved until you review it.
           </Paragraph>
         </div>
         <Link href={`${base}/new`} className={buttonVariants()}>

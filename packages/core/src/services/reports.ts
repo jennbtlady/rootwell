@@ -1,10 +1,26 @@
 import { sql } from "drizzle-orm";
-import type { ReportId, ReportParams, ReportResult } from "../reports";
+import type { ReportColumn, ReportId, ReportParams, ReportResult } from "../reports";
 import type { Tx } from "./types";
 
 const counted = sql`g.posted_at is not null and g.gift_type not in ('soft_credit', 'pledge')`;
 const email = sql`(select e.email from constituent_emails e where e.constituent_id = c.id order by e.is_primary desc limit 1)`;
 const phone = sql`(select p.phone from constituent_phones p where p.constituent_id = c.id order by p.is_primary desc limit 1)`;
+
+// For a mailing: separate name parts, the primary address, and whether the person asked not
+// to be mailed. Marcus could not use the old download for a mail merge.
+const mailing = sql`c.first_name, c.last_name, c.org_name, case when c.do_not_mail then 'Yes' else '' end as do_not_mail, ad.line1, ad.line2, ad.city, ad.state, ad.postal_code`;
+const mailingJoin = sql`left join lateral (select a.line1, a.line2, a.city, a.state, a.postal_code from constituent_addresses a where a.constituent_id = c.id order by a.is_primary desc limit 1) ad on true`;
+const MAILING_COLUMNS: ReportColumn[] = [
+  { key: "first_name", label: "First name", fileOnly: true },
+  { key: "last_name", label: "Last name", fileOnly: true },
+  { key: "org_name", label: "Organization", fileOnly: true },
+  { key: "line1", label: "Address line 1", fileOnly: true },
+  { key: "line2", label: "Address line 2", fileOnly: true },
+  { key: "city", label: "City", fileOnly: true },
+  { key: "state", label: "State", fileOnly: true },
+  { key: "postal_code", label: "ZIP code", fileOnly: true },
+  { key: "do_not_mail", label: "Do not mail", fileOnly: true },
+];
 
 async function fy(tx: Tx, orgId: string): Promise<string> {
   const r = await tx.execute(sql`select app.fiscal_year_start(current_date, fiscal_year_start_month)::text as s from organizations where id = ${orgId}`);
@@ -27,34 +43,36 @@ export async function runReport(tx: Tx, orgId: string, id: ReportId, p: ReportPa
         : sql`having sum(g.amount) filter (where g.gift_date < (${start}::date - interval '1 year')) > 0
                 and coalesce(sum(g.amount) filter (where g.gift_date >= (${start}::date - interval '1 year') and g.gift_date < ${start}::date), 0) = 0`;
       const rows = await tx.execute(sql`
-        select c.id, c.sort_name as name, ${email} as email, ${phone} as phone,
+        select c.id, c.sort_name as name, ${email} as email, ${phone} as phone, ${mailing},
                coalesce(sum(g.amount) filter (where g.gift_date >= (${start}::date - interval '1 year') and g.gift_date < ${start}::date), 0) as last_year,
                max(g.gift_date) as last_gift, sum(g.amount) as lifetime
-          from constituents c join gifts g on g.constituent_id = c.id and ${counted}
+          from constituents c join gifts g on g.constituent_id = c.id and ${counted} ${mailingJoin}
          where c.org_id = ${orgId} and not c.deceased
-           and not exists (select 1 from gifts t where t.constituent_id = c.id and t.posted_at is not null and t.gift_type not in ('soft_credit', 'pledge') and t.gift_date >= ${start}::date)
-         group by c.id ${window}
+           -- Someone whose gift this year is still in an open batch has given; leave them off.
+           and not exists (select 1 from gifts t where t.constituent_id = c.id and t.gift_type not in ('soft_credit', 'pledge') and t.gift_date >= ${start}::date)
+         group by c.id, ad.line1, ad.line2, ad.city, ad.state, ad.postal_code ${window}
          order by ${id === "lybunt" ? sql`last_year desc` : sql`lifetime desc`}`);
       return {
         columns: [
           { key: "name", label: "Name", kind: "link" }, { key: "email", label: "Email" }, { key: "phone", label: "Phone" },
           ...(id === "lybunt" ? [{ key: "last_year", label: "Last fiscal year", kind: "money" as const }] : []),
           { key: "last_gift", label: "Last gift", kind: "date" }, { key: "lifetime", label: "Lifetime", kind: "money" },
+          ...MAILING_COLUMNS,
         ],
         rows: rows as Record<string, unknown>[],
       };
     }
     case "lapsed": {
       const rows = await tx.execute(sql`
-        select c.id, c.sort_name as name, ${email} as email, ${phone} as phone, max(g.gift_date) as last_gift,
+        select c.id, c.sort_name as name, ${email} as email, ${phone} as phone, ${mailing}, max(g.gift_date) as last_gift,
                (array_agg(g.amount order by g.gift_date desc))[1] as last_amount, sum(g.amount) as lifetime
-          from constituents c join gifts g on g.constituent_id = c.id and ${counted}
+          from constituents c join gifts g on g.constituent_id = c.id and ${counted} ${mailingJoin}
          where c.org_id = ${orgId} and not c.deceased
-         group by c.id
+         group by c.id, ad.line1, ad.line2, ad.city, ad.state, ad.postal_code
         having max(g.gift_date) <= (current_date - interval '13 months')::date and max(g.gift_date) > (current_date - interval '15 months')::date
          order by lifetime desc`);
       return {
-        columns: [{ key: "name", label: "Name", kind: "link" }, { key: "email", label: "Email" }, { key: "phone", label: "Phone" }, { key: "last_gift", label: "Last gift", kind: "date" }, { key: "last_amount", label: "Last amount", kind: "money" }, { key: "lifetime", label: "Lifetime", kind: "money" }],
+        columns: [{ key: "name", label: "Name", kind: "link" }, { key: "email", label: "Email" }, { key: "phone", label: "Phone" }, { key: "last_gift", label: "Last gift", kind: "date" }, { key: "last_amount", label: "Last amount", kind: "money" }, { key: "lifetime", label: "Lifetime", kind: "money" }, ...MAILING_COLUMNS],
         rows: rows as Record<string, unknown>[],
       };
     }

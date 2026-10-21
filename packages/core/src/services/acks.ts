@@ -49,6 +49,15 @@ export type QueueItem = {
   daysWaiting: number;
 };
 
+/** Gifts entered but not posted yet. They join the queue when their batch is posted, so the page says they exist. */
+export async function unpostedGifts(tx: Tx, orgId: string): Promise<{ gifts: number; batches: number }> {
+  const r = await tx.execute(sql`
+    select count(*)::int as gifts, count(distinct g.batch_id)::int as batches
+      from gifts g where g.org_id = ${orgId} and g.posted_at is null and g.gift_type not in ('soft_credit', 'pledge')`);
+  const x = r[0] as { gifts: number; batches: number };
+  return { gifts: x.gifts, batches: x.batches };
+}
+
 export async function listAckQueue(tx: Tx, orgId: string, opts: { limit?: number; offset?: number } = {}): Promise<{ items: QueueItem[]; total: number }> {
   const rows = await tx.execute(sql`
     select g.id as gift_id, c.id as constituent_id, c.display_name as name,

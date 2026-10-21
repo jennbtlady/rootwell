@@ -53,9 +53,23 @@ test.describe.serial("phase 3 import wizard", () => {
 
     await finishReview(page);
     await expect(page.getByRole("button", { name: /Import \d+ people/ })).toBeVisible();
+
+    // Marcus's questions: old gifts were thanked already, and "General" means General operating.
+    await expect(page.getByRole("heading", { name: "Two questions before importing" })).toBeVisible();
+    await expect(page.getByRole("radio", { name: "Yes, gifts before a date were already thanked" })).toBeChecked();
+    const general = page.getByLabel('"General" in the file is');
+    await expect(general).toBeVisible();
+    expect(await general.evaluate((s: HTMLSelectElement) => s.options[s.selectedIndex]!.text)).toBe("General operating");
+    await expect(page.getByText("Close match, please check").first()).toBeVisible();
     await expectAccessible(page, "import summary");
+    // The questions fit a phone without sideways scrolling.
+    await page.setViewportSize({ width: 375, height: 812 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1);
+    await page.screenshot({ path: "test-results/import-questions-375.png", fullPage: true });
+    await page.setViewportSize({ width: 1280, height: 720 });
     await page.getByRole("button", { name: /Import \d+ people/ }).click();
     await expect(page.getByText(/Imported on/)).toBeVisible();
+    await expect(page.getByRole("term").filter({ hasText: "Gifts marked as already thanked" })).toBeVisible();
     await expectAccessible(page, "import done");
 
     // Dana Rivera appears twice in the file and became one person with two gifts.
@@ -63,8 +77,10 @@ test.describe.serial("phase 3 import wizard", () => {
     await page.getByRole("link", { name: "Rivera, Dana" }).click();
     await expect(page.getByRole("tab", { name: "Gifts (2)" })).toBeVisible();
 
-    await page.goBack();
-    await page.goto(`${org}/imports`);
+    // Past imports are one click from the donor list.
+    await page.goto(`${org}/constituents`);
+    await page.getByRole("link", { name: "Past imports" }).click();
+    await expect(page.getByRole("heading", { name: "Past imports", level: 1 })).toBeVisible();
     await page.getByRole("link", { name: "messy-import.csv" }).first().click();
     page.once("dialog", (d) => d.accept());
     await page.getByRole("button", { name: "Roll back this import" }).click();
@@ -86,7 +102,7 @@ test.describe.serial("phase 3 import wizard", () => {
     const seconds = (Date.now() - started) / 1000;
     console.log(`5,000-row import in the browser: ${seconds.toFixed(1)}s`);
     expect(seconds).toBeLessThan(120);
-    await expect(page.getByText("5,000", { exact: true })).toBeVisible();
+    await expect(page.locator("dt:text-is('Gifts') + dd")).toHaveText("5,000");
 
     page.once("dialog", (d) => d.accept());
     await page.getByRole("button", { name: "Roll back this import" }).click();

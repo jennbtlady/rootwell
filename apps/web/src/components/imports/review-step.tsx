@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ImportJob, ReviewPerson } from "@maple/core/services";
 import { api, errorMessage } from "@/lib/api";
-import { formatMoney } from "@/lib/format";
+import { formatDate, formatMoney } from "@/lib/format";
 import { Alert, AlertDescription, Badge, Button, Pagination, Radio, RadioGroup, Skeleton, useToast } from "@/components/ui";
 
 const PAGE = 20;
@@ -16,6 +16,11 @@ export function personLabel(p: Record<string, unknown>): string {
 
 export function personDetail(p: Record<string, unknown>): string {
   return [p.email, p.phone, [p.line1, p.city, p.postal_code].filter(Boolean).join(", ")].filter(Boolean).join(" · ");
+}
+
+function candidateDetail(d: NonNullable<ReviewPerson["candidates"][number]["details"]>): string {
+  const gifts = d.giftCount === 0 ? "No gifts yet" : `${d.giftCount.toLocaleString()} ${d.giftCount === 1 ? "gift" : "gifts"}, last on ${formatDate(d.lastGift)}`;
+  return [d.email, d.phone, d.address, gifts].filter(Boolean).join(" · ");
 }
 
 export function ReviewStep({ orgId, job }: { orgId: string; job: ImportJob }) {
@@ -100,6 +105,7 @@ function ReviewPersonCard({ orgId, jobId, person, onDecided }: { orgId: string; 
   return (
     <li className="rounded-30 border border-border-weaker bg-background-weakest p-4">
       <div className="text-30 leading-5">
+        <div className="text-20 font-semibold uppercase tracking-wide text-text-weak">In the file</div>
         <div className="font-semibold">{personLabel(person.person)}</div>
         <div className="text-text-weak">{personDetail(person.person) || "No email, phone or address in the file"}</div>
         <div className="text-text-weak">
@@ -108,21 +114,25 @@ function ReviewPersonCard({ orgId, jobId, person, onDecided }: { orgId: string; 
           {Number(person.giftTotal) > 0 ? ` · ${formatMoney(person.giftTotal)} in gifts` : ""}
         </div>
       </div>
-      <RadioGroup legend="This is" className="mt-3">
+      <RadioGroup legend="This is" className="mt-4">
         {person.candidates.map((c) => (
           <Radio
             key={c.id}
             name={group}
             value={c.id}
             label={
-              <span className="flex flex-wrap items-center gap-2">
-                {c.displayName}, already in your database
-                <Badge>{Math.round(c.score * 100)}%</Badge>
-                {c.reasons.map((r) => (
-                  <Badge key={r} variant="neutral">
-                    {r}
-                  </Badge>
-                ))}
+              // What the existing record holds, so the two can be compared. A percentage
+              // alone ("70%") said nothing, even when the names were identical.
+              <span className="flex flex-col gap-1">
+                <span className="flex flex-wrap items-center gap-2">
+                  {c.displayName}, already in your database
+                  {c.reasons.map((r) => (
+                    <Badge key={r} variant="neutral">
+                      {r[0]!.toUpperCase() + r.slice(1)}
+                    </Badge>
+                  ))}
+                </span>
+                {c.details && <span className="text-text-weak">{candidateDetail(c.details)}</span>}
               </span>
             }
             checked={choice === c.id}

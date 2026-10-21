@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getOrg, listAckQueue, listTemplates } from "@maple/core/services";
+import { getOrg, listAckQueue, listTemplates, unpostedGifts } from "@maple/core/services";
 import { requireSession, withSession } from "@/lib/session";
 import { Heading, Paragraph } from "@/components/ui";
 import { anchorClass } from "@/components/ui/text";
@@ -15,7 +15,7 @@ export default async function AcknowledgmentsPage({ params }: PageProps<"/app/or
   const data = await withSession(session, async (tx) => {
     const org = await getOrg(tx, orgId);
     if (!org || org.role === "board_viewer") return null;
-    return { org, queue: await listAckQueue(tx, orgId, { limit: 500 }), templates: await listTemplates(tx, orgId) };
+    return { org, queue: await listAckQueue(tx, orgId, { limit: 500 }), templates: await listTemplates(tx, orgId), unposted: await unpostedGifts(tx, orgId) };
   });
   if (!data) notFound();
   const canManage = data.org.role === "owner" || data.org.role === "admin";
@@ -44,6 +44,15 @@ export default async function AcknowledgmentsPage({ params }: PageProps<"/app/or
           )}
         </div>
       </div>
+      {data.unposted.gifts > 0 && (
+        // Marcus looked here for this week's gifts and did not find them, with no reason given.
+        <p className="rounded-30 border border-border-weaker bg-background-weakest p-3 text-30 leading-5">
+          {data.unposted.gifts.toLocaleString()} {data.unposted.gifts === 1 ? "gift is" : "gifts are"} in {data.unposted.batches === 1 ? "a batch" : `${data.unposted.batches} batches`} not posted yet. {data.unposted.gifts === 1 ? "It appears" : "They appear"} here once posted.{" "}
+          <Link href={`/app/orgs/${orgId}/batches`} className={anchorClass}>
+            Go to batches
+          </Link>
+        </p>
+      )}
       <AckQueue orgId={orgId} items={data.queue.items} total={data.queue.total} templates={data.templates} />
     </div>
   );
