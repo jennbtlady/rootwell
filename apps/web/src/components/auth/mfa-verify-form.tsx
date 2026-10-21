@@ -32,7 +32,7 @@ export function MfaVerifyForm({ next }: { next: string }) {
   }
 
   return (
-    <form onSubmit={verify} className="flex flex-col gap-4" noValidate>
+    <form method="post" onSubmit={verify} className="flex flex-col gap-4" noValidate>
       <FormField id="code" label="6 digit code from your authenticator app" required>
         {(f) => <Input {...f} name="code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]*" maxLength={6} required autoFocus value={code} onChange={(e) => setCode(e.target.value)} />}
       </FormField>

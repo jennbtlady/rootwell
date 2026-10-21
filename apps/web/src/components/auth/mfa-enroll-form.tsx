@@ -78,7 +78,7 @@ export function MfaEnrollForm({ next }: { next: string }) {
   }
 
   return (
-    <form onSubmit={verify} className="flex flex-col gap-4" noValidate>
+    <form method="post" onSubmit={verify} className="flex flex-col gap-4" noValidate>
       <ol className="list-decimal space-y-2 pl-5 text-30 leading-5">
         <li>Open an authenticator app on your phone, such as Google Authenticator, Microsoft Authenticator, or 1Password.</li>
         <li>Scan this code, or type the setup key by hand.</li>

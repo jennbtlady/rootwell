@@ -1,6 +1,7 @@
 /** Turns Supabase auth errors into short, plain sentences without leaking details. */
 export function friendlyAuthError(message: string | undefined): string {
   const m = (message ?? "").toLowerCase();
+  if (m.includes("missing email")) return "Enter your email.";
   if (m.includes("invalid login credentials")) return "That email and password do not match.";
   if (m.includes("email not confirmed")) return "Please confirm your email first. Check your inbox for the link.";
   if (m.includes("rate limit") || m.includes("too many")) return "Too many attempts. Please wait a minute and try again.";

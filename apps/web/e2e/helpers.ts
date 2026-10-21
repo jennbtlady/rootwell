@@ -7,12 +7,35 @@ export function state(): E2EState {
   return JSON.parse(readFileSync("e2e/.state/state.json", "utf8")) as E2EState;
 }
 
+/**
+ * Signs in through the form. If it does not reach /app, the failure lists what the auth
+ * server answered, so a flaky sign-in says why (for example "missing email or phone").
+ * Auth replies here carry no passwords.
+ */
 export async function signIn(page: Page, who: { email: string; password: string }) {
+  const log: string[] = [];
+  const onResp = async (r: import("@playwright/test").Response) => {
+    if (r.url().includes("/auth/v1/")) log.push(`auth ${r.status()} ${r.url().replace(/\?.*/, "")} ${r.status() >= 400 ? (await r.text().catch(() => "")).slice(0, 300) : ""}`);
+  };
+  const onFail = (r: import("@playwright/test").Request) => log.push(`failed ${r.url().replace(/\?.*/, "")}: ${r.failure()?.errorText}`);
+  const onConsole = (m: import("@playwright/test").ConsoleMessage) => { if (m.type() === "error") log.push(`console: ${m.text().slice(0, 300)}`); };
+  page.on("response", onResp);
+  page.on("requestfailed", onFail);
+  page.on("console", onConsole);
   await page.goto("/sign-in");
   await page.getByLabel("Email").fill(who.email);
   await page.getByLabel("Password").fill(who.password);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
-  await page.waitForURL(/\/app/);
+  try {
+    await page.waitForURL(/\/app/, { timeout: 30_000 });
+  } catch (e) {
+    console.log(`Sign-in did not finish:\n  ${log.join("\n  ") || "no auth requests were made"}`);
+    throw e;
+  } finally {
+    page.off("response", onResp);
+    page.off("requestfailed", onFail);
+    page.off("console", onConsole);
+  }
 }
 
 export async function signOut(page: Page) {
