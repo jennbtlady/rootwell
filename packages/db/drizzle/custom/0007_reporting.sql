@@ -103,6 +103,18 @@ begin
       select y.id as "giftId", y.constituent_id as "constituentId", c.display_name as name, y.amount, y.gift_date as date, f.name as fund
         from ytd y join constituents c on c.id = y.constituent_id left join funds f on f.id = y.fund_id
        order by y.amount desc, y.gift_date desc limit 10) x),
+    -- Active campaigns with a goal: raised so far, counting gifts inside the campaign's dates.
+    'campaignGoals', (select coalesce(jsonb_agg(x order by x.ends_on nulls last, x.name), '[]') from (
+      select c.name, c.goal_amount as goal, c.starts_on, c.ends_on,
+             (select coalesce(sum(cg.amount), 0) from cg where cg.campaign_id = c.id
+                 and (c.starts_on is null or cg.gift_date >= c.starts_on) and (c.ends_on is null or cg.gift_date <= c.ends_on)) as raised
+        from campaigns c
+       where c.org_id = p_org and c.active and c.goal_amount is not null and c.goal_amount > 0
+         and (c.ends_on is null or c.ends_on >= (p_as_of - interval '30 days')::date)) x),
+    -- LYBUNT: gave last fiscal year, not yet this one.
+    'lybunt', (select count(distinct p.constituent_id) from cg p
+                where p.gift_date >= v_prior_start and p.gift_date < v_fy
+                  and not exists (select 1 from ytd y where y.constituent_id = p.constituent_id)),
     'lapsed', jsonb_build_object(
       'count', (select count(*) from firsts where last_gift <= (p_as_of - interval '13 months')::date and last_gift > (p_as_of - interval '15 months')::date),
       'from', (p_as_of - interval '15 months')::date, 'to', (p_as_of - interval '13 months')::date)

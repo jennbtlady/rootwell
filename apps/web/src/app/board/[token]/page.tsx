@@ -5,7 +5,7 @@ import { getDb } from "@maple/api";
 import { boardView } from "@maple/core/services";
 import { formatDateTime } from "@/lib/format";
 import { Heading } from "@/components/ui";
-import { DashboardView } from "@/components/dashboard/dashboard-view";
+import { BoardDashboard } from "@/components/dashboard/board-dashboard";
 import { PrintButton } from "@/components/dashboard/dashboard-actions";
 
 export const metadata: Metadata = { title: "Board dashboard", robots: { index: false, follow: false } };
@@ -33,7 +33,7 @@ export default async function BoardPage({ params }: PageProps<"/board/[token]">)
         </div>
         <PrintButton />
       </div>
-      <DashboardView data={view.data} showNames={!view.hideNames} />
+      <BoardDashboard data={view.data} showNames={!view.hideNames} />
       <p className="text-20 text-text-weak">Shared read-only by {view.orgName}. Ask them for a new link if this one stops working.</p>
     </main>
   );

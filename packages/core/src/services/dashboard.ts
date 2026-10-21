@@ -23,6 +23,10 @@ export type DashboardData = {
   byMonth: { label: string; current: Money; prior: Money; month_index: number }[];
   topGifts: { giftId?: string; constituentId?: string; name: string; amount: Money; date: string; fund: string | null }[];
   lapsed: { count: number; from: string; to: string };
+  /** Active campaigns with a goal, and what has come in inside the campaign's dates. Added in Phase 6; older snapshots lack it. */
+  campaignGoals?: { name: string; goal: Money; raised: Money; starts_on: string | null; ends_on: string | null }[];
+  /** Gave last fiscal year, not yet this one. Added in Phase 6. */
+  lybunt?: number;
 };
 export type DashboardSnapshot = { computedAt: string; data: DashboardData };
 
@@ -31,7 +35,9 @@ export async function getDashboard(tx: Tx, orgId: string): Promise<DashboardSnap
   const rows = await tx.execute(sql`select computed_at, data, as_of from dashboard_snapshots where org_id = ${orgId} order by as_of desc limit 1`);
   const r = rows[0] as { computed_at: string; data: DashboardData; as_of: string } | undefined;
   const today = new Date().toISOString().slice(0, 10);
-  if (r && String(r.as_of).slice(0, 10) === today) return { computedAt: String(r.computed_at), data: r.data };
+  // Recalculate when today's figures were made before a newer field existed (Phase 6 added
+  // campaignGoals and lybunt), so nobody sees a misleading zero for one day.
+  if (r && String(r.as_of).slice(0, 10) === today && "lybunt" in r.data && "campaignGoals" in r.data) return { computedAt: String(r.computed_at), data: r.data };
   return refreshDashboard(tx, orgId);
 }
 
@@ -83,4 +89,76 @@ export async function boardView(tx: Tx, token: string): Promise<BoardView | null
 export async function setHideBoardNames(tx: Tx, orgId: string, hide: boolean): Promise<boolean> {
   const r = await tx.execute(sql`update organizations set hide_board_names = ${hide} where id = ${orgId}`);
   return r.count > 0;
+}
+
+// ---- the staff view (Home): live, for signed-in staff only
+
+export type StaffHome = {
+  todos: {
+    toThank: number;
+    toThankNeedLetter: number;
+    openBatches: number;
+    onlineAwaitingDeposit: number;
+    possibleDuplicates: number;
+    onlineNeedsAttention: number;
+  };
+  /** Gave the most last fiscal year and nothing yet this year. */
+  topNotYet: { constituentId: string; name: string; lastYear: string; lastGiftOn: string }[];
+  recentGifts: { giftId: string; constituentId: string; name: string; amount: string; date: string; fund: string | null; online: boolean; posted: boolean }[];
+};
+
+/**
+ * What staff need to act on, worked out live. "Need a letter" follows the IRS rule: a single
+ * gift of $250 or more needs a written acknowledgment.
+ */
+export async function staffHome(tx: Tx, orgId: string): Promise<StaffHome | null> {
+  const t = await tx.execute(sql`
+    select
+      (select count(*) from gifts where org_id = ${orgId} and posted_at is not null and acknowledged_at is null and gift_type <> 'soft_credit')::int as to_thank,
+      (select count(*) from gifts where org_id = ${orgId} and posted_at is not null and acknowledged_at is null and gift_type <> 'soft_credit' and amount >= 250)::int as need_letter,
+      (select count(*) from batches where org_id = ${orgId} and status = 'open')::int as open_batches,
+      (select count(*) from gifts where org_id = ${orgId} and external_source = 'stripe' and batch_id is null and posted_at is null)::int as online_waiting,
+      (select count(*) from duplicate_candidates where org_id = ${orgId} and status = 'open')::int as dups,
+      (select count(*) from webhook_events where org_id = ${orgId} and needs_attention)::int as attention,
+      app.fiscal_year_start(current_date, o.fiscal_year_start_month) as fy
+    from organizations o where o.id = ${orgId}`);
+  if (!t.length) return null;
+  const x = t[0] as Record<string, unknown>;
+  const fy = String(x.fy).slice(0, 10);
+  const top = await tx.execute(sql`
+    select c.id, c.display_name, sum(g.amount)::text as last_year, max(g.gift_date)::text as last_gift
+      from gifts g join constituents c on c.id = g.constituent_id
+     where g.org_id = ${orgId} and g.posted_at is not null and g.gift_type not in ('soft_credit', 'pledge')
+       and g.gift_date >= (${fy}::date - interval '1 year') and g.gift_date < ${fy}::date
+       and not exists (select 1 from gifts n where n.constituent_id = c.id and n.gift_date >= ${fy}::date and n.gift_type <> 'soft_credit')
+       and not c.deceased
+     group by c.id, c.display_name
+     order by sum(g.amount) desc
+     limit 5`);
+  const recent = await tx.execute(sql`
+    select g.id, g.constituent_id, c.display_name, g.amount::text, g.gift_date::text, f.name as fund, g.external_source = 'stripe' as online, g.posted_at is not null as posted
+      from gifts g join constituents c on c.id = g.constituent_id left join funds f on f.id = g.fund_id
+     where g.org_id = ${orgId} and g.gift_type <> 'soft_credit'
+     order by g.gift_date desc, g.created_at desc limit 6`);
+  return {
+    todos: {
+      toThank: Number(x.to_thank),
+      toThankNeedLetter: Number(x.need_letter),
+      openBatches: Number(x.open_batches),
+      onlineAwaitingDeposit: Number(x.online_waiting),
+      possibleDuplicates: Number(x.dups),
+      onlineNeedsAttention: Number(x.attention),
+    },
+    topNotYet: (top as Record<string, unknown>[]).map((r) => ({ constituentId: r.id as string, name: r.display_name as string, lastYear: String(r.last_year), lastGiftOn: String(r.last_gift) })),
+    recentGifts: (recent as Record<string, unknown>[]).map((r) => ({
+      giftId: r.id as string,
+      constituentId: r.constituent_id as string,
+      name: r.display_name as string,
+      amount: String(r.amount),
+      date: String(r.gift_date),
+      fund: (r.fund as string | null) ?? null,
+      online: Boolean(r.online),
+      posted: Boolean(r.posted),
+    })),
+  };
 }

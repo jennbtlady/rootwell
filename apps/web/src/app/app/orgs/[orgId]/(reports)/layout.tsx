@@ -14,7 +14,7 @@ export default async function ReportsLayout({ params, children }: LayoutProps<"/
         <SectionTabs
           label="Reports"
           tabs={[
-            { href: `${base}/dashboard`, label: "Dashboard" },
+            { href: `${base}/dashboard`, label: "Board dashboard" },
             { href: `${base}/reports`, label: "Reports" },
           ]}
         />

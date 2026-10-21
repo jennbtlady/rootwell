@@ -24,15 +24,34 @@ test.describe.serial("phase 4 dashboard, reports, thank-yous", () => {
   const s = state();
   const org = `/app/orgs/${s.orgId}`;
 
-  test("the dashboard shows this year's numbers and passes an accessibility scan", async ({ page }) => {
+  test("the board dashboard leads with a sentence, and passes an accessibility scan", async ({ page }) => {
     await signIn(page, s.owner);
     await page.goto(`${org}/dashboard`);
-    await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
-    await expect(page.getByText("Dollars this year")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Board dashboard", level: 1 })).toBeVisible();
     await page.getByRole("button", { name: "Refresh now" }).click();
+    await expect(page.getByText(/^(Giving is (up|down|about the same)|No gifts have been recorded|\$[\d,.]+ has come in)/)).toBeVisible();
+    await expect(page.getByText("Dollars this year")).toBeVisible();
+    // Board view has no to-do lists.
+    await expect(page.getByRole("heading", { name: "To do" })).toHaveCount(0);
+    await page.getByRole("button", { name: "How donor retention is counted" }).click();
+    await expect(page.getByText(/Fundraising Effectiveness Project definition: donors from the earlier year/)).toBeVisible();
+    await expectAccessible(page, "board dashboard");
+  });
+
+  test("the staff dashboard on Home shows to-dos, who to reach, and passes an accessibility scan", async ({ page }) => {
+    await signIn(page, s.owner);
+    await page.goto(org);
+    await expect(page.getByRole("heading", { name: "Home", level: 1 })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "To do" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "How this year is going" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Who to reach out to" })).toBeVisible();
     await page.getByRole("button", { name: "How first-time donor retention is counted" }).click();
     await expect(page.getByText(/Fundraising Effectiveness Project definition: of donors whose first gift/)).toBeVisible();
-    await expectAccessible(page, "dashboard");
+    await expectAccessible(page, "staff dashboard");
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "To do" })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1);
   });
 
   test("a board link works without signing in, hides names, and stops when turned off", async ({ page, browser }) => {

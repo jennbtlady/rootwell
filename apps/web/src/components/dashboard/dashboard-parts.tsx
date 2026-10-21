@@ -4,10 +4,10 @@ import { cn } from "@/lib/cn";
 import { Card, Heading } from "@/components/ui";
 import { Definition } from "./definition";
 
-const pct = (n: number, d: number) => (d ? Math.round((n / d) * 1000) / 10 : null);
-const num = (v: number | string) => Number(v);
+export const pct = (n: number, d: number) => (d ? Math.round((n / d) * 1000) / 10 : null);
+export const num = (v: number | string) => Number(v);
 
-function Delta({ now, before, money }: { now: number; before: number; money?: boolean }) {
+export function Delta({ now, before, money }: { now: number; before: number; money?: boolean }) {
   if (!before) return <span className="text-30 text-text-weak">No gifts in the same period last year</span>;
   const change = Math.round(((now - before) / before) * 100);
   const up = change >= 0;
@@ -21,7 +21,7 @@ function Delta({ now, before, money }: { now: number; before: number; money?: bo
   );
 }
 
-function Tile({ label, value, children, definition }: { label: string; value: string; children?: React.ReactNode; definition?: string }) {
+export function Tile({ label, value, children, definition }: { label: string; value: string; children?: React.ReactNode; definition?: string }) {
   return (
     <Card className="flex flex-col gap-1 p-4 sm:p-5 print:break-inside-avoid print:border-border-weak">
       <div className="flex items-center gap-1 text-20 font-semibold uppercase tracking-wide text-text-weak">
@@ -35,7 +35,7 @@ function Tile({ label, value, children, definition }: { label: string; value: st
 }
 
 /** Single series, magnitude, sorted: horizontal bars in one hue with direct value labels. */
-function Bars({ title, rows }: { title: string; rows: { name: string; total: number | string; gifts: number }[] }) {
+export function Bars({ title, rows }: { title: string; rows: { name: string; total: number | string; gifts: number }[] }) {
   const max = Math.max(1, ...rows.map((r) => num(r.total)));
   const shown = rows.slice(0, 8);
   const other = rows.slice(8).reduce((s, r) => s + num(r.total), 0);
@@ -62,7 +62,7 @@ function Bars({ title, rows }: { title: string; rows: { name: string; total: num
 }
 
 /** Emphasis form: this year in the accent, last year in gray for context. One axis. */
-function MonthChart({ rows, asOf }: { rows: DashboardData["byMonth"]; asOf: string }) {
+export function MonthChart({ rows, asOf }: { rows: DashboardData["byMonth"]; asOf: string }) {
   const max = Math.max(1, ...rows.flatMap((r) => [num(r.current), num(r.prior)]));
   const W = 640, H = 200, padL = 48, padB = 24, padT = 8;
   const bw = (W - padL) / rows.length;
@@ -134,7 +134,7 @@ function MonthChart({ rows, asOf }: { rows: DashboardData["byMonth"]; asOf: stri
   );
 }
 
-const DEF = {
+export const DEF = {
   donors: "People and organizations with at least one posted gift this fiscal year. Soft credits and pledges are not counted; pledge payments are.",
   dollars: "Total of posted gifts this fiscal year, compared with the same dates last year.",
   median: "Half of this year's gifts are larger than this and half are smaller. Less swayed by one big gift than the average.",
@@ -145,91 +145,58 @@ const DEF = {
   lapsed: "Donors whose last gift was between 13 and 15 months ago: the window to win them back before they fall away.",
 };
 
-export function DashboardView({ data, showNames, lapsedHref }: { data: DashboardData; showNames: boolean; lapsedHref?: string }) {
-  const r = data.retention;
-  const rate = (x: { base: number; retained: number }) => {
-    const p = pct(x.retained, x.base);
-    return p === null ? "No data" : `${p}%`;
-  };
+export function retentionRate(x: { base: number; retained: number }): string {
+  const p = pct(x.retained, x.base);
+  return p === null ? "No data" : `${p}%`;
+}
+
+export function retentionPeriod(data: DashboardData): string {
   const fy = (d: string) => `FY${Number(d.slice(0, 4)) + (d.slice(5, 7) === "01" ? 0 : 1)}`;
-  const period = `${fy(data.retentionPeriod.earlierStart)} to ${fy(data.retentionPeriod.laterStart)}`;
+  return `${fy(data.retentionPeriod.earlierStart)} to ${fy(data.retentionPeriod.laterStart)}`;
+}
+
+/** The answer to "are we on track?" in words, before any chart. */
+export function headline(data: DashboardData): string {
+  const now = num(data.dollarsYtd);
+  const before = num(data.dollarsPriorYtd);
+  const donors = `${data.donorsYtd.toLocaleString()} ${data.donorsYtd === 1 ? "donor has" : "donors have"} given, compared with ${data.donorsPriorYtd.toLocaleString()} at this point last year.`;
+  if (!before && !now) return "No gifts have been recorded this fiscal year or the same time last year yet.";
+  if (!before) return `${formatMoney(now)} has come in so far this fiscal year. There were no gifts in the same period last year to compare with. ${donors}`;
+  const change = Math.round(((now - before) / before) * 100);
+  const how = change === 0 ? "about the same as" : change > 0 ? `up ${change}% compared with` : `down ${Math.abs(change)}% compared with`;
+  return `Giving is ${how} this time last year: ${formatMoney(now)} so far this fiscal year, against ${formatMoney(before)} by the same date last year. ${donors}`;
+}
+
+/** Progress toward each active campaign goal. A bar per campaign, with the words beside it. */
+export function CampaignGoals({ goals }: { goals: NonNullable<DashboardData["campaignGoals"]> }) {
   return (
-    <div className="flex flex-col gap-4">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Tile label="Dollars this year" value={formatMoney(data.dollarsYtd)} definition={DEF.dollars}>
-          <Delta now={num(data.dollarsYtd)} before={num(data.dollarsPriorYtd)} money />
-        </Tile>
-        <Tile label="Donors this year" value={data.donorsYtd.toLocaleString()} definition={DEF.donors}>
-          <Delta now={data.donorsYtd} before={data.donorsPriorYtd} />
-        </Tile>
-        <Tile label="Median gift" value={formatMoney(data.medianGiftYtd)} definition={DEF.median}>
-          <span className="text-30 text-text-weak">
-            Average {formatMoney(data.averageGiftYtd)} across {data.giftsYtd.toLocaleString()} gifts
-          </span>
-        </Tile>
-        <Tile label="New and repeat donors" value={`${data.newDonorsYtd} / ${data.repeatDonorsYtd}`} definition={DEF.newRepeat}>
-          <span className="text-30 text-text-weak">
-            {data.newDonorsYtd} new, {data.repeatDonorsYtd} repeat
-          </span>
-        </Tile>
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Tile label="Donor retention" value={rate(r.overall)} definition={DEF.overall}>
-          <span className="text-30 text-text-weak">
-            {r.overall.retained} of {r.overall.base}, {period}
-          </span>
-        </Tile>
-        <Tile label="First-time donor retention" value={rate(r.firstTime)} definition={DEF.firstTime}>
-          <span className="text-30 text-text-weak">
-            {r.firstTime.retained} of {r.firstTime.base}, {period}
-          </span>
-        </Tile>
-        <Tile label="Repeat donor retention" value={rate(r.repeat)} definition={DEF.repeat}>
-          <span className="text-30 text-text-weak">
-            {r.repeat.retained} of {r.repeat.base}, {period}
-          </span>
-        </Tile>
-      </div>
-
-      <MonthChart rows={data.byMonth} asOf={data.asOf} />
-
-      <div className="grid gap-3 lg:grid-cols-2">
-        <Bars title="By fund this year" rows={data.byFund} />
-        <Bars title="By campaign this year" rows={data.byCampaign} />
-      </div>
-
-      <div className="grid gap-3 lg:grid-cols-[2fr_1fr]">
-        <Card className="p-4 sm:p-5 print:break-inside-avoid">
-          <Heading variant="heading40" as="h2">
-            Top 10 gifts this year
-          </Heading>
-          {data.topGifts.length === 0 ? (
-            <p className="text-30 text-text-weak">No gifts yet this year.</p>
-          ) : (
-            <ol className="flex flex-col divide-y divide-border-weaker text-30 leading-5">
-              {data.topGifts.map((g, i) => (
-                <li key={i} className="flex items-center justify-between gap-3 py-2">
-                  <span className="min-w-0 truncate">
-                    {showNames ? g.name : "A donor"} <span className="text-text-weak">· {formatDate(g.date)}{g.fund ? ` · ${g.fund}` : ""}</span>
+    <Card className="p-4 sm:p-5 print:break-inside-avoid">
+      <Heading variant="heading40" as="h2">
+        Campaign goals
+      </Heading>
+      {goals.length === 0 ? (
+        <p className="text-30 leading-5 text-text-weak">No active campaigns with a goal. Set a goal on a campaign under Settings, Funds, campaigns, appeals.</p>
+      ) : (
+        <ul className="flex flex-col gap-4">
+          {goals.map((g) => {
+            const share = num(g.goal) ? Math.min(100, Math.round((num(g.raised) / num(g.goal)) * 100)) : 0;
+            return (
+              <li key={g.name} className="flex flex-col gap-1">
+                <div className="flex flex-wrap items-baseline justify-between gap-2 text-30 leading-5">
+                  <span className="font-semibold">{g.name}</span>
+                  <span className="tabular-nums">
+                    {formatMoney(g.raised)} of {formatMoney(g.goal)} <span className="text-text-weak">({share}%)</span>
                   </span>
-                  <span className="font-semibold tabular-nums">{formatMoney(g.amount)}</span>
-                </li>
-              ))}
-            </ol>
-          )}
-        </Card>
-        <Tile label="Lapsed donors" value={data.lapsed.count.toLocaleString()} definition={DEF.lapsed}>
-          <span className="text-30 text-text-weak">
-            Last gift between {formatDate(data.lapsed.from)} and {formatDate(data.lapsed.to)}.
-          </span>
-          {lapsedHref && data.lapsed.count > 0 && (
-            <a href={lapsedHref} className="mt-1 text-30 text-text-link underline underline-offset-2 print:hidden">
-              See the list and export it
-            </a>
-          )}
-        </Tile>
-      </div>
-    </div>
+                </div>
+                <div className="h-3 w-full overflow-hidden rounded-pill bg-background-stronger" role="img" aria-label={`${g.name}: ${share}% of the goal`}>
+                  <div className="h-full rounded-pill bg-background-primary" style={{ width: `${share}%` }} />
+                </div>
+                {g.ends_on && <span className="text-20 text-text-weak">Ends {formatDate(g.ends_on)}</span>}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </Card>
   );
 }

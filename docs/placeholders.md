@@ -59,9 +59,14 @@ Direction (Jenn, 2026-10-20): a staff view for the executive director and develo
 director, and a separate board dashboard. Each can be customized, with one layout per
 organization to start.
 
-**On screen now:**
-- One dashboard (Reports, Dashboard) is shared by staff, board viewers, and board links.
-- Home has a few staff to-dos.
+**Built (2026-10-20):** both dashboards, as proposed below.
+- Staff: `components/dashboard/staff-dashboard.tsx` on Home, with live to-dos from
+  `staffHome()`.
+- Board: `components/dashboard/board-dashboard.tsx` under Reports, Board dashboard, and on
+  board links.
+- The nightly figures gained `campaignGoals` and `lybunt`.
+
+**Still a placeholder:** Customize, choosing and ordering the cards for each view.
 
 **Proposal, built from `docs/personas.md`:**
 
@@ -97,3 +102,26 @@ organization to start.
 
 **Data model:** one jsonb column on `organizations`, for example
 `dashboard_layouts = { "staff": [...], "board": [...] }`.
+
+## 4. Goal thermometer on giving pages
+
+Jenn, 2026-10-20: a fundraising thermometer, or a "goal against raised so far" bar, on
+giving pages.
+
+**On screen now:** nothing on the public page. The staff and board dashboards already
+show campaign goals as progress bars.
+
+**The build:**
+- **The setting:** a giving page tied to a campaign with a goal gets a choice: "Show
+  progress toward the goal", with a bar or a thermometer.
+- **The total:** raised so far counts posted gifts plus online gifts not yet posted, so
+  donors see their own gift reflected right away. It is worked out by the database
+  function that serves the public page (`app.public_donation_page`), and it shows only
+  totals, never names.
+- **Options:** show the dollar amounts, or only the percentage, for organizations that
+  would rather not publish totals. Hide it automatically after the campaign ends.
+- **Accessibility:** the bar has a text equivalent ("$4,450 of $20,000 raised, 22%"), and
+  any animation respects reduced motion.
+
+**Data model:** two small settings on `donation_pages`: whether to show progress, and how.
+Ask before adding them.
