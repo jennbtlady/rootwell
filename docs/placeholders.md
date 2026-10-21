@@ -6,28 +6,47 @@ without re-deciding the basics. Each one follows `docs/navigation-standard.md`.
 
 ## 1. Guided setup walkthrough
 
-**On screen now:** Home shows a "Get set up" card for owners and admins until the required
-steps are done. It opens `/app/orgs/{id}/setup`, which lists six steps, ticks each off from
-the data, and links to the page where it is done. A note says a guided walkthrough is coming.
-The steps come from `setupProgress()` in `packages/core/src/services/setup.ts`, and their
-wording from `apps/web/src/lib/setup-steps.ts`.
+**Built (2026-10-21)**, designed from the persona walkthroughs
+(`docs/usability/2026-10-21-persona-walkthroughs.md`).
 
-**The build:**
-- One step per screen, with Back, Next, and Skip for now.
-- Each step does the work right there, using the same forms the settings pages use:
-  - Add funds from a short starter list.
-  - Pick gift rules from two presets.
-  - Upload a spreadsheet.
-  - Invite people.
-  - Pick a letter template.
-- A progress bar at the top, and "Save and finish later" on every step.
-- It opens on its own the first time an owner signs in to a new organization. After that,
-  it is reachable from the Get set up card.
-- Done when a new owner finishes setup in under 30 minutes without opening Help (the
-  brief's target). Test it with the personas in `docs/personas.md`.
+- **Home is the guide.** A new organization sees "Welcome. Let's get ... set up" with the
+  steps, instead of a dashboard of zeros. Home switches to the staff dashboard once the
+  required steps are done or a gift exists. Until the first gift, it says "Ready for your
+  first gift". The five main areas never move; only what is on Home changes.
+- **The walkthrough** is at `/app/orgs/{id}/setup`, one step at a time, done in place, each
+  with Back, Skip for now, and Finish later:
+  1. About your organization: name, EIN, mailing address, fiscal year explained, and time
+     zone in plain names.
+  2. Where gifts go: starter funds ticked in one go, plus an optional current campaign with
+     a goal.
+  3. How gifts are recorded: the recommended rules in plain words, with the fund and
+     campaign to fill in on new gifts.
+  4. Your donors: a spreadsheet, a few by hand right there, or an empty list.
+  5. Your team: invite right there. Optional.
+  6. Your thank-you letter: a preview with their own EIN and address, and who signs it.
+  7. You're ready: what is done, what was skipped, and the next three things.
+- **Honest progress.** A step ticks only after a person decides. Opening the letter
+  page no longer counts.
+  - Required: organization details, funds, and gift rules.
+  - Recommended: donors and the thank-you letter.
+  - Optional: team and online giving.
+- **Also from the findings:**
+  - The gift form says "Add a fund before entering gifts", with a link, when there are none.
+  - New gifts are prefilled with the chosen campaign.
+  - Settings has an Organization details page.
+  - Phones keep the field being typed in above the bottom tab bar.
+- **Code:**
+  - `components/setup/*`
+  - `lib/wizard-steps.ts`
+  - `setupProgress` and `inSetupMode` in `packages/core/src/services/setup.ts`
+- **Tests:** `apps/web/e2e/setup-wizard.spec.ts`. The whole journey at 1280px and 375px, with
+  an accessibility scan at every step.
 
-**Data model:** probably none. Progress is worked out from the data. A "dismissed" flag
-per person may be needed so it stops opening on its own. Ask before adding it.
+**Not done yet:**
+- **The import improvements from the walkthroughs.** These are: "were these gifts already
+  thanked?", matching fund and campaign names, and showing past imports where imports start.
+- **Opening on its own.** The walkthrough does not open by itself on first sign-in. Home
+  leads to it instead, which needs no stored flag.
 
 ## 2. Knowledge base and chat assistant
 

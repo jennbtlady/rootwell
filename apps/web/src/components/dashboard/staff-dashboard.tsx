@@ -3,6 +3,7 @@ import type { DashboardData, StaffHome } from "@maple/core/services";
 import { formatDate, formatMoney } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { Badge, Card, Heading } from "@/components/ui";
+import { buttonVariants } from "@/components/ui/button";
 import { CampaignGoals, DEF, Delta, Tile, num, retentionPeriod, retentionRate } from "./dashboard-parts";
 
 /**
@@ -20,6 +21,57 @@ export function StaffDashboard({ base, data, live }: { base: string; data: Dashb
   ].filter((x) => x.n > 0);
   const r = data.retention;
   const period = retentionPeriod(data);
+
+  // No gifts recorded yet: a clear starting point, not a dashboard of zeros. The figures
+  // appear once there is something to show.
+  if (live.recentGifts.length === 0) {
+    return (
+      <div className="flex flex-col gap-4">
+        <Card className="p-5 sm:p-6">
+          <Heading variant="heading30" as="h2" noMargin>
+            Ready for your first gift
+          </Heading>
+          <p className="mt-2 max-w-2xl text-40 leading-6">
+            Take this week&apos;s checks and enter them together, the way they went to the bank. Once gifts are in, this page shows what to do next and how the year is going.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Link href={`${base}/batches`} className={buttonVariants()}>
+              Enter your first gifts
+            </Link>
+            <Link href={`${base}/constituents/new`} className={buttonVariants({ variant: "secondary" })}>
+              Add a donor
+            </Link>
+          </div>
+        </Card>
+        {(data.campaignGoals ?? []).length > 0 && <CampaignGoals goals={data.campaignGoals ?? []} />}
+        <Card className="p-4 sm:p-5">
+          <Heading variant="heading40" as="h2">
+            While you wait for gifts
+          </Heading>
+          <ul className="flex flex-col gap-2 text-30 leading-5">
+            <li>
+              <Link className="text-text-link underline" href={`${base}/settings/board`}>
+                Make a board link
+              </Link>{" "}
+              so your board can see progress without a sign-in.
+            </li>
+            <li>
+              <Link className="text-text-link underline" href={`${base}/settings/integrations`}>
+                Take gifts online
+              </Link>{" "}
+              with a giving page. Optional.
+            </li>
+            <li>
+              <Link className="text-text-link underline" href="/app/help">
+                Read the short guides
+              </Link>{" "}
+              to everyday tasks.
+            </li>
+          </ul>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-4">

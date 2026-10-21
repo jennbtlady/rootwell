@@ -15,6 +15,13 @@
     @apply font-sans text-text antialiased;
     font-feature-settings: "cv11", "ss01";
   }
+  /* On phones the main areas sit in a fixed bar at the bottom (about 4.5rem). Keep the field
+     being typed in, and anything scrolled to, above it. */
+  @media (max-width: 639px) {
+    html {
+      scroll-padding-bottom: 5.5rem;
+    }
+  }
   body {
     @apply bg-background-body;
   }

@@ -57,14 +57,16 @@ describe.skipIf(!hasDb)("lapsed account deletion", () => {
   it("a quiet lapsed account is due 12 months after it lapsed, and activity resets the clock", async () => {
     await lapse(a.id, 320);
     const d = await deleteOn(a.id);
-    expect(Math.round((new Date(d!).getTime() - Date.now()) / 86400_000)).toBe(45);
+    // The deletion day is a calendar date, so "days from now" is 44 or 45 depending on the hour.
+    expect(Math.round((new Date(d!).getTime() - Date.now()) / 86400_000)).toBeGreaterThanOrEqual(44);
+    expect(Math.round((new Date(d!).getTime() - Date.now()) / 86400_000)).toBeLessThanOrEqual(45);
     // A team member uses the account: the clock restarts from today.
     await as(db, a.staff, (tx) => tx.execute(sql`select app.touch_org_activity(${a.id})`));
     expect(Math.round((new Date((await deleteOn(a.id))!).getTime() - Date.now()) / 86400_000)).toBeGreaterThan(360);
     // Someone from another organization cannot keep it alive.
     await lapse(a.id, 320);
     await as(db, b.owner, (tx) => tx.execute(sql`select app.touch_org_activity(${a.id})`));
-    expect(Math.round((new Date((await deleteOn(a.id))!).getTime() - Date.now()) / 86400_000)).toBe(45);
+    expect(Math.round((new Date((await deleteOn(a.id))!).getTime() - Date.now()) / 86400_000)).toBeLessThanOrEqual(45);
   });
 
   it("deletes only after all three notices and 7 days after the last one", async () => {

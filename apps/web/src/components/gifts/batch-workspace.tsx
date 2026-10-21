@@ -126,7 +126,7 @@ function GiftEntryForm({ orgId, batch, standards, funds, campaigns, appeals, pre
   const [amount, setAmount] = useState("");
   const [giftDate, setGiftDate] = useState(batch.batchDate);
   const [fundId, setFundId] = useState(standards.defaultFundId ?? funds[0]?.id ?? "");
-  const [campaignId, setCampaignId] = useState("");
+  const [campaignId, setCampaignId] = useState(standards.defaultCampaignId && campaigns.some((c) => c.id === standards.defaultCampaignId) ? standards.defaultCampaignId : "");
   const [appealId, setAppealId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<(typeof PAYMENT_METHODS)[number]>("check");
   const [giftType, setGiftType] = useState<(typeof GIFT_TYPES)[number]>("one_time");
@@ -206,6 +206,19 @@ function GiftEntryForm({ orgId, batch, standards, funds, campaigns, appeals, pre
           Gift entry standards
         </Link>
       </div>
+
+      {funds.length === 0 && (
+        <Alert variant="warning">
+          <AlertTitle>Add a fund before entering gifts</AlertTitle>
+          <AlertDescription>
+            Every gift goes into a fund, like General operating. You have none yet.{" "}
+            <Link className="underline" href={`/app/orgs/${orgId}/setup?step=funds`}>
+              Add your funds
+            </Link>{" "}
+            (it takes a minute), then come back.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <FormField id="gift-donor" label={GIFT_FIELD_LABEL.constituentId} required error={fe("constituentId")} help={hint("constituentId")} className="sm:col-span-2">

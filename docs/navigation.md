@@ -30,6 +30,16 @@ Inside, one grouped list:
 
 Help is a visible "Help" link in the top bar on every signed-in page.
 
+## What adapts, and what never does
+
+The five main areas never move, hide, or reorder. What is on Home adapts to where the
+organization is:
+- A new organization sees the setup guide.
+- After setup, until the first gift, Home says "Ready for your first gift".
+- After that, it shows the staff dashboard.
+
+Role still decides who sees Settings, and board viewers see only Reports.
+
 ## Depth
 
 At most three levels: main area, tab or settings page, detail. Examples: Donors, All donors,

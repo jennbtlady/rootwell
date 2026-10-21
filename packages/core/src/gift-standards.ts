@@ -32,6 +32,8 @@ export const giftEntryStandards = z.object({
   /** Check number is required whenever the payment method is check. On by default. */
   checkNumberForChecks: z.boolean().default(true),
   defaultFundId: z.string().uuid().nullish(),
+  /** The campaign going on now, filled in on new gifts. Staff can change it per gift. */
+  defaultCampaignId: z.string().uuid().nullish(),
   /** When false, gifts are posted as they are entered. Batches are the default. */
   useBatches: z.boolean().default(true),
   /** One or two sentences shown under a field, written by the admin. */

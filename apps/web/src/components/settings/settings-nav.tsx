@@ -12,6 +12,7 @@ export function SettingsNav({ orgId }: { orgId: string }) {
     {
       title: "Your organization",
       items: [
+        { href: `${base}/organization`, label: "Organization details" },
         { href: `${base}/team`, label: "Team" },
         { href: `${base}/account`, label: "Account and export" },
         { href: `${base}/billing`, label: "Billing" },
