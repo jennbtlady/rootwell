@@ -97,6 +97,10 @@ begin
     'byMonth', (select coalesce(jsonb_agg(x order by x.month_index), '[]') from (
       select m as month_index, to_char((v_fy + (m || ' months')::interval), 'Mon') as label,
              (select coalesce(sum(amount), 0) from cg where gift_date >= (v_fy + (m || ' months')::interval)::date and gift_date < (v_fy + ((m + 1) || ' months')::interval)::date and gift_date <= p_as_of) as current,
+             -- For the small trend lines on the key numbers: donors, first-time donors and gifts each month this year.
+             (select count(distinct constituent_id) from cg where gift_date >= (v_fy + (m || ' months')::interval)::date and gift_date < (v_fy + ((m + 1) || ' months')::interval)::date and gift_date <= p_as_of) as donors,
+             (select count(*) from firsts where first_gift >= (v_fy + (m || ' months')::interval)::date and first_gift < (v_fy + ((m + 1) || ' months')::interval)::date and first_gift <= p_as_of) as new_donors,
+             (select count(*) from cg where gift_date >= (v_fy + (m || ' months')::interval)::date and gift_date < (v_fy + ((m + 1) || ' months')::interval)::date and gift_date <= p_as_of) as gifts,
              (select coalesce(sum(amount), 0) from cg where gift_date >= (v_prior_start + (m || ' months')::interval)::date and gift_date < (v_prior_start + ((m + 1) || ' months')::interval)::date) as prior
         from generate_series(0, 11) m) x),
     'topGifts', (select coalesce(jsonb_agg(x order by x.amount desc, x.date desc), '[]') from (
@@ -111,6 +115,12 @@ begin
         from campaigns c
        where c.org_id = p_org and c.active and c.goal_amount is not null and c.goal_amount > 0
          and (c.ends_on is null or c.ends_on >= (p_as_of - interval '30 days')::date)) x),
+    -- This year's gifts by size: how much of the total the largest gifts carry.
+    'giftBands', (select coalesce(jsonb_agg(x order by x.min desc), '[]') from (
+      select b.label, b.min, count(y.id) as gifts, coalesce(sum(y.amount), 0) as total
+        from (values ('$1,000 or more', 1000::numeric, null::numeric), ('$250 to $999', 250, 1000), ('$100 to $249', 100, 250), ('Under $100', 0, 100)) b(label, min, max)
+        left join ytd y on y.amount >= b.min and (b.max is null or y.amount < b.max)
+       group by b.label, b.min) x),
     -- LYBUNT: gave last fiscal year, not yet this one.
     'lybunt', (select count(distinct p.constituent_id) from cg p
                 where p.gift_date >= v_prior_start and p.gift_date < v_fy

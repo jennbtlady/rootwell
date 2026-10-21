@@ -3,7 +3,7 @@ import type { DashboardData } from "@maple/core/services";
 import { formatDate, formatMoney } from "@/lib/format";
 import { Card, Heading } from "@/components/ui";
 import { PrintedDefinitions } from "./definition";
-import { Bars, CampaignGoals, CardRows, DEF, Delta, MonthChart, Tile, headline, num, retentionPeriod, retentionRate } from "./dashboard-parts";
+import { Bars, CampaignGoals, CardRows, DEF, Delta, GiftBands, MonthChart, PacingCard, RetentionDots, Sparkline, Tile, headline, monthsSoFar, num, retentionPeriod, retentionRate } from "./dashboard-parts";
 
 /**
  * The board dashboard (Ruth: "are we on track?", in two minutes). A sentence first, then
@@ -13,6 +13,9 @@ import { Bars, CampaignGoals, CardRows, DEF, Delta, MonthChart, Tile, headline, 
 export function BoardDashboard({ data, showNames, layout }: { data: DashboardData; showNames: boolean; layout: LayoutItem[] }) {
   const r = data.retention;
   const period = retentionPeriod(data);
+  // Small trend lines: this year's months so far. Older snapshots lack the monthly counts.
+  const months = monthsSoFar(data);
+  const hasCounts = months.some((m) => m.donors !== undefined);
   // Each card on its own, so the organization's layout can show, hide and order them.
   const cards: Record<string, React.ReactNode> = {
     headline: (
@@ -20,27 +23,29 @@ export function BoardDashboard({ data, showNames, layout }: { data: DashboardDat
         <p className="text-50 font-semibold leading-8">{headline(data)}</p>
       </Card>
     ),
+    pacing: <PacingCard data={data} />,
     key_numbers: (
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Tile label="Dollars this fiscal year" value={formatMoney(data.dollarsYtd)} definition={DEF.dollars}>
+        <Tile label="Dollars this fiscal year" value={formatMoney(data.dollarsYtd)} definition={DEF.dollars} trend={<Sparkline values={months.map((m) => num(m.current))} />}>
           <Delta now={num(data.dollarsYtd)} before={num(data.dollarsPriorYtd)} money />
         </Tile>
-        <Tile label="Donors this fiscal year" value={data.donorsYtd.toLocaleString()} definition={DEF.donors}>
+        <Tile label="Donors this fiscal year" value={data.donorsYtd.toLocaleString()} definition={DEF.donors} trend={hasCounts && <Sparkline values={months.map((m) => m.donors ?? 0)} />}>
           <Delta now={data.donorsYtd} before={data.donorsPriorYtd} />
         </Tile>
-        <Tile label="Donor retention" value={retentionRate(r.overall)} definition={DEF.overall}>
+        <Tile label="Donor retention" value={retentionRate(r.overall)} definition={DEF.overall} trend={<RetentionDots base={r.overall.base} retained={r.overall.retained} />}>
           <span className="text-30 text-text-weak">
             {r.overall.retained} of {r.overall.base} donors came back, {period}
           </span>
         </Tile>
-        <Tile label="New donors this fiscal year" value={data.newDonorsYtd.toLocaleString()} definition={DEF.newRepeat}>
+        <Tile label="New donors this fiscal year" value={data.newDonorsYtd.toLocaleString()} definition={DEF.newRepeat} trend={hasCounts && <Sparkline kind="bars" values={months.map((m) => m.new_donors ?? 0)} />}>
           <span className="text-30 text-text-weak">
             {data.newDonorsYtd.toLocaleString()} new and {data.repeatDonorsYtd.toLocaleString()} returning
           </span>
         </Tile>
       </div>
     ),
-    campaign_goals: data.campaignGoals && data.campaignGoals.length > 0 ? <CampaignGoals goals={data.campaignGoals} /> : null,
+    campaign_goals: data.campaignGoals && data.campaignGoals.length > 0 ? <CampaignGoals goals={data.campaignGoals} asOf={data.asOf} /> : null,
+    gift_bands: data.giftBands ? <GiftBands bands={data.giftBands} total={num(data.dollarsYtd)} /> : null,
     by_month: <MonthChart rows={data.byMonth} asOf={data.asOf} />,
     by_fund: <Bars title="By fund this fiscal year" rows={data.byFund} />,
     top_gifts: (

@@ -1,6 +1,6 @@
 # Design system
 
-Decision (Jenn, 2026-10-20): Maple Ledger's design system is built on Twilio Paste's design
+Decision (Jenn, 2026-10-20): Rootwell's design system is built on Twilio Paste's design
 tokens and component anatomy. The components are our own, in this repo. We do not use
 Paste's React library at runtime.
 
@@ -70,6 +70,13 @@ Lime reads as "good" and pink as "bad" to many people, so neither is used for st
 Success, warning and error keep their own colors, and always come with an icon and words.
 The app icon and the phone browser bar use Crimson Violet. The Stripe stand-in pages keep
 Stripe's blue on purpose, because they imitate Stripe.
+
+Charts use `--paste-color-data-visualization-1` (#8E2A63, a lighter plum, for "this
+year") and `-2` (Air Force Blue #638494, for "last year"). Crimson Violet itself is
+darker than the dataviz validator's band for chart fills, so the plum is used there.
+The pair passes color-blind separation (13.2) and normal-vision separation (22.2). Air
+Force Blue reads as a muted color, which suits its job as the "context" series. Charts
+also name series in words, so color is never the only cue.
 
 To change a color, edit `overrides.css`, rerun the contrast checks for every pair it
 touches, and run the browser suite, which scans every page with axe.

@@ -187,16 +187,23 @@ describe.skipIf(!DATABASE_URL)("acknowledgments, statements, reports", () => {
     expect((await call(board, "GET", "/reports/lybunt")).status).toBe(403);
     const dash = (await (await call(board, "GET", "/dashboard")).json()) as { data: { topGifts: { name: string }[] } };
     expect(dash.data.topGifts.every((g) => g.name === "A donor")).toBe(true);
+    // Figures for the charts: gifts by size add up to the year's total, and each month has donor counts.
+    const full = (await (await call(owner, "POST", "/dashboard/refresh")).json()) as { data: { dollarsYtd: string; giftsYtd: number; giftBands: { label: string; gifts: number; total: string }[]; byMonth: { donors: number; new_donors: number; gifts: number }[] } };
+    expect(full.data.giftBands.map((b) => b.label)).toEqual(["$1,000 or more", "$250 to $999", "$100 to $249", "Under $100"]);
+    expect(full.data.giftBands.reduce((n, b) => n + Number(b.total), 0)).toBeCloseTo(Number(full.data.dollarsYtd), 2);
+    expect(full.data.giftBands.reduce((n, b) => n + b.gifts, 0)).toBe(full.data.giftsYtd);
+    expect(full.data.byMonth.reduce((n, m) => n + m.gifts, 0)).toBe(full.data.giftsYtd);
+    expect(full.data.byMonth.every((m) => typeof m.donors === "number" && typeof m.new_donors === "number")).toBe(true);
   });
 
   it("dashboard layouts: owners choose the cards, board links follow, staff and board viewers cannot change them", async () => {
-    const board_ = ["headline", "key_numbers", "campaign_goals", "by_month", "by_fund", "top_gifts"];
+    const board_ = ["headline", "pacing", "key_numbers", "campaign_goals", "by_fund", "gift_bands", "top_gifts", "by_month"];
     // Largest gifts first, monthly chart hidden.
     const cards = [...board_].reverse().map((id) => ({ id, shown: id !== "by_month" }));
     expect((await call(owner, "PUT", "/dashboard-layout", { view: "board", cards })).status).toBe(200);
     const org = (await (await call(owner, "GET", "")).json()) as { dashboardLayouts: { board: { id: string; shown: boolean }[]; staff: { id: string }[] } };
     expect(org.dashboardLayouts.board).toEqual(cards);
-    expect(org.dashboardLayouts.staff.map((c) => c.id)).toEqual(["todo", "this_year", "reach_out", "campaign_goals", "recent_gifts"]);
+    expect(org.dashboardLayouts.staff.map((c) => c.id)).toEqual(["todo", "this_year", "pacing", "reach_out", "campaign_goals", "recent_gifts"]);
 
     // A board link carries the same layout, without signing in.
     const { token } = (await (await call(owner, "POST", "/board-links", { label: "Layout check" })).json()) as { token: string };

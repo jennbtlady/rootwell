@@ -13,18 +13,21 @@ export type CardDef = { id: string; label: string; description: string; width: "
 export const DASHBOARD_CARDS: Record<DashboardView, CardDef[]> = {
   staff: [
     { id: "todo", label: "To do", description: "Gifts to thank, batches to post, duplicates to check.", width: "full" },
-    { id: "this_year", label: "How this fiscal year is going", description: "Dollars, donors and retention, against last year.", width: "full" },
+    { id: "this_year", label: "How this fiscal year is going", description: "Dollars, donors and retention, against last year, with small trend lines.", width: "full" },
+    { id: "pacing", label: "Raised so far, against last year", description: "The running total this fiscal year, with last year's line to beat.", width: "full" },
     { id: "reach_out", label: "Who to reach out to", description: "Gave last year but not yet this year, lapsed donors, and last year's top donors.", width: "half" },
     { id: "campaign_goals", label: "Campaign goals", description: "Progress toward each active campaign goal.", width: "half" },
     { id: "recent_gifts", label: "Recent gifts", description: "The latest gifts entered, posted or not.", width: "full" },
   ],
   board: [
     { id: "headline", label: "Summary sentence", description: "Are we on track, in one sentence.", width: "full" },
-    { id: "key_numbers", label: "Key numbers", description: "Dollars, donors, retention, and new donors this fiscal year.", width: "full" },
+    { id: "pacing", label: "Raised so far, against last year", description: "The running total this fiscal year, with last year's line to beat.", width: "full" },
+    { id: "key_numbers", label: "Key numbers", description: "Dollars, donors, retention, and new donors this fiscal year, with small trend lines.", width: "full" },
     { id: "campaign_goals", label: "Campaign goals", description: "Progress toward each active campaign goal.", width: "full" },
-    { id: "by_month", label: "Dollars by month", description: "This fiscal year against last, month by month.", width: "full" },
     { id: "by_fund", label: "By fund", description: "Where this fiscal year's gifts went.", width: "half" },
+    { id: "gift_bands", label: "Gifts by size", description: "How much of the total came from large, middle and small gifts.", width: "half" },
     { id: "top_gifts", label: "Largest gifts", description: "The five largest gifts this fiscal year. Names follow the board sharing setting.", width: "half" },
+    { id: "by_month", label: "Dollars by month", description: "This fiscal year against last, month by month.", width: "full" },
   ],
 };
 

@@ -3,6 +3,8 @@ import type { DashboardData } from "@maple/core/services";
 import { formatDate, formatMoney } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { Card, Heading } from "@/components/ui";
+import { daysLeft, monthIndex, pacing, timeElapsed } from "@/lib/dashboard-math";
+import { MonthBars, PacingChart } from "./charts";
 import { Definition } from "./definition";
 
 export const pct = (n: number, d: number) => (d ? Math.round((n / d) * 1000) / 10 : null);
@@ -22,7 +24,7 @@ export function Delta({ now, before, money }: { now: number; before: number; mon
   );
 }
 
-export function Tile({ label, value, children, definition }: { label: string; value: string; children?: React.ReactNode; definition?: string }) {
+export function Tile({ label, value, children, definition, trend }: { label: string; value: string; children?: React.ReactNode; definition?: string; trend?: React.ReactNode }) {
   return (
     <Card className="flex flex-col gap-1 p-4 sm:p-5 print:break-inside-avoid print:border-border-weak">
       <div className="flex items-center gap-1 text-20 font-semibold uppercase tracking-wide text-text-weak">
@@ -31,6 +33,7 @@ export function Tile({ label, value, children, definition }: { label: string; va
       </div>
       <div className="text-80 font-semibold leading-10 tabular-nums">{value}</div>
       {children}
+      {trend && <div className="mt-auto pt-2">{trend}</div>}
     </Card>
   );
 }
@@ -57,7 +60,7 @@ export function Bars({ title, rows }: { title: string; rows: { name: string; tot
                 <span className="min-w-0 break-words">{r.name}</span>
                 <span className="tabular-nums text-text">{formatMoney(r.total)}</span>
               </span>
-              <span className="h-3 rounded-r-20 bg-background-primary transition-opacity group-hover:opacity-80" style={{ width: `${Math.max(2, (num(r.total) / max) * 100)}%` }} aria-hidden="true" />
+              <span className="h-3 rounded-r-20 bg-data-visualization-1 transition-opacity group-hover:opacity-80" style={{ width: `${Math.max(2, (num(r.total) / max) * 100)}%` }} aria-hidden="true" />
             </li>
           ))}
         </ul>
@@ -66,13 +69,10 @@ export function Bars({ title, rows }: { title: string; rows: { name: string; tot
   );
 }
 
-/** Emphasis form: this year in the accent, last year in gray for context. One axis. */
+/** Emphasis form: this year in the accent, last year as quieter context. One axis. */
 export function MonthChart({ rows, asOf }: { rows: DashboardData["byMonth"]; asOf: string }) {
-  const max = Math.max(1, ...rows.flatMap((r) => [num(r.current), num(r.prior)]));
-  const W = 640, H = 200, padL = 48, padB = 24, padT = 8;
-  const bw = (W - padL) / rows.length;
-  const y = (v: number) => padT + (H - padT - padB) * (1 - v / max);
-  const ticks = [0, max / 2, max];
+  const data = rows.map((r) => ({ label: r.label, current: num(r.current), prior: num(r.prior) }));
+  const best = data.reduce((b, r) => (r.current > b.current ? r : b), data[0] ?? { label: "", current: 0, prior: 0 });
   return (
     <Card className="p-4 sm:p-5 print:break-inside-avoid">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -81,38 +81,16 @@ export function MonthChart({ rows, asOf }: { rows: DashboardData["byMonth"]; asO
         </Heading>
         <div className="flex gap-4 text-30 text-text-weak" aria-hidden="true">
           <span className="flex items-center gap-1.5">
-            <span className="inline-block size-3 rounded-10 bg-background-primary" /> This fiscal year
+            <span className="inline-block size-3 rounded-10 bg-data-visualization-1" /> This fiscal year
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="inline-block size-3 rounded-10 bg-background-stronger" /> Last fiscal year
+            <span className="inline-block size-3 rounded-10 bg-data-visualization-2" /> Last fiscal year
           </span>
         </div>
       </div>
-      <svg viewBox={`0 0 ${W} ${H}`} className="mt-3 w-full" role="img" aria-label="Dollars received each month this fiscal year and last. The table below has the numbers.">
-        {ticks.map((t) => (
-          <g key={t}>
-            <line x1={padL} x2={W} y1={y(t)} y2={y(t)} className="stroke-border-weaker" strokeWidth={1} />
-            <text x={padL - 6} y={y(t) + 4} textAnchor="end" className="fill-text-weak text-[10px]">
-              {t >= 1000 ? `$${Math.round(t / 100) / 10}k` : `$${Math.round(t)}`}
-            </text>
-          </g>
-        ))}
-        {rows.map((r, i) => {
-          const x = padL + i * bw;
-          const w = (bw - 8) / 2;
-          return (
-            <g key={r.label} className="group">
-              <title>{`${r.label}: ${formatMoney(r.current)} this year, ${formatMoney(r.prior)} last year`}</title>
-              <rect x={x} y={padT} width={bw} height={H - padT - padB} className="fill-transparent group-hover:fill-background-weak" />
-              <rect x={x + 3} y={y(num(r.prior))} width={w} height={Math.max(0, H - padB - y(num(r.prior)))} rx={2} className="fill-background-stronger" />
-              <rect x={x + 5 + w} y={y(num(r.current))} width={w} height={Math.max(0, H - padB - y(num(r.current)))} rx={2} className="fill-background-primary" />
-              <text x={x + bw / 2} y={H - 6} textAnchor="middle" className="fill-text-weak text-[10px]">
-                {r.label}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
+      <div className="mt-3">
+        <MonthBars data={data} summary={`Dollars received each month this fiscal year and last. The best month so far this year was ${best.label}, with ${formatMoney(best.current)}. The table below has every month.`} />
+      </div>
       <details className="mt-2 text-30">
         <summary className="cursor-pointer text-text-link">Show as a table</summary>
         <table className="mt-2 w-full text-30">
@@ -135,6 +113,122 @@ export function MonthChart({ rows, asOf }: { rows: DashboardData["byMonth"]; asO
         </table>
         <p className="mt-1 text-text-weak">This year runs through {formatDate(asOf)}.</p>
       </details>
+    </Card>
+  );
+}
+
+/**
+ * The headline: dollars so far, how that compares with this point last year, and the
+ * running total for both years. The line above the dashed one means "ahead".
+ */
+export function PacingCard({ data }: { data: DashboardData }) {
+  const points = pacing(data.byMonth, data.fiscalYearStart, data.asOf);
+  const now = num(data.dollarsYtd);
+  const before = num(data.dollarsPriorYtd);
+  const change = before ? Math.round(((now - before) / before) * 100) : null;
+  const words = change === null ? "No gifts at this point last year to compare with" : change === 0 ? "Level with this time last year" : `${Math.abs(change)}% ${change > 0 ? "ahead of" : "behind"} this time last year`;
+  return (
+    <Card className="p-4 sm:p-6 print:break-inside-avoid">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <Heading variant="heading40" as="h2" noMargin>
+            Raised this fiscal year
+          </Heading>
+          <div className="mt-1 text-[2.75rem] font-semibold leading-none tracking-tight text-text-primary tabular-nums">{formatMoney(now)}</div>
+        </div>
+        <span className={cn("inline-flex items-center gap-1.5 rounded-pill px-3 py-1 text-30 font-semibold", change !== null && change < 0 ? "bg-background-primary-weakest text-text-primary" : "bg-background-new-weakest text-text")}>
+          <span aria-hidden="true">{change === null ? "" : change > 0 ? "\u2197" : change < 0 ? "\u2198" : "\u2192"}</span>
+          {words}
+        </span>
+      </div>
+      <div className="mt-4">
+        <PacingChart data={points} summary={`Running total of gifts by month. ${formatMoney(now)} so far this fiscal year, against ${formatMoney(before)} by the same date last year. ${words}.`} />
+      </div>
+    </Card>
+  );
+}
+
+/** A small trend line under a key number. Decorative: the number and its sentence carry the meaning. */
+export function Sparkline({ values, kind = "line" }: { values: number[]; kind?: "line" | "bars" }) {
+  if (values.length < 2 || values.every((v) => v === 0)) return null;
+  const W = 120, H = 28, max = Math.max(...values, 1);
+  const x = (i: number) => (i / (values.length - 1)) * (W - 6) + 3;
+  const y = (v: number) => H - 3 - (v / max) * (H - 8);
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="h-7 w-full max-w-40" aria-hidden="true" preserveAspectRatio="none">
+      {kind === "bars" ? (
+        values.map((v, i) => {
+          const w = (W - 4) / values.length - 3;
+          return <rect key={i} x={2 + i * ((W - 4) / values.length)} y={y(v)} width={Math.max(2, w)} height={Math.max(1, H - 3 - y(v))} rx={2} className="fill-data-visualization-1" />;
+        })
+      ) : (
+        <>
+          <polyline points={values.map((v, i) => `${x(i)},${y(v)}`).join(" ")} fill="none" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" className="stroke-data-visualization-1" vectorEffect="non-scaling-stroke" />
+          <circle cx={x(values.length - 1)} cy={y(values[values.length - 1]!)} r={3} className="fill-data-visualization-1 stroke-background-weakest" strokeWidth={1.5} />
+        </>
+      )}
+    </svg>
+  );
+}
+
+/** This year's months so far, for the trend lines. */
+export function monthsSoFar(data: DashboardData) {
+  const now = monthIndex(data.fiscalYearStart, data.asOf);
+  return [...data.byMonth].sort((a, b) => a.month_index - b.month_index).filter((r) => r.month_index <= now);
+}
+
+/** One dot per donor from the earlier year; filled dots gave again. Over 60 donors, a bar instead. */
+export function RetentionDots({ base, retained }: { base: number; retained: number }) {
+  if (base === 0) return null;
+  if (base > 60) {
+    return (
+      <div className="h-2 w-full overflow-hidden rounded-pill bg-background-strong" aria-hidden="true">
+        <div className="h-full rounded-pill bg-data-visualization-1" style={{ width: `${(retained / base) * 100}%` }} />
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-wrap gap-1" aria-hidden="true">
+      {Array.from({ length: base }, (_, i) => (
+        <span key={i} className={cn("inline-block size-2.5 rounded-circle", i < retained ? "bg-data-visualization-1" : "bg-background-strong")} />
+      ))}
+    </div>
+  );
+}
+
+/** This year's gifts by size, with the dollars each size brought in. */
+export function GiftBands({ bands, total }: { bands: NonNullable<DashboardData["giftBands"]>; total: number }) {
+  const max = Math.max(1, ...bands.map((b) => num(b.total)));
+  // The largest size that has any gifts: "9 gifts of $1,000 or more brought in 41% of the total."
+  const lead = bands.find((b) => num(b.total) > 0 && b.gifts > 0);
+  const share = lead && total ? Math.round((num(lead.total) / total) * 100) : 0;
+  return (
+    <Card className="h-full p-4 sm:p-5 print:break-inside-avoid">
+      <Heading variant="heading40" as="h2">
+        Where the dollars came from
+      </Heading>
+      {!lead ? (
+        <p className="text-30 text-text-weak">No gifts yet this fiscal year.</p>
+      ) : (
+        <>
+          <ul className="flex flex-col gap-2">
+            {bands.map((b) => (
+              <li key={b.label} className="flex flex-col gap-1 text-30 leading-5" title={`${b.gifts} ${b.gifts === 1 ? "gift" : "gifts"}, ${formatMoney(b.total)}`}>
+                <span className="flex flex-wrap items-baseline justify-between gap-x-3">
+                  <span>
+                    {b.label} <span className="text-text-weak">· {b.gifts.toLocaleString()} {b.gifts === 1 ? "gift" : "gifts"}</span>
+                  </span>
+                  <span className="tabular-nums">{formatMoney(b.total)}</span>
+                </span>
+                <span className="h-2.5 rounded-r-20 bg-data-visualization-1" style={{ width: `${Math.max(1, (num(b.total) / max) * 100)}%`, opacity: num(b.total) ? 1 : 0.25 }} aria-hidden="true" />
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 text-30 leading-5 text-text-weak">
+            {lead.gifts.toLocaleString()} {lead.gifts === 1 ? "gift" : "gifts"} of {lead.label.replace(/^Under/, "under")} brought in {share}% of the total.
+          </p>
+        </>
+      )}
     </Card>
   );
 }
@@ -177,7 +271,7 @@ export function headline(data: DashboardData): string {
 }
 
 /** Progress toward each active campaign goal. A bar per campaign, with the words beside it. */
-export function CampaignGoals({ goals }: { goals: NonNullable<DashboardData["campaignGoals"]> }) {
+export function CampaignGoals({ goals, asOf }: { goals: NonNullable<DashboardData["campaignGoals"]>; asOf?: string }) {
   return (
     <Card className="p-4 sm:p-5 print:break-inside-avoid">
       <Heading variant="heading40" as="h2">
@@ -189,6 +283,9 @@ export function CampaignGoals({ goals }: { goals: NonNullable<DashboardData["cam
         <ul className="flex flex-col gap-4">
           {goals.map((g) => {
             const share = num(g.goal) ? Math.min(100, Math.round((num(g.raised) / num(g.goal)) * 100)) : 0;
+            // Where the campaign is in its own dates, so the bar answers "are we on pace?"
+            const elapsed = asOf ? timeElapsed(g.starts_on, g.ends_on, asOf) : null;
+            const left = asOf ? daysLeft(g.ends_on, asOf) : null;
             return (
               <li key={g.name} className="flex flex-col gap-1">
                 <div className="flex flex-wrap items-baseline justify-between gap-2 text-30 leading-5">
@@ -197,10 +294,19 @@ export function CampaignGoals({ goals }: { goals: NonNullable<DashboardData["cam
                     {formatMoney(g.raised)} of {formatMoney(g.goal)} <span className="text-text-weak">({share}%)</span>
                   </span>
                 </div>
-                <div className="h-3 w-full overflow-hidden rounded-pill bg-background-stronger" role="img" aria-label={`${g.name}: ${share}% of the goal`}>
-                  <div className="h-full rounded-pill bg-background-primary" style={{ width: `${share}%` }} />
+                <div className="relative" role="img" aria-label={`${g.name}: ${share}% of the goal${elapsed !== null ? `, with ${elapsed}% of the campaign's time gone` : ""}`}>
+                  <div className="h-3 w-full overflow-hidden rounded-pill bg-background-primary-weakest shadow-border-primary-weaker">
+                    <div className="h-full rounded-pill bg-data-visualization-1" style={{ width: `${share}%` }} />
+                  </div>
+                  {elapsed !== null && elapsed > 0 && elapsed < 100 && <span className="absolute -top-1 h-5 border-l-2 border-text" style={{ left: `${elapsed}%` }} aria-hidden="true" />}
                 </div>
-                {g.ends_on && <span className="text-20 text-text-weak">Ends {formatDate(g.ends_on)}</span>}
+                <span className="text-20 leading-4 text-text-weak">
+                  {elapsed !== null && elapsed < 100
+                    ? `${share >= elapsed ? "On pace" : "Behind pace"}: the line marks ${elapsed}% of the campaign's time gone.${left !== null ? ` ${left} ${left === 1 ? "day" : "days"} left.` : ""}`
+                    : g.ends_on
+                      ? `Ends ${formatDate(g.ends_on)}`
+                      : ""}
+                </span>
               </li>
             );
           })}

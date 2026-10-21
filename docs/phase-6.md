@@ -395,3 +395,67 @@ Everyone in the organization sees the same layout, and board links follow the bo
     cannot customize, and reset.
   - The layouts case in `packages/api/test/reporting.test.ts`, plus route-matrix entries.
   - `packages/core/test/dashboard-layout.test.ts`.
+
+## Dashboard charts (2026-10-21)
+
+Jenn asked for a livelier dashboard. A mockup was agreed first, then built with
+**Recharts** (Jenn's choice). It draws SVG, so colors come from the design tokens and
+print still works. It loads only on dashboard pages.
+
+- **Raised so far, against last year** (new card, on Home and the board dashboard):
+  - The headline total, and a chip saying how far ahead of or behind the same date last
+    year it is.
+  - The running total this fiscal year, with last year's total as a dashed line to beat.
+  - Hover shows both years for any month.
+  - It is worked out from the monthly figures already in the dashboard (`pacing()` in
+    `apps/web/src/lib/dashboard-math.ts`).
+- **Trend lines on the key numbers:**
+  - Dollars and donors by month as small lines, and new donors as small bars.
+  - Retention as one dot per donor from the earlier year, filled if they gave again. Over
+    60 donors it becomes a bar.
+  - These are decorative; the number and its sentence carry the meaning.
+- **Campaign goal meter:** a mark shows how much of the campaign's time has gone, with
+  "On pace" or "Behind pace" and the days left.
+- **Gifts by size** (new card, board dashboard): gifts of $1,000 or more, $250 to $999,
+  $100 to $249, and under $100. A sentence names the biggest group and its share of the
+  total.
+- **Dollars by month** is now a Recharts bar chart with hover. "Show as a table" stays.
+- **Data:** `app.compute_dashboard` adds `donors`, `new_donors` and `gifts` to each month,
+  and a `giftBands` list. This is a function change, not a table change. Snapshots made
+  before it lack these fields; the trend lines and Gifts by size simply do not show until
+  the next refresh.
+- **Accessibility:** each chart has a summary sentence for screen readers, the legends
+  use words, and the monthly chart keeps its table. Recharts' animation is off during the
+  server render and for people who ask for reduced motion.
+- **Colors:** `--paste-color-data-visualization-1` (#8E2A63, this year) and `-2` (#638494,
+  last year), checked with the dataviz palette validator. See `docs/design-system.md`.
+- **Layouts:** the new cards ("Raised so far, against last year" and "Gifts by size")
+  join the Customize lists. Saved layouts get them at the end, shown.
+- **Tests:**
+  - `apps/web/test/dashboard-math.test.ts`.
+  - The dashboard figures checks in `packages/api/test/reporting.test.ts`.
+  - The updated layout tests.
+
+## Browser tests and the dev server (2026-10-21)
+
+Local browser runs reuse the dev server on port 3000. It compiles each page on first
+visit and reloads when files change, so editing files during a long run causes timeouts
+and aborted page loads that are not real bugs. Run the suite on a warm server and leave
+files alone until it finishes.
+
+A production build cannot replace it. Production deliberately ignores
+`MFA_ENFORCEMENT=off` and refuses to fall back to the Stripe stand-ins, so a stray
+setting on a real server cannot weaken sign-in or fake payments. The tests rely on both.
+For the same reason the e2e job in `.github/workflows/ci.yml`, which runs against
+`next start`, will fail as written. It has not run yet, since the repo has no GitHub
+remote. Fix it before turning CI on.
+
+## Name: Rootwell (2026-10-21)
+
+The product is now called Rootwell. It replaced "Maple Ledger" on every screen, email,
+PDF, the app manifest and the docs. The export file is now `rootwell-export-<date>.zip`.
+The internal package scope stays `@maple/*`, since users never see it.
+
+The sign-in email subjects live in `supabase/config.toml`. The local auth server needs
+`supabase stop` and `supabase start` to use them, and the hosted project needs the same
+change in its dashboard.

@@ -1,5 +1,5 @@
 /*
- * Maple Ledger design overrides. This is the one place to change the look.
+ * Rootwell design overrides. This is the one place to change the look.
  *
  * Every token from Paste is a --paste-* custom property (see tokens.css). Redefine any
  * of them here and every component follows. Keep overrides to tokens. Do not style
@@ -88,6 +88,13 @@
   --paste-color-background-error: #c2001f;
   --paste-color-border-error: #c2001f;
   --paste-shadow-border-error: 0 0 0 1px #c2001f;
+  /* Charts. 1 is "this year", the series that matters: a lighter plum than Crimson Violet,
+     inside the chart lightness band. 2 is "last year", context: Air Force Blue, read as a
+     muted companion. Both pass 3:1 on white cards; checked with the dataviz validator
+     (CVD separation 13.2, normal-vision 22.2). Charts also label series in words. */
+  --paste-color-data-visualization-1: #8e2a63;
+  --paste-color-data-visualization-2: #638494;
+
   /* Remove and Delete use the same deeper red: Paste's #db132a was 4.32:1 on the pink
      selected-row tint. */
   --paste-color-text-destructive: #c2001f;

@@ -13,12 +13,12 @@ test.describe("security headers", () => {
     });
   }
 
-  test("a page framed by another site does not render", async ({ page }) => {
+  test("a page framed by another site does not render", async ({ page, baseURL }) => {
     let blocked = false;
     page.on("console", (m) => {
       if (/frame-ancestors|Refused to (display|frame)/i.test(m.text())) blocked = true;
     });
-    await page.setContent(`<iframe id="f" src="http://localhost:3000/sign-in" title="test"></iframe>`);
+    await page.setContent(`<iframe id="f" src="${baseURL}/sign-in" title="test"></iframe>`);
     await page.waitForTimeout(3000);
     const framed = page.frames().find((f) => f.url().includes("/sign-in"));
     const rendered = framed ? await framed.locator("body").innerText().catch(() => "") : "";

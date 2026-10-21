@@ -107,7 +107,7 @@ describe.skipIf(!DATABASE_URL)("api routes against the database", () => {
       ["POST", `/api/v1/orgs/${orgB}/imports`, { kind: "constituents", fileName: "x.csv", headers: ["a"], expectedRows: 1 }],
       ["GET", `/api/v1/orgs/${orgB}/imports/${randomUUID()}`, undefined],
       ["GET", `/api/v1/orgs/${orgB}/imports/${randomUUID()}/coding`, undefined],
-      ["PUT", `/api/v1/orgs/${orgB}/dashboard-layout`, { view: "staff", cards: [{ id: "todo", shown: true }, { id: "this_year", shown: true }, { id: "reach_out", shown: true }, { id: "campaign_goals", shown: true }, { id: "recent_gifts", shown: false }] }],
+      ["PUT", `/api/v1/orgs/${orgB}/dashboard-layout`, { view: "staff", cards: [{ id: "todo", shown: true }, { id: "this_year", shown: true }, { id: "pacing", shown: true }, { id: "reach_out", shown: true }, { id: "campaign_goals", shown: true }, { id: "recent_gifts", shown: false }] }],
       ["DELETE", `/api/v1/orgs/${orgB}/dashboard-layout/staff`, undefined],
       ["POST", `/api/v1/orgs/${orgB}/imports/${randomUUID()}/commit`, undefined],
       ["POST", `/api/v1/orgs/${orgB}/imports/${randomUUID()}/rollback`, undefined],

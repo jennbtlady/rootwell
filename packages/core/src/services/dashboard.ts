@@ -21,7 +21,10 @@ export type DashboardData = {
   retention: Record<"overall" | "firstTime" | "repeat", { base: number; retained: number }>;
   byFund: { name: string; total: Money; gifts: number }[];
   byCampaign: { name: string; total: Money; gifts: number }[];
-  byMonth: { label: string; current: Money; prior: Money; month_index: number }[];
+  /** donors, new_donors and gifts were added in Phase 6 for the trend lines; older snapshots lack them. */
+  byMonth: { label: string; current: Money; prior: Money; month_index: number; donors?: number; new_donors?: number; gifts?: number }[];
+  /** This fiscal year's gifts in size bands, largest first. Added in Phase 6; older snapshots lack it. */
+  giftBands?: { label: string; min: Money; gifts: number; total: Money }[];
   topGifts: { giftId?: string; constituentId?: string; name: string; amount: Money; date: string; fund: string | null }[];
   lapsed: { count: number; from: string; to: string };
   /** Active campaigns with a goal, and what has come in inside the campaign's dates. Added in Phase 6; older snapshots lack it. */

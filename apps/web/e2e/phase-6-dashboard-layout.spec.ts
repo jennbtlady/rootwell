@@ -25,8 +25,8 @@ test.describe.serial("customizable dashboards", () => {
     // Recent gifts to the top: focus stays on its Up button, so Enter keeps moving it.
     const up = page.getByRole("button", { name: "Move Recent gifts up" });
     await up.focus();
-    for (let i = 0; i < 4; i++) await page.keyboard.press("Enter");
-    await expect(page.getByText("Recent gifts moved to position 1 of 5.")).toBeAttached();
+    for (let i = 0; i < 5; i++) await page.keyboard.press("Enter");
+    await expect(page.getByText("Recent gifts moved to position 1 of 6.")).toBeAttached();
     await expect(page.getByRole("button", { name: "Move Recent gifts up" })).toBeDisabled();
     await page.getByRole("checkbox", { name: "Campaign goals" }).uncheck();
     await page.screenshot({ path: "test-results/customize-home-375.png", fullPage: true });
@@ -47,6 +47,8 @@ test.describe.serial("customizable dashboards", () => {
     await page.goto(`${org}/dashboard`);
     await page.getByRole("button", { name: "Customize" }).click();
     await page.getByRole("checkbox", { name: "Dollars by month" }).uncheck();
+    // Two steps up puts Largest gifts ahead of By fund.
+    await page.getByRole("button", { name: "Move Largest gifts up" }).click();
     await page.getByRole("button", { name: "Move Largest gifts up" }).click();
     await page.getByRole("button", { name: "Save layout" }).click();
     await expect(page.getByRole("heading", { name: "Dollars by month" })).toHaveCount(0);

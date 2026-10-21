@@ -5,7 +5,7 @@ import { formatDate, formatMoney } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { Badge, Card, Heading } from "@/components/ui";
 import { buttonVariants } from "@/components/ui/button";
-import { CampaignGoals, CardRows, DEF, Delta, Tile, num, retentionPeriod, retentionRate } from "./dashboard-parts";
+import { CampaignGoals, CardRows, DEF, Delta, PacingCard, RetentionDots, Sparkline, Tile, monthsSoFar, num, retentionPeriod, retentionRate } from "./dashboard-parts";
 
 /**
  * The staff dashboard on Home (Dana and Marcus: "what do I do next, and how are we doing").
@@ -22,6 +22,9 @@ export function StaffDashboard({ base, data, live, layout }: { base: string; dat
   ].filter((x) => x.n > 0);
   const r = data.retention;
   const period = retentionPeriod(data);
+  // Small trend lines: this year's months so far. Older snapshots lack the monthly counts.
+  const months = monthsSoFar(data);
+  const hasCounts = months.some((m) => m.donors !== undefined);
 
   // No gifts recorded yet: a clear starting point, not a dashboard of zeros. The figures
   // appear once there is something to show.
@@ -108,18 +111,18 @@ export function StaffDashboard({ base, data, live, layout }: { base: string; dat
           How this fiscal year is going
         </Heading>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Tile label="Dollars this fiscal year" value={formatMoney(data.dollarsYtd)} definition={DEF.dollars}>
+          <Tile label="Dollars this fiscal year" value={formatMoney(data.dollarsYtd)} definition={DEF.dollars} trend={<Sparkline values={months.map((m) => num(m.current))} />}>
             <Delta now={num(data.dollarsYtd)} before={num(data.dollarsPriorYtd)} money />
           </Tile>
-          <Tile label="Donors this fiscal year" value={data.donorsYtd.toLocaleString()} definition={DEF.donors}>
+          <Tile label="Donors this fiscal year" value={data.donorsYtd.toLocaleString()} definition={DEF.donors} trend={hasCounts && <Sparkline values={months.map((m) => m.donors ?? 0)} />}>
             <Delta now={data.donorsYtd} before={data.donorsPriorYtd} />
           </Tile>
-          <Tile label="Donor retention" value={retentionRate(r.overall)} definition={DEF.overall}>
+          <Tile label="Donor retention" value={retentionRate(r.overall)} definition={DEF.overall} trend={<RetentionDots base={r.overall.base} retained={r.overall.retained} />}>
             <span className="text-30 text-text-weak">
               {r.overall.retained} of {r.overall.base} donors gave again, {period}
             </span>
           </Tile>
-          <Tile label="First-time donor retention" value={retentionRate(r.firstTime)} definition={DEF.firstTime}>
+          <Tile label="First-time donor retention" value={retentionRate(r.firstTime)} definition={DEF.firstTime} trend={<RetentionDots base={r.firstTime.base} retained={r.firstTime.retained} />}>
             <span className="text-30 text-text-weak">A quick thank-you call is the best way to raise this.</span>
           </Tile>
         </div>
@@ -167,7 +170,8 @@ export function StaffDashboard({ base, data, live, layout }: { base: string; dat
           )}
         </Card>
     ),
-    campaign_goals: <CampaignGoals goals={data.campaignGoals ?? []} />,
+    pacing: <PacingCard data={data} />,
+    campaign_goals: <CampaignGoals goals={data.campaignGoals ?? []} asOf={data.asOf} />,
     recent_gifts: (
       <Card className="p-4 sm:p-5">
         <Heading variant="heading40" as="h2">
