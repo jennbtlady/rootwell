@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { sql } from "drizzle-orm";
 import type { Tx } from "./types";
+import { resolveLayout, type DashboardLayoutInput, type DashboardView, type LayoutItem } from "../dashboard-layout";
 
 type Money = number | string;
 export type DashboardData = {
@@ -79,11 +80,29 @@ export async function revokeShareLink(tx: Tx, orgId: string, id: string): Promis
   return r.count > 0;
 }
 
-export type BoardView = { orgName: string; computedAt: string; hideNames: boolean; data: DashboardData };
+export type BoardView = { orgName: string; computedAt: string; hideNames: boolean; data: DashboardData; layout: LayoutItem[] };
 
 export async function boardView(tx: Tx, token: string): Promise<BoardView | null> {
   const r = await tx.execute(sql`select app.board_view(${hashToken(token)}) as v`);
-  return ((r[0] as { v: BoardView | null }).v ?? null);
+  const v = (r[0] as { v: (Omit<BoardView, "layout"> & { layout: unknown }) | null }).v;
+  return v ? { ...v, layout: resolveLayout("board", v.layout) } : null;
+}
+
+/**
+ * Saves one dashboard's card order and visibility. RLS lets only owners and admins (with
+ * MFA) update the organization, so staff get a false here.
+ */
+export async function saveDashboardLayout(tx: Tx, orgId: string, input: DashboardLayoutInput): Promise<boolean> {
+  const r = await tx.execute(sql`
+    update organizations set dashboard_layouts = jsonb_set(dashboard_layouts, ${`{${input.view}}`}::text[], ${JSON.stringify(input.cards)}::jsonb)
+     where id = ${orgId}`);
+  return r.count > 0;
+}
+
+/** Back to the default layout for one view. */
+export async function resetDashboardLayout(tx: Tx, orgId: string, view: DashboardView): Promise<boolean> {
+  const r = await tx.execute(sql`update organizations set dashboard_layouts = dashboard_layouts - ${view}::text where id = ${orgId}`);
+  return r.count > 0;
 }
 
 export async function setHideBoardNames(tx: Tx, orgId: string, hide: boolean): Promise<boolean> {

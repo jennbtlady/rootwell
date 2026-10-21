@@ -1,16 +1,17 @@
 import Link from "next/link";
+import type { LayoutItem } from "@maple/core";
 import type { DashboardData, StaffHome } from "@maple/core/services";
 import { formatDate, formatMoney } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { Badge, Card, Heading } from "@/components/ui";
 import { buttonVariants } from "@/components/ui/button";
-import { CampaignGoals, DEF, Delta, Tile, num, retentionPeriod, retentionRate } from "./dashboard-parts";
+import { CampaignGoals, CardRows, DEF, Delta, Tile, num, retentionPeriod, retentionRate } from "./dashboard-parts";
 
 /**
  * The staff dashboard on Home (Dana and Marcus: "what do I do next, and how are we doing").
  * To-dos first, each linking to the list that clears it. Then the numbers, then who to call.
  */
-export function StaffDashboard({ base, data, live }: { base: string; data: DashboardData; live: StaffHome }) {
+export function StaffDashboard({ base, data, live, layout }: { base: string; data: DashboardData; live: StaffHome; layout: LayoutItem[] }) {
   const t = live.todos;
   const todos = [
     { n: t.toThank, label: t.toThank === 1 ? "gift to thank" : "gifts to thank", note: t.toThankNeedLetter ? `${t.toThankNeedLetter} of $250 or more need a written letter` : null, href: `${base}/acknowledgments`, urgent: t.toThankNeedLetter > 0 },
@@ -73,8 +74,9 @@ export function StaffDashboard({ base, data, live }: { base: string; data: Dashb
     );
   }
 
-  return (
-    <div className="flex flex-col gap-4">
+  // Each card on its own, so the organization's layout can show, hide and order them.
+  const cards: Record<string, React.ReactNode> = {
+    todo: (
       <section aria-labelledby="todo-h" className="flex flex-col gap-2">
         <Heading id="todo-h" variant="heading40" as="h2" noMargin>
           To do
@@ -99,7 +101,8 @@ export function StaffDashboard({ base, data, live }: { base: string; data: Dashb
           </ul>
         )}
       </section>
-
+    ),
+    this_year: (
       <section aria-labelledby="how-h" className="flex flex-col gap-2">
         <Heading id="how-h" variant="heading40" as="h2" noMargin>
           How this fiscal year is going
@@ -121,9 +124,9 @@ export function StaffDashboard({ base, data, live }: { base: string; data: Dashb
           </Tile>
         </div>
       </section>
-
-      <section aria-labelledby="who-h" className="grid gap-3 lg:grid-cols-2">
-        <Card className="p-4 sm:p-5">
+    ),
+    reach_out: (
+        <Card className="h-full p-4 sm:p-5">
           <Heading id="who-h" variant="heading40" as="h2">
             Who to reach out to
           </Heading>
@@ -163,9 +166,9 @@ export function StaffDashboard({ base, data, live }: { base: string; data: Dashb
             </>
           )}
         </Card>
-        <CampaignGoals goals={data.campaignGoals ?? []} />
-      </section>
-
+    ),
+    campaign_goals: <CampaignGoals goals={data.campaignGoals ?? []} />,
+    recent_gifts: (
       <Card className="p-4 sm:p-5">
         <Heading variant="heading40" as="h2">
           Recent gifts
@@ -195,6 +198,13 @@ export function StaffDashboard({ base, data, live }: { base: string; data: Dashb
           </ul>
         )}
       </Card>
+    ),
+  };
+
+  return (
+    <div className="flex flex-col gap-4">
+      <CardRows view="staff" layout={layout} cards={cards} />
+
       <p className="text-20 text-text-weak">
         Your fiscal year started {formatDate(data.fiscalYearStart)}. Totals count posted gifts through {formatDate(data.asOf)}. To-dos are live. The board sees a simpler view under Reports, Board dashboard.
       </p>

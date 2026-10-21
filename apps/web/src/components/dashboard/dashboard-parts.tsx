@@ -1,3 +1,4 @@
+import { layoutRows, type DashboardView, type LayoutItem } from "@maple/core";
 import type { DashboardData } from "@maple/core/services";
 import { formatDate, formatMoney } from "@/lib/format";
 import { cn } from "@/lib/cn";
@@ -206,5 +207,26 @@ export function CampaignGoals({ goals }: { goals: NonNullable<DashboardData["cam
         </ul>
       )}
     </Card>
+  );
+}
+
+/**
+ * Renders the shown cards in the organization's order. Two half-width cards in a row sit
+ * side by side on a wide screen; everything else takes the full width.
+ */
+export function CardRows({ view, layout, cards }: { view: DashboardView; layout: LayoutItem[]; cards: Record<string, React.ReactNode> }) {
+  // A card with nothing to show (no campaign goals yet) is left out of the pairing too.
+  const present = layout.filter((l) => cards[l.id] != null && cards[l.id] !== false);
+  return layoutRows(view, present).map((row) =>
+    row.length === 2 ? (
+      <div key={row.join("+")} className="grid gap-3 lg:grid-cols-2">
+        <div className="min-w-0">{cards[row[0]!]}</div>
+        <div className="min-w-0">{cards[row[1]!]}</div>
+      </div>
+    ) : (
+      <div key={row[0]} className="min-w-0">
+        {cards[row[0]!]}
+      </div>
+    ),
   );
 }

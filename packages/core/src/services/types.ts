@@ -1,5 +1,6 @@
 import type { RlsTx } from "@maple/db";
 import type { OrgRole } from "../schemas/membership";
+import type { DashboardView, LayoutItem } from "../dashboard-layout";
 
 /** Every service takes the RLS-scoped transaction first. Nothing here opens its own. */
 export type Tx = RlsTx;
@@ -35,4 +36,6 @@ export type OrgDetail = {
   subscriptionStatus: string;
   trialEndsAt: string | null;
   role: OrgRole;
+  /** Card order and visibility per dashboard, already resolved against the current card list. */
+  dashboardLayouts: Record<DashboardView, LayoutItem[]>;
 };

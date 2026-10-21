@@ -1,23 +1,26 @@
+import type { LayoutItem } from "@maple/core";
 import type { DashboardData } from "@maple/core/services";
 import { formatDate, formatMoney } from "@/lib/format";
 import { Card, Heading } from "@/components/ui";
 import { PrintedDefinitions } from "./definition";
-import { Bars, CampaignGoals, DEF, Delta, MonthChart, Tile, headline, num, retentionPeriod, retentionRate } from "./dashboard-parts";
+import { Bars, CampaignGoals, CardRows, DEF, Delta, MonthChart, Tile, headline, num, retentionPeriod, retentionRate } from "./dashboard-parts";
 
 /**
  * The board dashboard (Ruth: "are we on track?", in two minutes). A sentence first, then
  * the comparison, goals, the trend, and where the money went. No to-do lists. It is what
  * board links and board viewers see; staff open it to see exactly the same thing.
  */
-export function BoardDashboard({ data, showNames }: { data: DashboardData; showNames: boolean }) {
+export function BoardDashboard({ data, showNames, layout }: { data: DashboardData; showNames: boolean; layout: LayoutItem[] }) {
   const r = data.retention;
   const period = retentionPeriod(data);
-  return (
-    <div className="flex flex-col gap-4">
+  // Each card on its own, so the organization's layout can show, hide and order them.
+  const cards: Record<string, React.ReactNode> = {
+    headline: (
       <Card className="p-4 sm:p-5">
         <p className="text-50 font-semibold leading-8">{headline(data)}</p>
       </Card>
-
+    ),
+    key_numbers: (
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Tile label="Dollars this fiscal year" value={formatMoney(data.dollarsYtd)} definition={DEF.dollars}>
           <Delta now={num(data.dollarsYtd)} before={num(data.dollarsPriorYtd)} money />
@@ -36,13 +39,12 @@ export function BoardDashboard({ data, showNames }: { data: DashboardData; showN
           </span>
         </Tile>
       </div>
-
-      {data.campaignGoals && data.campaignGoals.length > 0 && <CampaignGoals goals={data.campaignGoals} />}
-      <MonthChart rows={data.byMonth} asOf={data.asOf} />
-
-      <div className="grid gap-3 lg:grid-cols-2">
-        <Bars title="By fund this fiscal year" rows={data.byFund} />
-        <Card className="p-4 sm:p-5 print:break-inside-avoid">
+    ),
+    campaign_goals: data.campaignGoals && data.campaignGoals.length > 0 ? <CampaignGoals goals={data.campaignGoals} /> : null,
+    by_month: <MonthChart rows={data.byMonth} asOf={data.asOf} />,
+    by_fund: <Bars title="By fund this fiscal year" rows={data.byFund} />,
+    top_gifts: (
+        <Card className="h-full p-4 sm:p-5 print:break-inside-avoid">
           <Heading variant="heading40" as="h2">
             Largest gifts this fiscal year
           </Heading>
@@ -62,7 +64,13 @@ export function BoardDashboard({ data, showNames }: { data: DashboardData; showN
             </ol>
           )}
         </Card>
-      </div>
+    ),
+  };
+
+  return (
+    <div className="flex flex-col gap-4">
+      <CardRows view="board" layout={layout} cards={cards} />
+
       <p className="text-20 text-text-weak">
         Your fiscal year started {formatDate(data.fiscalYearStart)}. Figures run through {formatDate(data.asOf)} and count posted gifts only.
       </p>

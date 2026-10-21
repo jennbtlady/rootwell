@@ -12,3 +12,4 @@ export * from "./acknowledgments";
 export * from "./schemas/integrations";
 export * from "./accounting";
 export * from "./fees";
+export * from "./dashboard-layout";

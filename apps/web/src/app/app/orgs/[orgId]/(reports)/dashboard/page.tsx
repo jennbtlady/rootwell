@@ -6,6 +6,7 @@ import { formatDateTime } from "@/lib/format";
 import { Heading } from "@/components/ui";
 import { BoardDashboard } from "@/components/dashboard/board-dashboard";
 import { DashboardActions } from "@/components/dashboard/dashboard-actions";
+import { DashboardCustomizer } from "@/components/dashboard/dashboard-customizer";
 
 export const metadata: Metadata = { title: "Board dashboard" };
 
@@ -38,7 +39,9 @@ export default async function DashboardPage({ params }: PageProps<"/app/orgs/[or
         </div>
         <DashboardActions orgId={orgId} canShare={org.role === "owner" || org.role === "admin"} />
       </div>
-      <BoardDashboard data={snap.data} showNames={!org.hideBoardNames} />
+      <DashboardCustomizer orgId={orgId} view="board" layout={org.dashboardLayouts.board} canCustomize={org.role === "owner" || org.role === "admin"}>
+        <BoardDashboard data={snap.data} showNames={!org.hideBoardNames} layout={org.dashboardLayouts.board} />
+      </DashboardCustomizer>
     </div>
   );
 }

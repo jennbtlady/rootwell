@@ -4,6 +4,7 @@ import { getDashboard, getOrg, inSetupMode, setupProgress, staffHome } from "@ma
 import { requireSession, withSession } from "@/lib/session";
 import { buttonVariants, Card, CardContent, CardDescription, CardHeader, CardTitle, Heading } from "@/components/ui";
 import { RemoveSampleButton } from "@/components/orgs/sample-org-buttons";
+import { DashboardCustomizer } from "@/components/dashboard/dashboard-customizer";
 import { StaffDashboard } from "@/components/dashboard/staff-dashboard";
 import { ROLE_LABEL } from "@/components/orgs/role-labels";
 import { SetupHome } from "@/components/setup/setup-home";
@@ -71,7 +72,12 @@ export default async function OrgPage({ params }: PageProps<"/app/orgs/[orgId]">
         </Card>
       )}
 
-      {snap && live && <StaffDashboard base={base} data={snap.data} live={live} />}
+      {snap && live && (
+        // The customize button appears once there is a dashboard to arrange (after the first gift).
+        <DashboardCustomizer orgId={orgId} view="staff" layout={org.dashboardLayouts.staff} canCustomize={canManage && live.recentGifts.length > 0}>
+          <StaffDashboard base={base} data={snap.data} live={live} layout={org.dashboardLayouts.staff} />
+        </DashboardCustomizer>
+      )}
 
       {org.isSample && org.role === "owner" && (
         <Card className="mt-4">

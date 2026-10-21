@@ -85,7 +85,10 @@ organization to start.
   board links.
 - The nightly figures gained `campaignGoals` and `lybunt`.
 
-**Still a placeholder:** Customize, choosing and ordering the cards for each view.
+**Customize, built (2026-10-21):** owners and admins choose which cards show and their
+order, separately for Home and for the board dashboard. One layout per organization for
+each view. See `docs/phase-6.md`, "Customizable dashboards". Per-person layouts are a
+possible later step.
 
 **Proposal, built from `docs/personas.md`:**
 

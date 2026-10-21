@@ -39,7 +39,7 @@ export default async function BoardPage({ params }: PageProps<"/board/[token]">)
         </div>
         <PrintButton />
       </div>
-      <BoardDashboard data={view.data} showNames={!view.hideNames} />
+      <BoardDashboard data={view.data} showNames={!view.hideNames} layout={view.layout} />
       <p className="text-20 text-text-weak">Shared read-only by {view.orgName}. Ask them for a new link if this one stops working.</p>
     </main>
   );

@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createDb, type Db } from "@maple/db";
+import { createDb, withPublic, type Db } from "@maple/db";
+import { boardView } from "@maple/core/services";
 import { app, setDb, setMailer, setVerifier, type Mail } from "../src";
 import { pdfPages } from "./pdf-text";
 
@@ -186,5 +187,32 @@ describe.skipIf(!DATABASE_URL)("acknowledgments, statements, reports", () => {
     expect((await call(board, "GET", "/reports/lybunt")).status).toBe(403);
     const dash = (await (await call(board, "GET", "/dashboard")).json()) as { data: { topGifts: { name: string }[] } };
     expect(dash.data.topGifts.every((g) => g.name === "A donor")).toBe(true);
+  });
+
+  it("dashboard layouts: owners choose the cards, board links follow, staff and board viewers cannot change them", async () => {
+    const board_ = ["headline", "key_numbers", "campaign_goals", "by_month", "by_fund", "top_gifts"];
+    // Largest gifts first, monthly chart hidden.
+    const cards = [...board_].reverse().map((id) => ({ id, shown: id !== "by_month" }));
+    expect((await call(owner, "PUT", "/dashboard-layout", { view: "board", cards })).status).toBe(200);
+    const org = (await (await call(owner, "GET", "")).json()) as { dashboardLayouts: { board: { id: string; shown: boolean }[]; staff: { id: string }[] } };
+    expect(org.dashboardLayouts.board).toEqual(cards);
+    expect(org.dashboardLayouts.staff.map((c) => c.id)).toEqual(["todo", "this_year", "reach_out", "campaign_goals", "recent_gifts"]);
+
+    // A board link carries the same layout, without signing in.
+    const { token } = (await (await call(owner, "POST", "/board-links", { label: "Layout check" })).json()) as { token: string };
+    const view = await withPublic(db, (tx) => boardView(tx, token));
+    expect(view?.layout).toEqual(cards);
+
+    // Every card once, at least one shown.
+    expect((await call(owner, "PUT", "/dashboard-layout", { view: "board", cards: cards.slice(1) })).status).toBe(400);
+    expect((await call(owner, "PUT", "/dashboard-layout", { view: "board", cards: cards.map((c) => ({ ...c, shown: false })) })).status).toBe(400);
+    expect((await call(owner, "PUT", "/dashboard-layout", { view: "board", cards: [...cards.slice(1), { id: "made_up", shown: true }] })).status).toBe(400);
+    expect((await call(board, "PUT", "/dashboard-layout", { view: "board", cards })).status).toBe(403);
+    expect((await call(board, "DELETE", "/dashboard-layout/board")).status).toBe(403);
+
+    // Reset goes back to the default order.
+    expect((await call(owner, "DELETE", "/dashboard-layout/board")).status).toBe(200);
+    const after = (await (await call(owner, "GET", "")).json()) as { dashboardLayouts: { board: { id: string; shown: boolean }[] } };
+    expect(after.dashboardLayouts.board).toEqual(board_.map((id) => ({ id, shown: true })));
   });
 });

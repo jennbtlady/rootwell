@@ -185,7 +185,10 @@ begin
   else
     v := jsonb_set(v, '{topGifts}', coalesce((select jsonb_agg(g - 'constituentId' - 'giftId') from jsonb_array_elements(v->'topGifts') g), '[]'));
   end if;
-  return jsonb_build_object('orgName', o.name, 'computedAt', s.computed_at, 'hideNames', o.hide_board_names, 'data', v);
+  -- The organization's chosen board cards travel with the data, so a board link shows the
+  -- same layout as Reports, Board dashboard.
+  return jsonb_build_object('orgName', o.name, 'computedAt', s.computed_at, 'hideNames', o.hide_board_names, 'data', v,
+                            'layout', coalesce(o.dashboard_layouts->'board', '[]'::jsonb));
 end $$;
 grant execute on function app.board_view(text) to anon, authenticated;
 grant execute on function app.refresh_dashboard(uuid) to authenticated;

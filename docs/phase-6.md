@@ -91,6 +91,10 @@ Also this phase, at Jenn's request:
 
 ## Rollback
 
+Migration `0012_phase6_dashboard_layouts`: drop `organizations.dashboard_layouts` and take
+`'layout'` back out of `app.board_view` in `0007_reporting.sql`. The dashboards fall back
+to the standard order.
+
 Migration `0011_phase6_import_options`: drop `import_jobs.options`, then restore
 `app.commit_import` and the "similar name" wording from git history (`0005_dedupe.sql`,
 `0006_imports.sql`). Gifts already imported keep their "before import" thank-you.
@@ -345,3 +349,49 @@ Every remaining Minor finding in the walkthrough report is now fixed or confirme
   - `e2e/phase-6-polish.spec.ts`.
   - Additions to the import, reporting, Dana trust and setup wizard specs.
   - Import warning cases in `packages/core/test/import.test.ts`.
+
+## Customizable dashboards (2026-10-21)
+
+Owners and admins choose which cards show, and in what order. Home (the staff view) and
+the board dashboard each have their own layout, one per organization (Jenn's direction).
+Everyone in the organization sees the same layout, and board links follow the board one.
+
+- **Using it.**
+  - Customize is a button at the top of Home (once the first gift is in) and of Reports,
+    Board dashboard.
+  - It lists the cards with a Show checkbox and Up and Down buttons. These are buttons, not
+    dragging, so moving a card works by keyboard, with a screen reader, and on a phone.
+  - Focus stays on the button just pressed, and each move is announced ("Recent gifts
+    moved to position 1 of 5").
+  - Save layout, Cancel, or "Use the standard layout".
+- **Cards.**
+  - Home: To do, How this fiscal year is going, Who to reach out to, Campaign goals,
+    Recent gifts.
+  - Board: Summary sentence, Key numbers, Campaign goals, Dollars by month, By fund,
+    Largest gifts.
+  - The list and its rules live in `packages/core/src/dashboard-layout.ts`.
+- **Layout rules.**
+  - Two "half" cards next to each other sit side by side on a wide screen. A half card
+    without a half neighbour takes the full width.
+  - The page order always follows the chosen order, so a screen reader meets the cards
+    as arranged.
+  - Cards added to the app later appear at the end, shown. Unknown cards in a saved
+    layout are ignored.
+- **Data.**
+  - `organizations.dashboard_layouts` holds `{ staff: [{ id, shown }], board: [...] }`.
+    Empty means the standard layout. This was approved by Jenn.
+  - `getOrg` returns both layouts, already checked against the card list.
+  - `app.board_view` adds the board layout for board links.
+- **API.**
+  - `PUT /orgs/:orgId/dashboard-layout` with `{ view, cards }`. It needs every card once
+    and at least one shown.
+  - `DELETE /orgs/:orgId/dashboard-layout/:view` resets to the standard layout.
+  - Both are for owners and admins. RLS on `organizations` already limits updates to them,
+    with MFA, and blocks lapsed accounts.
+- **Sample organization:** no seed change. It starts on the standard layout, which is the
+  useful starting point.
+- **Tests:**
+  - `apps/web/e2e/phase-6-dashboard-layout.spec.ts`: keyboard, 375px, board links, staff
+    cannot customize, and reset.
+  - The layouts case in `packages/api/test/reporting.test.ts`, plus route-matrix entries.
+  - `packages/core/test/dashboard-layout.test.ts`.

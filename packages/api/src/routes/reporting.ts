@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { sql } from "drizzle-orm";
 import { withRls, type RlsTx } from "@maple/db";
-import { REPORT_IDS, REPORTS, reportParams, toCsv, unknownMergeFields } from "@maple/core";
+import { DASHBOARD_VIEWS, dashboardLayoutInput, REPORT_IDS, REPORTS, reportParams, toCsv, unknownMergeFields } from "@maple/core";
 import {
   createShareLink,
   getDashboard,
@@ -12,9 +12,11 @@ import {
   recordAcks,
   redactForBoard,
   refreshDashboard,
+  resetDashboardLayout,
   renderAcks,
   revokeShareLink,
   runReport,
+  saveDashboardLayout,
   saveTemplate,
   setHideBoardNames,
   statementDonors,
@@ -63,6 +65,32 @@ export const reporting = new Hono<ApiEnv>()
     });
     if (!out) return c.json({ error: "Not found" }, 404);
     return c.json(out);
+  })
+  // ---- dashboard layouts: one per organization and view. Owners and admins change them.
+  .put("/:orgId/dashboard-layout", validate("param", orgParam), validate("json", dashboardLayoutInput), async (c) => {
+    const { orgId } = c.req.valid("param");
+    const body = c.req.valid("json");
+    const out = await withRls(getDb(), c.get("claims"), async (tx) => {
+      const { role } = await roleIn(tx, orgId);
+      if (!role) return "missing" as const;
+      if (role !== "owner" && role !== "admin") return "forbidden" as const;
+      return (await saveDashboardLayout(tx, orgId, body)) ? ("ok" as const) : ("forbidden" as const);
+    });
+    if (out === "missing") return c.json({ error: "Not found" }, 404);
+    if (out === "forbidden") return c.json(forbidden, 403);
+    return c.json({ ok: true });
+  })
+  .delete("/:orgId/dashboard-layout/:view", validate("param", orgParam.extend({ view: z.enum(DASHBOARD_VIEWS) })), async (c) => {
+    const { orgId, view } = c.req.valid("param");
+    const out = await withRls(getDb(), c.get("claims"), async (tx) => {
+      const { role } = await roleIn(tx, orgId);
+      if (!role) return "missing" as const;
+      if (role !== "owner" && role !== "admin") return "forbidden" as const;
+      return (await resetDashboardLayout(tx, orgId, view)) ? ("ok" as const) : ("forbidden" as const);
+    });
+    if (out === "missing") return c.json({ error: "Not found" }, 404);
+    if (out === "forbidden") return c.json(forbidden, 403);
+    return c.json({ ok: true });
   })
   // ---- board sharing (owners and admins; RLS enforces)
   .get("/:orgId/board-links", validate("param", orgParam), async (c) => {

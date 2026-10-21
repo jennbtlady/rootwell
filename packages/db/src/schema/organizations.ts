@@ -31,6 +31,8 @@ export const organizations = pgTable("organizations", {
   logoPath: text("logo_path"),
   giftEntryStandards: jsonb("gift_entry_standards").$type<GiftEntryStandards>().notNull().default({}),
   hideBoardNames: boolean("hide_board_names").notNull().default(true),
+  /** Card order and visibility for each dashboard, one layout per organization: { staff: [{ id, shown }], board: [...] }. Empty means the default layout. */
+  dashboardLayouts: jsonb("dashboard_layouts").notNull().default({}),
   // True only for the demo organization every account can add and remove.
   sampleOrgEnabled: boolean("sample_org_enabled").notNull().default(false),
   /** Account names for the QuickBooks export. */
