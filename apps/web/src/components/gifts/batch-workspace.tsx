@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { GIFT_FIELD_LABEL, GIFT_TYPES, GIFT_TYPE_LABEL, PAYMENT_METHODS, PAYMENT_METHOD_LABEL, requiredGiftFields, type GiftEntryStandards, type GiftField } from "@maple/core";
 import type { Batch, CodingRow, Gift } from "@maple/core/services";
 import { api, errorMessage } from "@/lib/api";
+import { useEarlyTyping } from "@/lib/early-typing";
 import { formatDate, formatMoney } from "@/lib/format";
 import { Alert, AlertDescription, AlertTitle, Button, Combobox, EmptyState, FormField, Input, Select, Table, TBody, TD, Textarea, TH, THead, TR, useToast, type ComboboxItem, useConfirm } from "@/components/ui";
 import { anchorClass } from "@/components/ui/text";
@@ -159,6 +160,17 @@ function GiftEntryForm({ orgId, batch, standards, funds, campaigns, appeals, pre
   const amountRef = useRef<HTMLInputElement>(null);
   const donorRef = useRef<HTMLInputElement>(null);
   const searchSeq = useRef(0);
+  const form = useRef<HTMLFormElement>(null);
+
+  // Amounts, dates and notes typed before the page's scripts loaded still count.
+  useEarlyTyping(form, (name, value) => {
+    const setters: Record<string, (v: string) => void> = {
+      amount: setAmount, giftDate: setGiftDate, fundId: setFundId, campaignId: setCampaignId, appealId: setAppealId,
+      paymentMethod: (v) => setPaymentMethod(v as typeof paymentMethod), giftType: (v) => setGiftType(v as typeof giftType),
+      checkNumber: setCheckNumber, reference: setReference, fairMarketValue: setFmv, notes: setNotes,
+    };
+    setters[name]?.(value);
+  });
 
   useEffect(() => {
     if (e0 || preselected) amountRef.current?.focus();
@@ -222,7 +234,7 @@ function GiftEntryForm({ orgId, batch, standards, funds, campaigns, appeals, pre
   const isInKind = giftType === "in_kind";
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-4 rounded-30 border border-border-weaker bg-background-weakest p-4 sm:p-6" noValidate aria-labelledby="gift-entry-title">
+    <form ref={form} method="post" onSubmit={submit} className="flex flex-col gap-4 rounded-30 border border-border-weaker bg-background-weakest p-4 sm:p-6" noValidate aria-labelledby="gift-entry-title">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 id="gift-entry-title" className="scroll-mt-4 font-display text-40 font-medium">
           {e0 ? `Edit the ${formatMoney(e0.amount)} gift from ${e0.constituentName}` : "Enter a gift"}
@@ -269,14 +281,14 @@ function GiftEntryForm({ orgId, batch, standards, funds, campaigns, appeals, pre
           )}
         </FormField>
         <FormField id="gift-amount" label={GIFT_FIELD_LABEL.amount} required error={fe("amount")} help={hint("amount")}>
-          {(f) => <Input {...f} ref={amountRef} inputMode="decimal" insertBefore="$" value={amount} onChange={(e) => setAmount(e.target.value)} />}
+          {(f) => <Input {...f} ref={amountRef} inputMode="decimal" insertBefore="$" name="amount" value={amount} onChange={(e) => setAmount(e.target.value)} />}
         </FormField>
         <FormField id="gift-date" label={GIFT_FIELD_LABEL.giftDate} required error={fe("giftDate")} help={hint("giftDate")}>
-          {(f) => <Input {...f} type="date" value={giftDate} onChange={(e) => setGiftDate(e.target.value)} />}
+          {(f) => <Input {...f} type="date" name="giftDate" value={giftDate} onChange={(e) => setGiftDate(e.target.value)} />}
         </FormField>
         <FormField id="gift-fund" label={GIFT_FIELD_LABEL.fundId} required error={fe("fundId")} help={hint("fundId")}>
           {(f) => (
-            <Select {...f} value={fundId} onChange={(e) => setFundId(e.target.value)}>
+            <Select {...f} name="fundId" value={fundId} onChange={(e) => setFundId(e.target.value)}>
               <option value="">Choose a fund</option>
               {funds.map((x) => (
                 <option key={x.id} value={x.id}>
@@ -288,7 +300,7 @@ function GiftEntryForm({ orgId, batch, standards, funds, campaigns, appeals, pre
         </FormField>
         <FormField id="gift-campaign" label={GIFT_FIELD_LABEL.campaignId} required={required.has("campaignId")} optional={!required.has("campaignId")} error={fe("campaignId")} help={hint("campaignId")}>
           {(f) => (
-            <Select {...f} value={campaignId} onChange={(e) => setCampaignId(e.target.value)}>
+            <Select {...f} name="campaignId" value={campaignId} onChange={(e) => setCampaignId(e.target.value)}>
               <option value="">{required.has("campaignId") ? "Choose a campaign" : "None"}</option>
               {campaigns.map((x) => (
                 <option key={x.id} value={x.id}>
@@ -301,7 +313,7 @@ function GiftEntryForm({ orgId, batch, standards, funds, campaigns, appeals, pre
         {(appeals.length > 0 || required.has("appealId")) && (
           <FormField id="gift-appeal" label={GIFT_FIELD_LABEL.appealId} required={required.has("appealId")} optional={!required.has("appealId")} error={fe("appealId")} help={hint("appealId")}>
             {(f) => (
-              <Select {...f} value={appealId} onChange={(e) => setAppealId(e.target.value)}>
+              <Select {...f} name="appealId" value={appealId} onChange={(e) => setAppealId(e.target.value)}>
                 <option value="">None</option>
                 {appeals.map((x) => (
                   <option key={x.id} value={x.id}>
@@ -314,7 +326,7 @@ function GiftEntryForm({ orgId, batch, standards, funds, campaigns, appeals, pre
         )}
         <FormField id="gift-method" label={GIFT_FIELD_LABEL.paymentMethod} required error={fe("paymentMethod")} help={hint("paymentMethod")}>
           {(f) => (
-            <Select {...f} value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as typeof paymentMethod)}>
+            <Select {...f} name="paymentMethod" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as typeof paymentMethod)}>
               {PAYMENT_METHODS.map((m) => (
                 <option key={m} value={m}>
                   {PAYMENT_METHOD_LABEL[m]}
@@ -325,12 +337,12 @@ function GiftEntryForm({ orgId, batch, standards, funds, campaigns, appeals, pre
         </FormField>
         {isCheck && (
           <FormField id="gift-check" label={GIFT_FIELD_LABEL.checkNumber} required={standards.checkNumberForChecks || required.has("checkNumber")} error={fe("checkNumber")} help={hint("checkNumber")}>
-            {(f) => <Input {...f} inputMode="numeric" value={checkNumber} onChange={(e) => setCheckNumber(e.target.value)} />}
+            {(f) => <Input {...f} inputMode="numeric" name="checkNumber" value={checkNumber} onChange={(e) => setCheckNumber(e.target.value)} />}
           </FormField>
         )}
         <FormField id="gift-type" label={GIFT_FIELD_LABEL.giftType} required error={fe("giftType")} help={hint("giftType")}>
           {(f) => (
-            <Select {...f} value={giftType} onChange={(e) => setGiftType(e.target.value as typeof giftType)}>
+            <Select {...f} name="giftType" value={giftType} onChange={(e) => setGiftType(e.target.value as typeof giftType)}>
               {GIFT_TYPES.filter((t) => t !== "soft_credit" && t !== "pledge_payment" && t !== "recurring").map((t) => (
                 <option key={t} value={t}>
                   {GIFT_TYPE_LABEL[t]}
@@ -341,16 +353,16 @@ function GiftEntryForm({ orgId, batch, standards, funds, campaigns, appeals, pre
         </FormField>
         {isInKind && (
           <FormField id="gift-fmv" label="Fair market value" required error={fe("fairMarketValue")} help="What the item would sell for. The deductible amount is the gift less this.">
-            {(f) => <Input {...f} inputMode="decimal" insertBefore="$" value={fmv} onChange={(e) => setFmv(e.target.value)} />}
+            {(f) => <Input {...f} inputMode="decimal" insertBefore="$" name="fairMarketValue" value={fmv} onChange={(e) => setFmv(e.target.value)} />}
           </FormField>
         )}
         {(required.has("reference") || reference) && (
           <FormField id="gift-ref" label={GIFT_FIELD_LABEL.reference} required={required.has("reference")} error={fe("reference")} help={hint("reference")}>
-            {(f) => <Input {...f} value={reference} onChange={(e) => setReference(e.target.value)} />}
+            {(f) => <Input {...f} name="reference" value={reference} onChange={(e) => setReference(e.target.value)} />}
           </FormField>
         )}
         <FormField id="gift-notes" label={GIFT_FIELD_LABEL.notes} required={required.has("notes")} optional={!required.has("notes")} error={fe("notes")} help={hint("notes")} className="sm:col-span-2">
-          {(f) => <Textarea {...f} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />}
+          {(f) => <Textarea {...f} rows={2} name="notes" value={notes} onChange={(e) => setNotes(e.target.value)} />}
         </FormField>
       </div>
 

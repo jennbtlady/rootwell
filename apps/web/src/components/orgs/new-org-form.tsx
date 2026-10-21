@@ -36,7 +36,7 @@ export function NewOrgForm() {
 
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
+    <form method="post" onSubmit={submit} className="flex flex-col gap-4" noValidate>
       <FormField id="name" label="Organization name" required>
         {(f) => <Input {...f} name="name" required autoComplete="organization" value={name} onChange={(e) => setName(e.target.value)} />}
       </FormField>

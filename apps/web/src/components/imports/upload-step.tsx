@@ -55,7 +55,7 @@ export function UploadStep({ orgId }: { orgId: string }) {
   }
 
   return (
-    <form onSubmit={upload} className="flex max-w-3xl flex-col gap-6" noValidate>
+    <form method="post" onSubmit={upload} className="flex max-w-3xl flex-col gap-6" noValidate>
       <RadioGroup legend="What is in the file?">
         <Radio name="kind" value="constituents_gifts" label="People and their gifts" help="One gift per row, with the person's details repeated on each row. Most exports from other donor tools look like this." checked={kind === "constituents_gifts"} onChange={() => setKind("constituents_gifts")} />
         <Radio name="kind" value="constituents" label="People only" help="One person per row. No gift amounts." checked={kind === "constituents"} onChange={() => setKind("constituents")} />

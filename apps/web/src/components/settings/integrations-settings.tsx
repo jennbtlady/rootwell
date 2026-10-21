@@ -180,7 +180,7 @@ function MailchimpCard({ orgId, mailchimp }: { orgId: string; mailchimp: Integra
           </Alert>
         )}
         {!connected ? (
-          <form onSubmit={saveKey} className="flex flex-wrap items-end gap-2" noValidate>
+          <form method="post" onSubmit={saveKey} className="flex flex-wrap items-end gap-2" noValidate>
             <FormField id="mc-key" className="w-full sm:w-80" label="Mailchimp API key" error={keyError} help="In Mailchimp, open your profile, then Extras, then API keys. Make a key and paste it here. It is stored encrypted.">
               {(f) => <Input {...f} type="password" autoComplete="off" value={key} onChange={(e) => setKey(e.target.value)} />}
             </FormField>
@@ -190,7 +190,7 @@ function MailchimpCard({ orgId, mailchimp }: { orgId: string; mailchimp: Integra
           </form>
         ) : (
           <>
-            <form onSubmit={saveConfig} className="flex flex-col gap-3" noValidate>
+            <form method="post" onSubmit={saveConfig} className="flex flex-col gap-3" noValidate>
               <FormField id="mc-list" label="Audience" help="Mailchimp calls a mailing list an audience.">
                 {(f) => (
                   <Select {...f} value={listId} onChange={(e) => setListId(e.target.value)} disabled={!audiences}>
@@ -271,7 +271,7 @@ function QuickBooksCard({ orgId, accounting }: { orgId: string; accounting: Acco
         <CardDescription>
           Download your posted batches as journal entries for QuickBooks Online. Each batch becomes one entry: the deposit to your bank, any card fees, and the gifts by fund. Use the account names exactly as they appear in your QuickBooks chart of accounts.
         </CardDescription>
-        <form onSubmit={save} className="grid gap-4 sm:grid-cols-3" noValidate>
+        <form method="post" onSubmit={save} className="grid gap-4 sm:grid-cols-3" noValidate>
           {field("depositAccount", "Bank account", "Where deposits land.", "Checking")}
           {field("feeAccount", "Fees account", "An expense account for card fees.", "Bank and payment fees")}
           {field("defaultIncomeAccount", "Default income account", "For funds without their own. Set a fund's own account under Funds.", "Contributions")}

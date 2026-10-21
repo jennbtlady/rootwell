@@ -67,7 +67,7 @@ export function MappingStep({ orgId, job, samples, saved, onDone }: { orgId: str
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-5" noValidate>
+    <form method="post" onSubmit={submit} className="flex flex-col gap-5" noValidate>
       <p className="max-w-3xl text-30 leading-5 text-text-weak">
         {sameHeaders
           ? `This file has the same columns as your saved mapping "${sameHeaders.name}", so we used it.`

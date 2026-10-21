@@ -13,7 +13,7 @@ export function ConstituentSearch({ base, initial }: { base: string; initial: st
     router.push(q.trim() ? `${base}?q=${encodeURIComponent(q.trim())}` : base);
   }
   return (
-    <form onSubmit={submit} role="search" className="flex max-w-xl items-end gap-2">
+    <form method="post" onSubmit={submit} role="search" className="flex max-w-xl items-end gap-2">
       <div className="flex-1">
         <Label htmlFor="constituent-q" className="sr-only">
           Search donors

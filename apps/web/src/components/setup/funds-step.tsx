@@ -56,7 +56,7 @@ export function FundsStep({ data, nav }: { data: WizardData; nav: WizardNav }) {
   const nothingYet = data.funds.length === 0 && picked.length === 0 && !other.trim();
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-6" noValidate>
+    <form method="post" onSubmit={submit} className="flex flex-col gap-6" noValidate>
       <section className="flex flex-col gap-3">
         <Intro>A fund is the pot of money a gift goes into. Most small organizations need one or two. You can add more any time.</Intro>
         {data.funds.length > 0 && (

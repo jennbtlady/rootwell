@@ -34,7 +34,7 @@ export function TemplateEditor({ orgId, template }: { orgId: string; template: A
   const p = `tpl-${template.id}`;
   return (
     <Card>
-      <form onSubmit={save} className="flex flex-col gap-4" noValidate>
+      <form method="post" onSubmit={save} className="flex flex-col gap-4" noValidate>
         <div className="flex items-center gap-2">
           <Badge variant="neutral">{template.channel === "email" ? "Email" : "Letter"}</Badge>
         </div>

@@ -1,9 +1,10 @@
 "use client";
 
-import { useId, useState, type FormEvent } from "react";
+import { useId, useRef, useState, type FormEvent } from "react";
 import { grossUpForFee } from "@maple/core";
 import { Alert, AlertDescription, Button, Card, Checkbox, FormField, Input, Select } from "@/components/ui";
 import { cn } from "@/lib/cn";
+import { useEarlyTyping } from "@/lib/early-typing";
 
 const usd = (cents: number) => (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: cents % 100 ? 2 : 0 });
 
@@ -16,6 +17,15 @@ export function GiveForm({ slug, amounts, funds, allowMonthly, offerCoverFees }:
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const name = useId();
+  const form = useRef<HTMLFormElement>(null);
+  // An amount tapped before the page's scripts loaded is the amount given.
+  useEarlyTyping(form, (field, value, checked) => {
+    if (field === `${name}-freq`) setMonthly(value === "monthly");
+    if (field === `${name}-amt`) setChoice(value);
+    if (field === `${name}-other`) setOther(value);
+    if (field === `${name}-fund`) setFundId(value);
+    if (field === `${name}-cover`) setCover(checked);
+  });
 
   const dollars = choice === "other" ? Number(other.replace(/[$,\s]/g, "")) : Number(choice);
   const valid = Number.isFinite(dollars) && dollars >= 1 && dollars <= 100000;
@@ -48,7 +58,7 @@ export function GiveForm({ slug, amounts, funds, allowMonthly, offerCoverFees }:
 
   return (
     <Card>
-      <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
+      <form ref={form} method="post" onSubmit={submit} className="flex flex-col gap-4" noValidate>
         {allowMonthly && (
           <fieldset>
             <legend className="mb-2 text-30 font-semibold">How often</legend>
@@ -58,7 +68,7 @@ export function GiveForm({ slug, amounts, funds, allowMonthly, offerCoverFees }:
                 { v: true, l: "Every month" },
               ].map((o) => (
                 <label key={o.l} className={pill(monthly === o.v)}>
-                  <input type="radio" className="sr-only" name={`${name}-freq`} checked={monthly === o.v} onChange={() => setMonthly(o.v)} />
+                  <input type="radio" className="sr-only" name={`${name}-freq`} value={o.v ? "monthly" : "once"} checked={monthly === o.v} onChange={() => setMonthly(o.v)} />
                   {o.l}
                 </label>
               ))}
@@ -82,13 +92,13 @@ export function GiveForm({ slug, amounts, funds, allowMonthly, offerCoverFees }:
         </fieldset>
         {choice === "other" && (
           <FormField id={`${name}-other`} label="Your amount" required>
-            {(f) => <Input {...f} inputMode="decimal" insertBefore="$" autoFocus value={other} onChange={(e) => setOther(e.target.value)} />}
+            {(f) => <Input {...f} inputMode="decimal" insertBefore="$" autoFocus name={`${name}-other`} value={other} onChange={(e) => setOther(e.target.value)} />}
           </FormField>
         )}
         {funds.length > 1 && (
           <FormField id={`${name}-fund`} label="Where your gift goes">
             {(f) => (
-              <Select {...f} value={fundId} onChange={(e) => setFundId(e.target.value)}>
+              <Select {...f} name={`${name}-fund`} value={fundId} onChange={(e) => setFundId(e.target.value)}>
                 {funds.map((x) => (
                   <option key={x.id} value={x.id}>
                     {x.name}
@@ -102,6 +112,7 @@ export function GiveForm({ slug, amounts, funds, allowMonthly, offerCoverFees }:
           <Checkbox
             label={valid ? `Add ${usd(grossUpForFee(giftCents) - giftCents)} to cover the card fee` : "Add a little to cover the card fee"}
             help="So all of your gift reaches us."
+            name={`${name}-cover`}
             checked={cover}
             onChange={(e) => setCover(e.target.checked)}
           />

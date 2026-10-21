@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useRef, useState, type FormEvent, type ReactNode } from "react";
 import { US_TIMEZONES } from "@maple/core";
 import type { OrgDetail } from "@maple/core/services";
 import { api, errorMessage } from "@/lib/api";
+import { useEarlyTyping } from "@/lib/early-typing";
 import { Alert, AlertDescription, Button, FormField, Input, Select } from "@/components/ui";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -25,6 +26,15 @@ export function ProfileForm({ org, submitLabel, onSaved, extraActions }: { org: 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const form = useRef<HTMLFormElement>(null);
+  // Copies in anything typed before the page's scripts loaded.
+  useEarlyTyping(form, (field, value) => {
+    const setters: Record<string, (v: string) => void> = {
+      name: setName, ein: setEin, line1: setLine1, line2: setLine2, city: setCity, state: (v) => setState(v.toUpperCase()), postalCode: setPostalCode,
+      fiscalYearStartMonth: (v) => setMonth(Number(v)), timezone: setTimezone,
+    };
+    setters[field]?.(value);
+  });
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -48,36 +58,36 @@ export function ProfileForm({ org, submitLabel, onSaved, extraActions }: { org: 
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
+    <form ref={form} method="post" onSubmit={submit} className="flex flex-col gap-4" noValidate>
       {formError && (
         <Alert variant="error">
           <AlertDescription>{formError}</AlertDescription>
         </Alert>
       )}
       <FormField id="org-name" label="Organization name" required error={errors.name}>
-        {(f) => <Input {...f} autoComplete="organization" value={name} onChange={(e) => setName(e.target.value)} />}
+        {(f) => <Input {...f} autoComplete="organization" name="name" value={name} onChange={(e) => setName(e.target.value)} />}
       </FormField>
       <FormField id="org-ein" label="EIN (federal tax ID)" optional error={errors.ein} help="Nine digits, on your IRS determination letter. Donors need it for their taxes. Leave blank if you do not have one yet.">
-        {(f) => <Input {...f} inputMode="numeric" placeholder="12-3456789" value={ein} onChange={(e) => setEin(e.target.value)} className="sm:max-w-60" />}
+        {(f) => <Input {...f} inputMode="numeric" placeholder="12-3456789" name="ein" value={ein} onChange={(e) => setEin(e.target.value)} className="sm:max-w-60" />}
       </FormField>
       <fieldset className="flex flex-col gap-3">
         <legend className="mb-1 text-30 font-semibold">Mailing address</legend>
         <p className="-mt-1 text-20 leading-4 text-text-weak">Printed on thank-you letters and year-end statements.</p>
         <FormField id="org-line1" label="Street" required error={errors.line1}>
-          {(f) => <Input {...f} autoComplete="address-line1" value={line1} onChange={(e) => setLine1(e.target.value)} />}
+          {(f) => <Input {...f} autoComplete="address-line1" name="line1" value={line1} onChange={(e) => setLine1(e.target.value)} />}
         </FormField>
         <FormField id="org-line2" label="Suite or PO box" optional error={errors.line2}>
-          {(f) => <Input {...f} autoComplete="address-line2" value={line2} onChange={(e) => setLine2(e.target.value)} />}
+          {(f) => <Input {...f} autoComplete="address-line2" name="line2" value={line2} onChange={(e) => setLine2(e.target.value)} />}
         </FormField>
         <div className="grid gap-3 sm:grid-cols-[1fr_6rem_8rem]">
           <FormField id="org-city" label="City" error={errors.city}>
-            {(f) => <Input {...f} autoComplete="address-level2" value={city} onChange={(e) => setCity(e.target.value)} />}
+            {(f) => <Input {...f} autoComplete="address-level2" name="city" value={city} onChange={(e) => setCity(e.target.value)} />}
           </FormField>
           <FormField id="org-state" label="State" error={errors.state}>
-            {(f) => <Input {...f} autoComplete="address-level1" maxLength={2} value={state} onChange={(e) => setState(e.target.value.toUpperCase())} />}
+            {(f) => <Input {...f} autoComplete="address-level1" maxLength={2} name="state" value={state} onChange={(e) => setState(e.target.value.toUpperCase())} />}
           </FormField>
           <FormField id="org-zip" label="ZIP code" error={errors.postalCode}>
-            {(f) => <Input {...f} autoComplete="postal-code" inputMode="numeric" value={postalCode} onChange={(e) => setPostalCode(e.target.value)} />}
+            {(f) => <Input {...f} autoComplete="postal-code" inputMode="numeric" name="postalCode" value={postalCode} onChange={(e) => setPostalCode(e.target.value)} />}
           </FormField>
         </div>
       </fieldset>
@@ -87,7 +97,7 @@ export function ProfileForm({ org, submitLabel, onSaved, extraActions }: { org: 
         help="The month your books start each year. Most nonprofits use January or July; your treasurer or your Form 990 will say. On your dashboards, &quot;this year&quot; counts from this month."
       >
         {(f) => (
-          <Select {...f} value={month} onChange={(e) => setMonth(Number(e.target.value))} className="sm:max-w-60">
+          <Select {...f} name="fiscalYearStartMonth" value={month} onChange={(e) => setMonth(Number(e.target.value))} className="sm:max-w-60">
             {MONTHS.map((m, i) => (
               <option key={m} value={i + 1}>
                 {m}
@@ -98,7 +108,7 @@ export function ProfileForm({ org, submitLabel, onSaved, extraActions }: { org: 
       </FormField>
       <FormField id="org-tz" label="Time zone" help="Used for gift dates and the nightly dashboard update.">
         {(f) => (
-          <Select {...f} value={timezone} onChange={(e) => setTimezone(e.target.value)} className="sm:max-w-60">
+          <Select {...f} name="timezone" value={timezone} onChange={(e) => setTimezone(e.target.value)} className="sm:max-w-60">
             {US_TIMEZONES.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.label}

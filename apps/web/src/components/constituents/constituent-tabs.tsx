@@ -128,7 +128,7 @@ function InteractionsPanel({ orgId, constituentId, interactions }: { orgId: stri
         </div>
       )}
       {open && (
-        <form onSubmit={submit} className="flex max-w-xl flex-col gap-4 rounded-30 border border-border-weaker bg-background-weakest p-4" noValidate>
+        <form method="post" onSubmit={submit} className="flex max-w-xl flex-col gap-4 rounded-30 border border-border-weaker bg-background-weakest p-4" noValidate>
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField id="int-type" label="Type">
               {(f) => (
@@ -242,7 +242,7 @@ function RelationshipsPanel({ orgId, constituent: c }: { orgId: string; constitu
         </div>
       )}
       {open && (
-        <form onSubmit={submit} className="flex max-w-xl flex-col gap-4 rounded-30 border border-border-weaker bg-background-weakest p-4" noValidate>
+        <form method="post" onSubmit={submit} className="flex max-w-xl flex-col gap-4 rounded-30 border border-border-weaker bg-background-weakest p-4" noValidate>
           <FormField id="rel-type" label={`${c.displayName} is the`}>
             {(f) => (
               <Select {...f} value={type} onChange={(e) => setType(e.target.value)}>
@@ -375,7 +375,7 @@ function DetailsPanel({ orgId, constituent: c, allTags }: { orgId: string; const
             />
           ))}
         </div>
-        <form onSubmit={addTag} className="flex items-end gap-2">
+        <form method="post" onSubmit={addTag} className="flex items-end gap-2">
           <FormField id="new-tag" label="New tag" className="flex-1">
             {(f) => <Input {...f} value={newTag} onChange={(e) => setNewTag(e.target.value)} placeholder="Board, Volunteer, Monthly donor" />}
           </FormField>

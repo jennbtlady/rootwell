@@ -53,7 +53,7 @@ export function BoardSharing({ orgId, hideNames, links }: { orgId: string; hideN
           <CardTitle>Make a link</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={create} className="flex flex-wrap items-end gap-2" noValidate>
+          <form method="post" onSubmit={create} className="flex flex-wrap items-end gap-2" noValidate>
             <FormField id="link-label" label="Who it is for">
               {(f) => <Input {...f} value={label} onChange={(e) => setLabel(e.target.value)} />}
             </FormField>

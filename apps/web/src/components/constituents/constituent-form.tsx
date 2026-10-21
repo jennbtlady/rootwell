@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import type { ConstituentInput } from "@maple/core";
 import type { Constituent, DuplicateCandidate } from "@maple/core/services";
 import { api, errorMessage } from "@/lib/api";
+import { useEarlyTyping } from "@/lib/early-typing";
 import { buttonVariants } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle, Button, Checkbox, FormField, Input, Radio, RadioGroup, Select, Textarea } from "@/components/ui";
 import { anchorClass } from "@/components/ui/text";
@@ -95,7 +96,18 @@ export function ConstituentForm({ orgId, existing, prefillName = "", returnToBat
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [dupes, setDupes] = useState<DuplicateCandidate[]>([]);
   const dupeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const form = useRef<HTMLFormElement>(null);
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setD((x) => ({ ...x, [k]: v }));
+  // Each field is named after its key in the draft, so text typed before the page's
+  // scripts loaded is copied in (and the duplicate check still sees it).
+  useEarlyTyping(form, (name, value, checked) => {
+    if (!(name in EMPTY)) return;
+    const k = name as keyof Draft;
+    setD((x) => {
+      const v = typeof EMPTY[k] === "boolean" ? checked : k === "state" ? value.toUpperCase() : value;
+      return x[k] === v ? x : { ...x, [k]: v };
+    });
+  });
   const base = `/app/orgs/${orgId}/constituents`;
   // Where a chosen donor goes: back to the batch being entered, or to their record.
   const destination = (id: string) => (returnToBatch ? `/app/orgs/${orgId}/batches/${returnToBatch}?constituent=${id}` : `${base}/${id}`);
@@ -156,7 +168,7 @@ export function ConstituentForm({ orgId, existing, prefillName = "", returnToBat
   const fe = (k: string) => fieldErrors[k];
 
   return (
-    <form onSubmit={submit} className="flex max-w-2xl flex-col gap-6" noValidate>
+    <form ref={form} method="post" onSubmit={submit} className="flex max-w-2xl flex-col gap-6" noValidate>
       <RadioGroup legend="Type">
         <div className="flex flex-wrap gap-4">
           <Radio name="type" value="person" label="Person" checked={d.type === "person"} onChange={() => set("type", "person")} />
@@ -168,35 +180,35 @@ export function ConstituentForm({ orgId, existing, prefillName = "", returnToBat
       {isPerson ? (
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField id="firstName" label="First name" error={fe("firstName")}>
-            {(f) => <Input {...f} autoComplete="off" value={d.firstName} onChange={(e) => set("firstName", e.target.value)} />}
+            {(f) => <Input {...f} autoComplete="off" name="firstName" value={d.firstName} onChange={(e) => set("firstName", e.target.value)} />}
           </FormField>
           <FormField id="lastName" label="Last name" required error={fe("lastName")}>
-            {(f) => <Input {...f} autoComplete="off" value={d.lastName} onChange={(e) => set("lastName", e.target.value)} />}
+            {(f) => <Input {...f} autoComplete="off" name="lastName" value={d.lastName} onChange={(e) => set("lastName", e.target.value)} />}
           </FormField>
           <FormField id="preferredName" label="Goes by" optional help="Used in letters and on screen instead of the first name.">
-            {(f) => <Input {...f} autoComplete="off" value={d.preferredName} onChange={(e) => set("preferredName", e.target.value)} />}
+            {(f) => <Input {...f} autoComplete="off" name="preferredName" value={d.preferredName} onChange={(e) => set("preferredName", e.target.value)} />}
           </FormField>
           <div className="grid grid-cols-2 gap-4">
             <FormField id="prefix" label="Prefix" optional>
-              {(f) => <Input {...f} autoComplete="off" placeholder="Ms." value={d.prefix} onChange={(e) => set("prefix", e.target.value)} />}
+              {(f) => <Input {...f} autoComplete="off" placeholder="Ms." name="prefix" value={d.prefix} onChange={(e) => set("prefix", e.target.value)} />}
             </FormField>
             <FormField id="suffix" label="Suffix" optional>
-              {(f) => <Input {...f} autoComplete="off" placeholder="Jr." value={d.suffix} onChange={(e) => set("suffix", e.target.value)} />}
+              {(f) => <Input {...f} autoComplete="off" placeholder="Jr." name="suffix" value={d.suffix} onChange={(e) => set("suffix", e.target.value)} />}
             </FormField>
           </div>
         </div>
       ) : (
         <FormField id="orgName" label={d.type === "household" ? "Household name" : "Organization name"} required error={fe("orgName")} help={d.type === "household" ? "For example, The Rivera Family." : undefined}>
-          {(f) => <Input {...f} autoComplete="organization" value={d.orgName} onChange={(e) => set("orgName", e.target.value)} />}
+          {(f) => <Input {...f} autoComplete="organization" name="orgName" value={d.orgName} onChange={(e) => set("orgName", e.target.value)} />}
         </FormField>
       )}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <FormField id="email" label="Email" optional error={fe("emails")}>
-          {(f) => <Input {...f} type="email" autoComplete="off" value={d.email} onChange={(e) => set("email", e.target.value)} />}
+          {(f) => <Input {...f} type="email" autoComplete="off" name="email" value={d.email} onChange={(e) => set("email", e.target.value)} />}
         </FormField>
         <FormField id="phone" label="Phone" optional error={fe("phones")}>
-          {(f) => <Input {...f} type="tel" autoComplete="off" value={d.phone} onChange={(e) => set("phone", e.target.value)} />}
+          {(f) => <Input {...f} type="tel" autoComplete="off" name="phone" value={d.phone} onChange={(e) => set("phone", e.target.value)} />}
         </FormField>
       </div>
 
@@ -223,35 +235,35 @@ export function ConstituentForm({ orgId, existing, prefillName = "", returnToBat
       <fieldset className="grid gap-4 sm:grid-cols-6">
         <legend className="mb-2 text-30 font-medium leading-5 text-text">Mailing address</legend>
         <FormField id="line1" label="Street" optional className="sm:col-span-6">
-          {(f) => <Input {...f} autoComplete="off" value={d.line1} onChange={(e) => set("line1", e.target.value)} />}
+          {(f) => <Input {...f} autoComplete="off" name="line1" value={d.line1} onChange={(e) => set("line1", e.target.value)} />}
         </FormField>
         <FormField id="line2" label="Apartment, suite" optional className="sm:col-span-6">
-          {(f) => <Input {...f} autoComplete="off" value={d.line2} onChange={(e) => set("line2", e.target.value)} />}
+          {(f) => <Input {...f} autoComplete="off" name="line2" value={d.line2} onChange={(e) => set("line2", e.target.value)} />}
         </FormField>
         <FormField id="city" label="City" optional className="sm:col-span-3">
-          {(f) => <Input {...f} autoComplete="off" value={d.city} onChange={(e) => set("city", e.target.value)} />}
+          {(f) => <Input {...f} autoComplete="off" name="city" value={d.city} onChange={(e) => set("city", e.target.value)} />}
         </FormField>
         <FormField id="state" label="State" optional className="sm:col-span-1">
-          {(f) => <Input {...f} autoComplete="off" maxLength={2} value={d.state} onChange={(e) => set("state", e.target.value.toUpperCase())} />}
+          {(f) => <Input {...f} autoComplete="off" maxLength={2} name="state" value={d.state} onChange={(e) => set("state", e.target.value.toUpperCase())} />}
         </FormField>
         <FormField id="postalCode" label="ZIP" optional className="sm:col-span-2">
-          {(f) => <Input {...f} autoComplete="off" inputMode="numeric" value={d.postalCode} onChange={(e) => set("postalCode", e.target.value)} />}
+          {(f) => <Input {...f} autoComplete="off" inputMode="numeric" name="postalCode" value={d.postalCode} onChange={(e) => set("postalCode", e.target.value)} />}
         </FormField>
       </fieldset>
 
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-2 text-30 font-medium leading-5 text-text">Contact preferences</legend>
-        <Checkbox label="Do not contact at all" checked={d.doNotContact} onChange={(e) => set("doNotContact", e.target.checked)} />
-        <Checkbox label="No email" checked={d.doNotEmail} onChange={(e) => set("doNotEmail", e.target.checked)} />
-        <Checkbox label="No mail" checked={d.doNotMail} onChange={(e) => set("doNotMail", e.target.checked)} />
-        <Checkbox label="No calls" checked={d.doNotCall} onChange={(e) => set("doNotCall", e.target.checked)} />
-        {isPerson && <Checkbox label="Deceased" checked={d.deceased} onChange={(e) => set("deceased", e.target.checked)} />}
+        <Checkbox label="Do not contact at all" name="doNotContact" checked={d.doNotContact} onChange={(e) => set("doNotContact", e.target.checked)} />
+        <Checkbox label="No email" name="doNotEmail" checked={d.doNotEmail} onChange={(e) => set("doNotEmail", e.target.checked)} />
+        <Checkbox label="No mail" name="doNotMail" checked={d.doNotMail} onChange={(e) => set("doNotMail", e.target.checked)} />
+        <Checkbox label="No calls" name="doNotCall" checked={d.doNotCall} onChange={(e) => set("doNotCall", e.target.checked)} />
+        {isPerson && <Checkbox label="Deceased" name="deceased" checked={d.deceased} onChange={(e) => set("deceased", e.target.checked)} />}
       </fieldset>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <FormField id="source" label="How did they find you?" optional>
           {(f) => (
-            <Select {...f} value={d.source} onChange={(e) => set("source", e.target.value)}>
+            <Select {...f} name="source" value={d.source} onChange={(e) => set("source", e.target.value)}>
               <option value="">Not sure</option>
               <option value="event">Event</option>
               <option value="mailing">Mailing</option>
@@ -265,7 +277,7 @@ export function ConstituentForm({ orgId, existing, prefillName = "", returnToBat
         </FormField>
       </div>
       <FormField id="notes" label="Notes" optional>
-        {(f) => <Textarea {...f} rows={3} value={d.notes} onChange={(e) => set("notes", e.target.value)} />}
+        {(f) => <Textarea {...f} rows={3} name="notes" value={d.notes} onChange={(e) => set("notes", e.target.value)} />}
       </FormField>
 
       <div aria-live="polite">

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { api, errorMessage } from "@/lib/api";
+import { useEarlyTyping } from "@/lib/early-typing";
 import { ROLE_HELP, ROLE_LABEL } from "@/components/orgs/role-labels";
 import { Alert, AlertDescription, Badge, Button, FormField, Input, Select, useToast } from "@/components/ui";
 import { Intro, SkipButton, type WizardData, type WizardNav } from "./setup-wizard";
@@ -15,6 +16,11 @@ export function TeamStep({ data, nav }: { data: WizardData; nav: WizardNav }) {
   const [role, setRole] = useState<"admin" | "staff" | "board_viewer">("staff");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const form = useRef<HTMLFormElement>(null);
+  useEarlyTyping(form, (name, value) => {
+    if (name === "email") setEmail(value);
+    if (name === "role") setRole(value as typeof role);
+  });
 
   async function invite(e: FormEvent) {
     e.preventDefault();
@@ -41,14 +47,14 @@ export function TeamStep({ data, nav }: { data: WizardData; nav: WizardNav }) {
           </li>
         ))}
       </ul>
-      <form onSubmit={invite} className="flex flex-col gap-3" noValidate>
+      <form ref={form} method="post" onSubmit={invite} className="flex flex-col gap-3" noValidate>
         <div className="grid max-w-2xl gap-3 sm:grid-cols-[1fr_12rem]">
           <FormField id="team-email" label="Email">
-            {(f) => <Input {...f} type="email" autoComplete="off" value={email} onChange={(e) => setEmail(e.target.value)} />}
+            {(f) => <Input {...f} type="email" autoComplete="off" name="email" value={email} onChange={(e) => setEmail(e.target.value)} />}
           </FormField>
           <FormField id="team-role" label="What they can do">
             {(f) => (
-              <Select {...f} value={role} onChange={(e) => setRole(e.target.value as typeof role)}>
+              <Select {...f} name="role" value={role} onChange={(e) => setRole(e.target.value as typeof role)}>
                 <option value="staff">Staff</option>
                 <option value="admin">Admin</option>
                 <option value="board_viewer">Board viewer</option>

@@ -51,7 +51,7 @@ export function NewBatchForm({ orgId }: { orgId: string }) {
           </>
         }
       >
-        <form id="new-batch" onSubmit={submit} className="flex flex-col gap-4" noValidate>
+        <form method="post" id="new-batch" onSubmit={submit} className="flex flex-col gap-4" noValidate>
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField id="batch-date" label="Batch date" required>
               {(f) => <Input {...f} type="date" value={batchDate} onChange={(e) => setBatchDate(e.target.value)} />}

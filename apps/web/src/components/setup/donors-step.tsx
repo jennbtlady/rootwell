@@ -42,7 +42,7 @@ export function DonorsStep({ data, nav }: { data: WizardData; nav: WizardNav }) 
 
   if (mode === "hand") {
     return (
-      <form onSubmit={saveRows} className="flex flex-col gap-4" noValidate>
+      <form method="post" onSubmit={saveRows} className="flex flex-col gap-4" noValidate>
         <Intro>Add a few people now. You can add details like addresses later from each person&apos;s page.</Intro>
         <div className="flex flex-col gap-3">
           {rows.map((r, i) => (

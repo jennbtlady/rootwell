@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import type { OrgRole } from "@maple/core";
 import type { Member } from "@maple/core/services";
 import { api, errorMessage } from "@/lib/api";
+import { useEarlyTyping } from "@/lib/early-typing";
 import { Alert, AlertDescription, Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, FormField, Input, Select, useConfirm } from "@/components/ui";
 import { ROLE_HELP, ROLE_LABEL } from "./role-labels";
 
@@ -139,6 +140,11 @@ function InviteForm({ orgId }: { orgId: string }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const form = useRef<HTMLFormElement>(null);
+  useEarlyTyping(form, (name, value) => {
+    if (name === "email") setEmail(value);
+    if (name === "role") setRole(value as GrantableRole);
+  });
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -161,13 +167,13 @@ function InviteForm({ orgId }: { orgId: string }) {
         <CardDescription>They get an email with a link to join. Owners and admins must set up two-step sign-in.</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
+        <form ref={form} method="post" onSubmit={submit} className="flex flex-col gap-4" noValidate>
           <FormField id="invite-email" label="Email" required>
-            {(f) => <Input {...f} type="email" autoComplete="off" required value={email} onChange={(e) => setEmail(e.target.value)} />}
+            {(f) => <Input {...f} type="email" autoComplete="off" required name="email" value={email} onChange={(e) => setEmail(e.target.value)} />}
           </FormField>
           <FormField id="invite-role" label="Role" help={ROLE_HELP[role]}>
             {(f) => (
-              <Select {...f} value={role} onChange={(e) => setRole(e.target.value as GrantableRole)}>
+              <Select {...f} name="role" value={role} onChange={(e) => setRole(e.target.value as GrantableRole)}>
                 {GRANTABLE.map((r) => (
                   <option key={r} value={r}>
                     {ROLE_LABEL[r]}
@@ -230,7 +236,7 @@ function TransferOwnership({ orgId, myUserId, members }: { orgId: string; myUser
         {candidates.length === 0 ? (
           <p className="text-30 leading-5 text-text-weak">Invite another person first. Only active members can become the owner.</p>
         ) : (
-          <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
+          <form method="post" onSubmit={submit} className="flex flex-col gap-4" noValidate>
             <FormField id="transfer-to" label="New owner">
               {(f) => (
                 <Select {...f} value={toUserId} onChange={(e) => setToUserId(e.target.value)}>

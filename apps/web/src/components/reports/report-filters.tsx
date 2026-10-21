@@ -38,7 +38,7 @@ export function ReportFilters({ orgId, reportId, params, values, campaigns }: { 
   }
 
   return (
-    <form onSubmit={apply} className="flex flex-wrap items-end gap-3" noValidate>
+    <form method="post" onSubmit={apply} className="flex flex-wrap items-end gap-3" noValidate>
       {params.includes("from") && (
         <FormField id="rep-from" label="From">
           {(f) => <Input {...f} type="date" value={from} onChange={(e) => setFrom(e.target.value)} />}

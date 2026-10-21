@@ -35,7 +35,7 @@ export function StandardsForm({ orgId, standards = DEFAULT_STANDARDS, funds }: {
   }
 
   return (
-    <form onSubmit={submit} className="flex max-w-2xl flex-col gap-6" noValidate>
+    <form method="post" onSubmit={submit} className="flex max-w-2xl flex-col gap-6" noValidate>
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-2 text-30 font-medium leading-5 text-text">Always required</legend>
         <p className="text-30 leading-5 text-text-weak">Donor, amount, date, fund, payment method and gift type. These cannot be turned off.</p>

@@ -450,6 +450,36 @@ For the same reason the e2e job in `.github/workflows/ci.yml`, which runs agains
 `next start`, will fail as written. It has not run yet, since the repo has no GitHub
 remote. Fix it before turning CI on.
 
+## Typing before the page loads (2026-10-21)
+
+On a slow phone or a slow first load, a form shows up before its scripts are ready.
+The sign-in fix (commit b1430ac) showed what goes wrong in that gap, and every other form
+had the same problem:
+
+- Text typed early never reached the form's code, so it saved as empty.
+- Pressing the button early sent the form the browser's default way. That reloaded the
+  page, lost what was typed, and put names, emails and addresses in the address bar,
+  browser history and server logs.
+
+What changed:
+
+- Every `<form>` in `apps/web/src` has `method="post"`. A press before the scripts load
+  now just shows the page again. Nothing typed ends up in the address. Keep this on any
+  new form.
+- `useEarlyTyping` in `apps/web/src/lib/early-typing.ts` reads every named field once the
+  scripts are ready and copies its value into the form's state. The fields stay
+  controlled, so the live duplicate check on Add donor still sees what was typed. It is on
+  the gift entry form, add and edit donor, invite someone (Settings and the setup
+  walkthrough), organization details and the setup profile step, and the public donation
+  page. A form that uses it needs a `name` on each field.
+- The New batch form opens in a dialog that only exists once the scripts load, so it
+  cannot be typed into early. It got `method="post"` only.
+
+Tests: `e2e/phase-6-early-typing.spec.ts` holds back the page's scripts, fills the add
+donor form and the gift form, lets the scripts load, then saves. It checks that the name
+and the amount arrive. It also presses Add donor with scripts turned off and checks that
+the browser sends a POST, the page comes back, and no donor details are in the address.
+
 ## Name: Rootwell (2026-10-21)
 
 The product is now called Rootwell. It replaced "Maple Ledger" on every screen, email,

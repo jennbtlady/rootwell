@@ -76,7 +76,7 @@ export function DonationPageForm({ orgId, funds, campaigns, page }: { orgId: str
 
   return (
     <Card>
-      <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
+      <form method="post" onSubmit={submit} className="flex flex-col gap-4" noValidate>
         {formError && (
           <Alert variant="error">
             <AlertDescription>{formError}</AlertDescription>

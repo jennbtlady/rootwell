@@ -137,7 +137,7 @@ function CodingModal({ orgId, kind, row, campaigns, onClose }: { orgId: string; 
         </>
       }
     >
-      <form id="coding-form" onSubmit={submit} className="flex flex-col gap-4" noValidate>
+      <form method="post" id="coding-form" onSubmit={submit} className="flex flex-col gap-4" noValidate>
         <FormField id="cd-name" label="Name" required>
           {(f) => <Input {...f} value={name} onChange={(e) => setName(e.target.value)} />}
         </FormField>
