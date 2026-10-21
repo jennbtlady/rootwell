@@ -95,7 +95,11 @@ test.describe.serial("accessibility audit", () => {
     await expect(dialog).toBeVisible();
     for (let i = 0; i < 12; i++) {
       await page.keyboard.press("Tab");
-      expect(await dialog.evaluate((d) => d.contains(document.activeElement))).toBe(true);
+      // Base UI sends focus through an invisible guard at each end of the dialog, which
+      // then moves it back inside. Wait for focus to settle before checking.
+      await expect
+        .poll(() => dialog.evaluate((d) => (d.contains(document.activeElement) ? "inside" : `outside: ${document.activeElement?.outerHTML.slice(0, 120)}`)), { timeout: 2000 })
+        .toBe("inside");
     }
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();

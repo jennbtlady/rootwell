@@ -22,11 +22,15 @@ const ORGS = Number(process.env.ORGS ?? 50);
 const PEOPLE = Number(process.env.PEOPLE ?? 10_000);
 const GIFTS = Number(process.env.GIFTS ?? 3);
 const KEEP = process.env.KEEP === "1" || process.env.REUSE === "1";
+/** CLEAN=1 only removes data a KEEP=1 run left behind. */
+const CLEAN = process.env.CLEAN === "1";
 /** REUSE=1 measures the load data a KEEP=1 run left behind, without seeding again. */
 const REUSE = process.env.REUSE === "1";
 
-const FIRST = ["Ana", "Ben", "Carla", "Dev", "Elena", "Femi", "Grace", "Hiro", "Imani", "Jon", "Kira", "Luis", "Maya", "Nate", "Olu", "Priya", "Quinn", "Rosa", "Sam", "Tara", "Uma", "Victor", "Wen", "Xavier", "Yara", "Zoe", "Amir", "Bea", "Cole", "Dina"];
-const LAST = ["Smith", "Garcia", "Okafor", "Nguyen", "Patel", "Kim", "Rivera", "Cohen", "Haddad", "Novak", "Silva", "Mensah", "Tanaka", "Murphy", "Rossi", "Kowalski", "Jensen", "Moreau", "Ahmed", "Lopez", "Baker", "Chen", "Diaz", "Evans", "Fischer", "Gupta", "Hughes", "Ito", "Jones", "Khan"];
+const FIRST = ["James", "Mary", "Robert", "Patricia", "John", "Jennifer", "Michael", "Linda", "David", "Elizabeth", "William", "Barbara", "Richard", "Susan", "Joseph", "Jessica", "Thomas", "Sarah", "Christopher", "Karen", "Charles", "Lisa", "Daniel", "Nancy", "Matthew", "Betty", "Anthony", "Sandra", "Mark", "Margaret", "Donald", "Ashley", "Steven", "Kimberly", "Andrew", "Emily", "Paul", "Donna", "Joshua", "Michelle", "Kenneth", "Carol", "Kevin", "Amanda", "Brian", "Melissa", "George", "Deborah", "Timothy", "Stephanie", "Ronald", "Rebecca", "Jason", "Sharon", "Edward", "Laura", "Jeffrey", "Cynthia", "Ryan", "Dorothy", "Jacob", "Amy", "Gary", "Kathleen", "Nicholas", "Angela", "Eric", "Shirley", "Jonathan", "Emma", "Stephen", "Brenda", "Larry", "Pamela", "Justin", "Nicole", "Scott", "Anna", "Brandon", "Samantha", "Benjamin", "Katherine", "Samuel", "Christine", "Gregory", "Debra", "Alexander", "Rachel", "Patrick", "Carolyn", "Frank", "Janet", "Raymond", "Maria", "Jack", "Olivia", "Dennis", "Heather", "Jerry", "Helen"];
+// Common US names, combined by a hash so the mix looks like a real donor list: some
+// people share a name, many names are close, most are distinct.
+const LAST = ["Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis", "Rodriguez", "Martinez", "Hernandez", "Lopez", "Gonzalez", "Wilson", "Anderson", "Thomas", "Taylor", "Moore", "Jackson", "Martin", "Lee", "Perez", "Thompson", "White", "Harris", "Sanchez", "Clark", "Ramirez", "Lewis", "Robinson", "Walker", "Young", "Allen", "King", "Wright", "Scott", "Torres", "Nguyen", "Hill", "Flores", "Green", "Adams", "Nelson", "Baker", "Hall", "Rivera", "Campbell", "Mitchell", "Carter", "Roberts", "Gomez", "Phillips", "Evans", "Turner", "Diaz", "Parker", "Cruz", "Edwards", "Collins", "Reyes", "Stewart", "Morris", "Morales", "Murphy", "Cook", "Rogers", "Gutierrez", "Ortiz", "Morgan", "Cooper", "Peterson", "Bailey", "Reed", "Kelly", "Howard", "Ramos", "Kim", "Cox", "Ward", "Richardson", "Watson", "Brooks", "Chavez", "Wood", "James", "Bennett", "Gray", "Mendoza", "Ruiz", "Hughes", "Price", "Alvarez", "Castillo", "Sanders", "Patel", "Myers", "Long", "Ross", "Foster", "Jimenez", "Powell", "Jenkins", "Perry", "Russell", "Sullivan", "Bell", "Coleman", "Butler", "Henderson", "Barnes", "Gonzales", "Fisher", "Vasquez", "Simmons", "Romero", "Jordan", "Patterson", "Alexander", "Hamilton", "Graham", "Reynolds", "Griffin", "Wallace", "Moreno", "West", "Cole", "Hayes", "Bryant", "Herrera", "Gibson", "Ellis", "Tran", "Medina", "Aguilar", "Stevens", "Murray", "Ford", "Castro", "Marshall", "Owens", "Harrison", "Fernandez", "McDonald", "Woods", "Washington", "Kennedy", "Wells", "Vargas", "Henry", "Chen"];
 const arr = (xs: string[]) => `array[${xs.map((x) => `'${x}'`).join(",")}]`;
 
 const sql = postgres(url, { max: 1, onnotice: () => {} });
@@ -48,8 +52,8 @@ async function seed() {
       await tx.unsafe(`
         insert into constituents (org_id, type, first_name, last_name, display_name, sort_name, source, created_at)
         select '${org}', 'person', f, l, f || ' ' || l, l || ', ' || f, 'import', now() - ((i % 1500) || ' days')::interval
-          from (select i, (${arr(FIRST)})[1 + (i * 7) % ${FIRST.length}] as f,
-                          (${arr(LAST)})[1 + (i * 13) % ${LAST.length}] || case when i % 3 = 0 then '-' || (i % 977) else '' end as l
+          from (select i, (${arr(FIRST)})[1 + abs(hashtext('f' || i || '${n}')) % ${FIRST.length}] as f,
+                          (${arr(LAST)})[1 + abs(hashtext('l' || i || '${n}')) % ${LAST.length}] as l
                   from generate_series(1, ${PEOPLE}) i) s`);
       await tx.unsafe(`
         insert into constituent_emails (org_id, constituent_id, email, type, is_primary)
@@ -91,6 +95,7 @@ async function measure() {
     const t: Timing = { name, ms: [] };
     for (let i = 0; i < runs; i++) t.ms.push((await fn(i)).ms);
     timings.push(t);
+    console.log(`  ${name}: median ${pct(t.ms, 50).toFixed(0)} ms, 95th ${pct(t.ms, 95).toFixed(0)} ms`);
   };
   const sample = orgIds.slice(0, Math.min(10, orgIds.length));
   const o = (i: number) => sample[i % sample.length]!;
@@ -112,7 +117,7 @@ async function measure() {
   await time("LYBUNT report", 10, (i) => call("GET", `/orgs/${o(i)}/reports/lybunt`));
   await time(`Gifts by fund report (${year})`, 10, (i) => call("GET", `/orgs/${o(i)}/reports/gifts_by_fund?from=${year}-01-01&to=${year}-12-31`));
   await time("Download everything (zip)", 3, (i) => call("GET", `/orgs/${o(i)}/export/everything`));
-  await time("Duplicate scan, whole org", 2, (i) => call("POST", `/orgs/${o(i)}/duplicates/scan`));
+  await time("Duplicate scan, whole org", 1, (i) => call("POST", `/orgs/${o(i)}/duplicates/scan`));
 
   // 50 people searching at once, one per organization.
   const s = performance.now();
@@ -137,6 +142,15 @@ async function cleanup() {
 }
 
 try {
+  if (CLEAN) {
+    const rows = (await sql`select o.id, m.user_id from organizations o join org_memberships m on m.org_id = o.id and m.role = 'owner' where o.name like 'Load test org %'`) as unknown as { id: string; user_id: string }[];
+    orgIds.push(...rows.map((r) => r.id));
+    if (rows[0]) userId = rows[0].user_id;
+    console.log(`Removing ${orgIds.length} load test organizations...`);
+    await cleanup();
+    await sql.end();
+    process.exit(0);
+  }
   if (REUSE) {
     const rows = (await sql`select o.id, m.user_id from organizations o join org_memberships m on m.org_id = o.id and m.role = 'owner'
                              where o.name like 'Load test org %' order by o.created_at`) as unknown as { id: string; user_id: string }[];
