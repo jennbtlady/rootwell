@@ -4,6 +4,7 @@ import type { OrgRole } from "../schemas/membership";
 import type { OrgDetail, OrgSummary, Tx } from "./types";
 import { resolveLayout } from "../dashboard-layout";
 import { isModuleKey } from "../modules";
+import type { BrandingInput, OrgBranding } from "../branding";
 
 export async function listMyOrgs(tx: Tx): Promise<OrgSummary[]> {
   const rows = await tx.execute(sql`
@@ -71,6 +72,24 @@ export async function createOrg(tx: Tx, input: CreateOrganizationInput): Promise
 }
 
 /** Owners and admins (with two-step sign-in) update the organization's own details. RLS enforces it. */
+/**
+ * Saves the look of public pages (fundraising Phase 1). Images must sit in this organization's
+ * own folder of the branding bucket, so one organization cannot point at another's uploads.
+ * Owners and admins only, by RLS on organizations. Returns "bad_path" for a foreign image.
+ */
+export async function saveBranding(tx: Tx, orgId: string, input: BrandingInput): Promise<"ok" | "missing" | "bad_path"> {
+  for (const p of [input.logoPath, input.headerImagePath]) if (p && !p.startsWith(`${orgId}/`)) return "bad_path";
+  const branding: OrgBranding = {
+    ...(input.primaryColor ? { primaryColor: input.primaryColor } : {}),
+    ...(input.accentColor ? { accentColor: input.accentColor } : {}),
+    ...(input.headerImagePath ? { headerImagePath: input.headerImagePath } : {}),
+  };
+  const r = await tx.execute(sql`
+    update organizations set branding = ${JSON.stringify(branding)}::jsonb, logo_path = ${input.logoPath}
+     where id = ${orgId}`);
+  return r.count > 0 ? "ok" : "missing";
+}
+
 export async function updateOrgProfile(tx: Tx, orgId: string, input: OrgProfileInput): Promise<boolean> {
   const r = await tx.execute(sql`
     update organizations

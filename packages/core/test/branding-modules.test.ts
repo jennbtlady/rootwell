@@ -35,8 +35,12 @@ describe("branding contrast", () => {
   });
 
   it("falls back to Rootwell's colors, and checks the color format", () => {
-    expect(resolvedBranding({}).primary).toBe("#0263E0");
-    expect(brandingInput.parse({ primaryColor: "#1a3d8f", accentColor: null })).toEqual({ primaryColor: "#1A3D8F", accentColor: null });
+    expect(resolvedBranding({}).primary).toBe("#500030");
+    expect(brandingInput.parse({ primaryColor: "#1a3d8f", accentColor: null })).toEqual({ primaryColor: "#1A3D8F", accentColor: null, logoPath: null, headerImagePath: null });
+    const org = "0b7c2f6e-4c1a-4d0e-9a51-5b8f3c2d1e00";
+    expect(brandingInput.safeParse({ primaryColor: null, accentColor: null, logoPath: `${org}/logo-ab12.png` }).success).toBe(true);
+    expect(brandingInput.safeParse({ primaryColor: null, accentColor: null, logoPath: `${org}/../x.png` }).success).toBe(false);
+    expect(brandingInput.safeParse({ primaryColor: null, accentColor: null, logoPath: `${org}/logo.svg` }).success).toBe(false);
     expect(brandingInput.safeParse({ primaryColor: "blue", accentColor: null }).success).toBe(false);
   });
 });

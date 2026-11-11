@@ -6,8 +6,11 @@ import { z } from "zod";
  */
 export type OrgBranding = { primaryColor?: string; accentColor?: string; headerImagePath?: string };
 
-/** Rootwell's own colors, used on public pages until an organization picks its own. */
-export const DEFAULT_BRANDING = { primaryColor: "#0263E0", accentColor: "#14B053" } as const;
+/**
+ * Rootwell's own colors (docs/design-system.md), used on public pages until an organization
+ * picks its own: Crimson Violet, and the text-safe shade of Air Force Blue.
+ */
+export const DEFAULT_BRANDING = { primaryColor: "#500030", accentColor: "#567280" } as const;
 
 const hex = z
   .string()
@@ -15,11 +18,22 @@ const hex = z
   .regex(/^#[0-9a-fA-F]{6}$/, "Use a color like #1A6B3C: a # and six letters or numbers.")
   .transform((v) => v.toUpperCase());
 
+/** An image in the public "branding" bucket: <org id>/<name>.png, .jpg or .webp. */
+const imagePath = z
+  .string()
+  .regex(/^[0-9a-f-]{36}\/[a-z0-9-]{1,64}\.(png|jpe?g|webp)$/, "That image is not one of this organization's uploads.");
+
 export const brandingInput = z.object({
   primaryColor: hex.nullable(),
   accentColor: hex.nullable(),
+  logoPath: imagePath.nullable().default(null),
+  headerImagePath: imagePath.nullable().default(null),
 });
 export type BrandingInput = z.infer<typeof brandingInput>;
+
+/** Logos and header images: PNG, JPEG or WebP (no SVG, which can carry scripts), 2 MB at most. */
+export const BRANDING_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"] as const;
+export const BRANDING_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
 
 /** WCAG 2.1 relative luminance of a #RRGGBB color. */
 export function luminance(color: string): number {
