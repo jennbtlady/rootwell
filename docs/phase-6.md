@@ -446,9 +446,8 @@ files alone until it finishes.
 A production build cannot replace it. Production deliberately ignores
 `MFA_ENFORCEMENT=off` and refuses to fall back to the Stripe stand-ins, so a stray
 setting on a real server cannot weaken sign-in or fake payments. The tests rely on both.
-For the same reason the e2e job in `.github/workflows/ci.yml`, which runs against
-`next start`, will fail as written. It has not run yet, since the repo has no GitHub
-remote. Fix it before turning CI on.
+For the same reason the e2e job in `.github/workflows/ci.yml` runs against `next dev`
+too (fixed 2026-11-11; it used to run `next start` and would have failed).
 
 ## Typing before the page loads (2026-10-21)
 
@@ -511,11 +510,22 @@ secrets in git. Three gaps must close before a paying customer.
    - Fix: reject password-only (aal1) tokens for anyone who has a factor or holds owner or
      admin. Require aal2 for the full export, report CSVs, statements, and board link
      creation.
+   - Done 2026-11-11. `requireUser` in `packages/api/src/auth.ts` applies the /app layout's
+     rule (`secondStepNeeded` in `packages/core/src/services/profiles.ts`, using
+     `app.has_verified_factor()` from `drizzle/custom/0014_two_step_api.sql`). Two calls stay
+     open for setup: `GET /me` and creating a first organization. `requireTwoStep` guards
+     Download everything, report CSVs, letter and statement PDFs, QuickBooks files and new
+     board links for every role, with a "two_step_required" code. Download buttons show the
+     reason, and Help, Two-step sign-in links to the setup page for staff. Tests: the route
+     matrix in `packages/api/test/routes.test.ts`.
 2. **The Stripe stand-ins can run in production.**
    - Where: `STRIPE_MODE=simulated` in `packages/api/src/integrations/index.ts:31,59`.
    - Why it matters: it falls back to webhook secrets that are in the source code. Anyone
      could forge an event that marks an organization paid or canceled.
    - Fix: remove the escape hatch, or randomize the fallback secret for each process.
+   - Done 2026-11-11, both: `STRIPE_MODE` is gone, so a production build without keys
+     refuses Stripe and Stripe Billing, and the stand-ins sign with a secret made fresh for
+     each process. Tests: `packages/api/test/stripe-mode.test.ts`.
 3. **There are no rate limits.**
    - Where: public checkout (`public-give.ts`), board links, sign-up and magic link, and the
      bulk thank-you and statement email routes.
@@ -550,6 +560,6 @@ secrets in git. Three gaps must close before a paying customer.
 
 **Housekeeping:**
 - The CI browser job runs against `next start`, which ignores the test switches. Point it
-  at `next dev`.
+  at `next dev`. Done 2026-11-11.
 - The "No new tables or columns" note above was true for billing only. Statement sends,
   import options and dashboard layouts came later.

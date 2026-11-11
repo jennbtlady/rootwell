@@ -28,11 +28,13 @@ export default defineConfig({
     { name: "ios-safari", use: { ...devices["iPhone 13"] }, grep: /@mobile/ },
     { name: "android-chrome", use: { ...devices["Pixel 7"] }, grep: /@mobile/ },
   ],
+  // Always the dev server, in CI too. A production build ignores MFA_ENFORCEMENT=off and
+  // refuses the Stripe stand-ins, on purpose, and these tests rely on both.
   webServer: {
-    command: ci ? "pnpm exec next start --port 3000" : "pnpm exec next dev --port 3000",
+    command: "pnpm exec next dev --port 3000",
     url: "http://localhost:3000/api/v1/health",
     reuseExistingServer: !ci,
-    timeout: 120_000,
+    timeout: 180_000,
     env: { MFA_ENFORCEMENT: "off", SMTP_URL: process.env.SMTP_URL ?? "smtp://127.0.0.1:54325" },
   },
 });

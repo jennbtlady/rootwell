@@ -77,7 +77,8 @@ jobs:
           echo "DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres" >> $GITHUB_ENV
           echo "NEXT_PUBLIC_APP_URL=http://localhost:3000" >> $GITHUB_ENV
       - run: pnpm db:migrate
-      - run: pnpm --filter @maple/web build
+      # No production build here: the browser tests run against `next dev` (see
+      # apps/web/playwright.config.ts), because production ignores the test-only switches.
       - run: pnpm --filter @maple/web exec playwright install --with-deps chromium
       - run: pnpm --filter @maple/web e2e
         env:
