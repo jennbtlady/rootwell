@@ -43,6 +43,26 @@ Homebrew is not required for anything in this repo.
 
 Owners and admins must set up an authenticator app before they can manage an organization, and the database refuses their sensitive writes without it. For local testing, put `MFA_ENFORCEMENT=off` in `apps/web/.env.local` and restart `pnpm dev`. The switch is ignored in production builds. Set it back to `on` (or remove it) to test the real flow.
 
+## Stripe in test mode
+
+Without Stripe keys the app uses a built-in stand-in, marked "Test mode" everywhere. To try
+online giving: in Settings, Integrations, choose Connect Stripe, then on the stand-in's page
+either "Connect test account" (ready to take gifts) or "Connect a test account that still needs
+details" (shows "Needs more information" until you finish setup on the stand-in's page). Make a
+giving page in Settings, Giving pages, and give on it as a donor. "Make a test deposit" on the
+Stripe card turns test gifts into a deposit batch. Real test-mode keys: see `docs/phase-5.md`.
+
+## Modules (fundraising)
+
+Each organization has a set of modules: `donations` (every organization has it),
+`peer_fundraising`, `events`, and later `auction`. Bundles map to modules in
+`packages/core/src/modules.ts`. A Noble Maple admin turns them on or off:
+
+```
+DATABASE_URL=... pnpm --filter @maple/api modules "<org id or exact name>"
+DATABASE_URL=... pnpm --filter @maple/api modules "<org>" on fundraising
+```
+
 ## Email templates
 
 Auth emails (invitations, sign-in links, confirmations) use the templates in `supabase/templates/`. They link to `/auth/callback` with a token hash. After changing a template or `supabase/config.toml`, restart with `pnpm db:stop` then `pnpm db:start`. A hosted Supabase project needs the same templates pasted into its dashboard.
