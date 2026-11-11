@@ -91,6 +91,11 @@ Also this phase, at Jenn's request:
 
 ## Rollback
 
+Migration `0013_launch_rate_limits`: drop `rate_limit_hits` and the functions in
+`drizzle/custom/0015_rate_limits.sql` (details in `docs/rate-limits.md`). The public routes
+run unlimited again.
+
+
 Migration `0012_phase6_dashboard_layouts`: drop `organizations.dashboard_layouts` and take
 `'layout'` back out of `app.board_view` in `0007_reporting.sql`. The dashboards fall back
 to the standard order.
@@ -531,6 +536,11 @@ secrets in git. Three gaps must close before a paying customer.
      bulk thank-you and statement email routes.
    - Fix: Vercel WAF rules. Turn on captcha and email confirmation in the hosted Supabase
      project, and record those settings in `docs/`.
+   - Done in code 2026-11-11, see `docs/rate-limits.md`: limits in the database on checkout
+     (per visitor and per page), board links (per visitor) and bulk thank-you and statement
+     email (per organization), plus a Cloudflare Turnstile bot check on giving pages, sign
+     in and sign up. Still to switch on when the accounts exist: Turnstile keys, captcha and
+     email confirmation in hosted Supabase, and Vercel firewall rules (steps in that doc).
 
 **Soon after:**
 - Owner-initiated deletion of a real organization. Today only the sample organization and

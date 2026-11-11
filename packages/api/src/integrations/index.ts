@@ -9,6 +9,7 @@ export * from "./mailchimp";
 export * from "./stripe-gateway";
 export * from "./stripe-sim";
 export * from "./billing";
+export * from "./turnstile";
 
 let stripeOverride: StripeGateway | undefined;
 let stripeCached: StripeGateway | undefined;

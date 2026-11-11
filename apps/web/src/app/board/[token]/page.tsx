@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { withPublic } from "@maple/db";
-import { getDb } from "@maple/api";
-import { boardView } from "@maple/core/services";
+import { clientIp, getDb, TOO_MANY, visitorKey } from "@maple/api";
+import { boardView, hitRateLimit } from "@maple/core/services";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { Heading } from "@/components/ui";
 import { BoardDashboard } from "@/components/dashboard/board-dashboard";
@@ -18,7 +19,20 @@ export const metadata: Metadata = { title: "Board dashboard", robots: { index: f
 export default async function BoardPage({ params }: PageProps<"/board/[token]">) {
   const { token } = await params;
   if (!/^[A-Za-z0-9_-]{20,64}$/.test(token)) notFound();
-  const view = await withPublic(getDb(), (tx) => boardView(tx, token));
+  // Limit per visitor, so nobody can try link after link (launch review, must fix 3).
+  const h = await headers();
+  const visitor = visitorKey(clientIp((n) => h.get(n)));
+  const view = await withPublic(getDb(), async (tx) => ((await hitRateLimit(tx, "boardVisitor", visitor)) ? boardView(tx, token) : ("limited" as const)));
+  if (view === "limited") {
+    return (
+      <main className="mx-auto flex w-full max-w-5xl flex-col gap-2 px-4 py-8">
+        <Heading variant="heading20" as="h1" noMargin>
+          Board dashboard
+        </Heading>
+        <p className="text-40 leading-7">{TOO_MANY}</p>
+      </main>
+    );
+  }
   if (!view) notFound();
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-4 py-8">

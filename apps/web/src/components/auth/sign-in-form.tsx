@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { createSupabaseBrowser } from "@/lib/supabase/browser";
 import { Alert, AlertDescription, Button, FormField, Input } from "@/components/ui";
 import { anchorClass } from "@/components/ui/text";
+import { BOT_CHECK_WAIT, useBotCheck } from "@/components/bot-check";
 import { friendlyAuthError } from "./messages";
 
 export function SignInForm({ next, initialError }: { next: string; initialError?: string }) {
@@ -14,6 +15,7 @@ export function SignInForm({ next, initialError }: { next: string; initialError?
   const [pending, setPending] = useState<"password" | "link" | null>(null);
   const [error, setError] = useState<string | null>(initialError ?? null);
   const [notice, setNotice] = useState<string | null>(null);
+  const bot = useBotCheck();
 
 // The fields are read from the form when it is sent, not from React state. On a slow first
 // load, text typed before the page's scripts start never reached state, and sign-in went
@@ -29,10 +31,12 @@ export function SignInForm({ next, initialError }: { next: string; initialError?
     const password = String(new FormData(form.current ?? undefined).get("password") ?? "");
     if (!email) return setError("Enter your email.");
     if (!password) return sendLink();
+    if (bot.required && !bot.token) return setError(BOT_CHECK_WAIT);
     setPending("password");
     const supabase = createSupabaseBrowser();
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signInWithPassword({ email, password, options: { captchaToken: bot.token ?? undefined } });
     setPending(null);
+    bot.reset();
     if (error) return setError(friendlyAuthError(error.message));
     router.push(next);
     router.refresh();
@@ -41,15 +45,17 @@ export function SignInForm({ next, initialError }: { next: string; initialError?
   async function sendLink() {
     const email = field("email");
     if (!email) return setError("Enter your email first, then we can send a link.");
+    if (bot.required && !bot.token) return setError(BOT_CHECK_WAIT);
     setError(null);
     setNotice(null);
     setPending("link");
     const supabase = createSupabaseBrowser();
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`, captchaToken: bot.token ?? undefined },
     });
     setPending(null);
+    bot.reset();
     if (error) return setError(friendlyAuthError(error.message));
     setNotice("Check your email for a sign-in link. It works for one hour.");
   }
@@ -63,6 +69,7 @@ export function SignInForm({ next, initialError }: { next: string; initialError?
         {(f) => <Input {...f} name="password" type="password" autoComplete="current-password" />}
       </FormField>
 
+      {bot.element}
       <div aria-live="polite">
         {error && (
           <Alert variant="error">

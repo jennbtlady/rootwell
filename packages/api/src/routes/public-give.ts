@@ -2,11 +2,12 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { withPublic } from "@maple/db";
 import { checkoutRequest } from "@maple/core";
-import { publicDonationPage } from "@maple/core/services";
+import { hitRateLimit, publicDonationPage, RATE_LIMITS } from "@maple/core/services";
 import type { ApiEnv } from "../env";
 import { getDb } from "../db";
 import { validate } from "../validate";
-import { grossUpForFee, stripeGateway } from "../integrations";
+import { grossUpForFee, stripeGateway, TurnstileNotConfigured, turnstileVerifier } from "../integrations";
+import { clientIp, tooManyRequests, visitorKey } from "../rate-limit";
 
 const slugParam = z.object({ slug: z.string().min(3).max(50) });
 
@@ -21,6 +22,25 @@ export const publicGive = new Hono<ApiEnv>()
   .post("/give/:slug/checkout", validate("param", slugParam), validate("json", checkoutRequest), async (c) => {
     const { slug } = c.req.valid("param");
     const body = c.req.valid("json");
+
+    // Card-testing protection, before anything reaches Stripe: limits per visitor and per
+    // page, then the bot check (launch review, must fix 3).
+    const ip = clientIp((n) => c.req.header(n));
+    const limited = await withPublic(getDb(), async (tx) => {
+      if (!(await hitRateLimit(tx, "checkoutVisitor", visitorKey(ip)))) return RATE_LIMITS.checkoutVisitor.windowSeconds;
+      if (!(await hitRateLimit(tx, "checkoutPage", slug))) return RATE_LIMITS.checkoutPage.windowSeconds;
+      return 0;
+    });
+    if (limited) return tooManyRequests(c, limited);
+    let human: boolean;
+    try {
+      human = await turnstileVerifier()(body.botCheck, ip);
+    } catch (e) {
+      if (e instanceof TurnstileNotConfigured) return c.json({ error: "Online giving is paused for a moment. Please try again later." }, 503);
+      throw e;
+    }
+    if (!human) return c.json({ error: "The security check did not finish. Please wait a moment and press Give again.", code: "bot_check_failed" }, 400);
+
     const page = await withPublic(getDb(), (tx) => publicDonationPage(tx, slug));
     if (!page) return c.json({ error: "This giving page does not exist or is turned off." }, 404);
     if (!page.stripeAccount) return c.json({ error: "This page is not taking gifts yet." }, 409);

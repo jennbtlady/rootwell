@@ -23,10 +23,13 @@ import {
   recordStatementSends,
   toPrint,
   letterhead,
+  hitRateLimit,
+  RATE_LIMITS,
 } from "@maple/core/services";
 import type { ApiEnv } from "../env";
 import { getDb } from "../db";
 import { assertTwoStep, requireTwoStep } from "../auth";
+import { tooManyRequests } from "../rate-limit";
 import { validate } from "../validate";
 import { getMailer, textToHtml } from "../email/mailer";
 import { renderLetters, renderStatements } from "../pdf/documents";
@@ -173,9 +176,14 @@ export const reporting = new Hono<ApiEnv>()
     const claims = c.get("claims");
     const rendered = await withRls(getDb(), claims, async (tx) => {
       const t = (await listTemplates(tx, orgId)).find((x) => x.id === templateId && x.channel === "email");
-      return t ? { t, ...(await renderAcks(tx, orgId, ids, t)) } : null;
+      if (!t) return null;
+      // Counted only once the template is found, which RLS allows for members only, so
+      // nobody outside the organization can use up its sends.
+      if (!(await hitRateLimit(tx, "bulkEmailOrg", orgId))) return "limited" as const;
+      return { t, ...(await renderAcks(tx, orgId, ids, t)) };
     });
     if (!rendered) return c.json({ error: "Choose an email template." }, 400);
+    if (rendered === "limited") return tooManyRequests(c, RATE_LIMITS.bulkEmailOrg.windowSeconds);
     const mailer = getMailer();
     const results: { giftId: string; channel: "email"; status: "sent" | "failed"; recipient: string | null; error: string | null; templateId: string }[] = [];
     let skipped = 0;
@@ -259,9 +267,11 @@ export const reporting = new Hono<ApiEnv>()
     const out = await withRls(getDb(), c.get("claims"), async (tx) => {
       const { role } = await roleIn(tx, orgId);
       if (role !== "owner" && role !== "admin") return null;
+      if (!(await hitRateLimit(tx, "bulkEmailOrg", orgId))) return "limited" as const;
       return { org: await letterhead(tx, orgId), donors: await statementDonors(tx, orgId, year, c.req.valid("json").constituentIds) };
     });
     if (!out) return c.json(forbidden, 403);
+    if (out === "limited") return tooManyRequests(c, RATE_LIMITS.bulkEmailOrg.windowSeconds);
     const mailer = getMailer();
     const resend = c.req.valid("json").resend;
     let sent = 0;
