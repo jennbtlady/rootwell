@@ -23,9 +23,13 @@ import {
   recordStatementSends,
   toPrint,
   letterhead,
+  hitRateLimit,
+  RATE_LIMITS,
 } from "@maple/core/services";
 import type { ApiEnv } from "../env";
 import { getDb } from "../db";
+import { assertTwoStep, requireTwoStep } from "../auth";
+import { tooManyRequests } from "../rate-limit";
 import { validate } from "../validate";
 import { getMailer, textToHtml } from "../email/mailer";
 import { renderLetters, renderStatements } from "../pdf/documents";
@@ -98,7 +102,7 @@ export const reporting = new Hono<ApiEnv>()
     const items = await withRls(getDb(), c.get("claims"), (tx) => listShareLinks(tx, orgId));
     return c.json({ items });
   })
-  .post("/:orgId/board-links", validate("param", orgParam), validate("json", z.object({ label: z.string().trim().min(1).max(80) })), async (c) => {
+  .post("/:orgId/board-links", requireTwoStep, validate("param", orgParam), validate("json", z.object({ label: z.string().trim().min(1).max(80) })), async (c) => {
     const { orgId } = c.req.valid("param");
     const created = await withRls(getDb(), c.get("claims"), (tx) => createShareLink(tx, orgId, c.req.valid("json").label));
     return c.json(created, 201);
@@ -119,6 +123,7 @@ export const reporting = new Hono<ApiEnv>()
   .get("/:orgId/reports/:reportId", validate("param", orgParam.extend({ reportId: z.enum(REPORT_IDS) })), validate("query", reportParams.extend({ format: z.enum(["json", "csv"]).default("json") })), async (c) => {
     const { orgId, reportId } = c.req.valid("param");
     const { format, ...params } = c.req.valid("query");
+    if (format === "csv") assertTwoStep(c.get("claims").aal);
     const result = await withRls(getDb(), c.get("claims"), async (tx) => {
       const { role } = await roleIn(tx, orgId);
       if (!role) return "missing" as const;
@@ -171,9 +176,14 @@ export const reporting = new Hono<ApiEnv>()
     const claims = c.get("claims");
     const rendered = await withRls(getDb(), claims, async (tx) => {
       const t = (await listTemplates(tx, orgId)).find((x) => x.id === templateId && x.channel === "email");
-      return t ? { t, ...(await renderAcks(tx, orgId, ids, t)) } : null;
+      if (!t) return null;
+      // Counted only once the template is found, which RLS allows for members only, so
+      // nobody outside the organization can use up its sends.
+      if (!(await hitRateLimit(tx, "bulkEmailOrg", orgId))) return "limited" as const;
+      return { t, ...(await renderAcks(tx, orgId, ids, t)) };
     });
     if (!rendered) return c.json({ error: "Choose an email template." }, 400);
+    if (rendered === "limited") return tooManyRequests(c, RATE_LIMITS.bulkEmailOrg.windowSeconds);
     const mailer = getMailer();
     const results: { giftId: string; channel: "email"; status: "sent" | "failed"; recipient: string | null; error: string | null; templateId: string }[] = [];
     let skipped = 0;
@@ -194,7 +204,7 @@ export const reporting = new Hono<ApiEnv>()
     const failed = results.filter((r) => r.status === "failed");
     return c.json({ sent: results.length - failed.length, failed: failed.length, skipped, firstError: failed[0]?.error ?? null });
   })
-  .post("/:orgId/acks/letters", validate("param", orgParam), validate("json", z.object({ giftIds, templateId: z.string(), markSent: z.boolean().default(false) })), async (c) => {
+  .post("/:orgId/acks/letters", requireTwoStep, validate("param", orgParam), validate("json", z.object({ giftIds, templateId: z.string(), markSent: z.boolean().default(false) })), async (c) => {
     const { orgId } = c.req.valid("param");
     const { giftIds: ids, templateId, markSent } = c.req.valid("json");
     const out = await withRls(getDb(), c.get("claims"), async (tx) => {
@@ -215,7 +225,7 @@ export const reporting = new Hono<ApiEnv>()
     return c.json({ marked: ids.length });
   })
   // ---- annual statements (owners and admins)
-  .get("/:orgId/statements/:year", validate("param", orgParam.extend({ year: z.coerce.number().int().min(2000).max(2100) })), async (c) => {
+  .get("/:orgId/statements/:year", requireTwoStep, validate("param", orgParam.extend({ year: z.coerce.number().int().min(2000).max(2100) })), async (c) => {
     const { orgId, year } = c.req.valid("param");
     const out = await withRls(getDb(), c.get("claims"), async (tx) => {
       const { role } = await roleIn(tx, orgId);
@@ -257,9 +267,11 @@ export const reporting = new Hono<ApiEnv>()
     const out = await withRls(getDb(), c.get("claims"), async (tx) => {
       const { role } = await roleIn(tx, orgId);
       if (role !== "owner" && role !== "admin") return null;
+      if (!(await hitRateLimit(tx, "bulkEmailOrg", orgId))) return "limited" as const;
       return { org: await letterhead(tx, orgId), donors: await statementDonors(tx, orgId, year, c.req.valid("json").constituentIds) };
     });
     if (!out) return c.json(forbidden, 403);
+    if (out === "limited") return tooManyRequests(c, RATE_LIMITS.bulkEmailOrg.windowSeconds);
     const mailer = getMailer();
     const resend = c.req.valid("json").resend;
     let sent = 0;

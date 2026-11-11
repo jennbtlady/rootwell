@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { createSupabaseBrowser } from "@/lib/supabase/browser";
 import { Alert, AlertDescription, AlertTitle, Button, FormField, Input } from "@/components/ui";
 import { anchorClass } from "@/components/ui/text";
+import { BOT_CHECK_WAIT, useBotCheck } from "@/components/bot-check";
 import { friendlyAuthError } from "./messages";
 
 export function SignUpForm() {
@@ -15,6 +16,7 @@ export function SignUpForm() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const bot = useBotCheck();
 
 // The fields are read from the form when it is sent, not from React state. On a slow first
 // load, text typed before the page's scripts start never reached state, and sign-in went
@@ -30,6 +32,7 @@ export function SignUpForm() {
     setEmail(email);
     if (!email) return setError("Enter your email.");
     if (password.length < 8) return setError("Use a password with at least 8 characters.");
+    if (bot.required && !bot.token) return setError(BOT_CHECK_WAIT);
     setPending(true);
     const supabase = createSupabaseBrowser();
     const { data, error } = await supabase.auth.signUp({
@@ -38,9 +41,11 @@ export function SignUpForm() {
       options: {
         data: { full_name: fullName.trim() },
         emailRedirectTo: `${window.location.origin}/auth/callback`,
+        captchaToken: bot.token ?? undefined,
       },
     });
     setPending(false);
+    bot.reset();
     if (error) return setError(friendlyAuthError(error.message));
     if (data.session) {
       router.push("/app");
@@ -71,6 +76,7 @@ export function SignUpForm() {
         {(f) => <Input {...f} name="password" type="password" autoComplete="new-password" required minLength={8} />}
       </FormField>
 
+      {bot.element}
       <div aria-live="polite">
         {error && (
           <Alert variant="error">

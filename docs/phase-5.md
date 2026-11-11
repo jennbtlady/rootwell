@@ -104,7 +104,9 @@ screen it touches. Its connect and checkout pages live under `/api/v1/stripe-sim
 charges the nonprofit rate (2.2% plus 30 cents), and it sends events signed with Stripe's
 real scheme to our real webhook route. Integrations has a "Make a test deposit" button that
 pays out everything not yet paid out. In production without keys the app refuses to start
-Stripe, unless `STRIPE_MODE=simulated` is set on purpose.
+Stripe. There is no switch to turn the stand-in on in production (the old
+`STRIPE_MODE=simulated` was removed on 2026-11-11), and the stand-in signs its test events
+with a secret made fresh for each process, never one written in the source.
 
 Mailchimp keys that start with `sim-` (for example `sim-key-us1`) use an in-memory
 Mailchimp with two audiences, Newsletter and Donors. Outside production only.

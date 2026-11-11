@@ -76,9 +76,15 @@ jobs:
           grep SECRET_KEY supabase.env | sed 's/^SECRET_KEY=/SUPABASE_SECRET_KEY=/' | tr -d '"' >> $GITHUB_ENV
           echo "DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres" >> $GITHUB_ENV
           echo "NEXT_PUBLIC_APP_URL=http://localhost:3000" >> $GITHUB_ENV
+          # Fresh for each run, like the local setup note: they sign Stripe connect links,
+          # encrypt saved Mailchimp keys and authorize the daily jobs.
+          echo "INTEGRATIONS_KEY=$(openssl rand -base64 32)" >> $GITHUB_ENV
+          echo "CRON_SECRET=$(openssl rand -base64 32)" >> $GITHUB_ENV
       - run: pnpm db:migrate
-      - run: pnpm --filter @maple/web build
-      - run: pnpm --filter @maple/web exec playwright install --with-deps chromium
+      # No production build here: the browser tests run against `next dev` (see
+      # apps/web/playwright.config.ts), because production ignores the test-only switches.
+      # WebKit too: the iPhone Safari project in playwright.config.ts runs on it.
+      - run: pnpm --filter @maple/web exec playwright install --with-deps chromium webkit
       - run: pnpm --filter @maple/web e2e
         env:
           CI: "1"

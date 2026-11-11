@@ -10,9 +10,9 @@ export function ExportEverythingButton({ orgId }: { orgId: string }) {
   const [pending, setPending] = useState(false);
   async function go() {
     setPending(true);
-    const ok = await downloadWithAuth(`/api/v1/orgs/${orgId}/export/everything`, await accessToken(), "rootwell-export.zip");
+    const r = await downloadWithAuth(`/api/v1/orgs/${orgId}/export/everything`, await accessToken(), "rootwell-export.zip");
     setPending(false);
-    if (!ok) toast({ type: "error", title: "No file", description: "Only owners and admins can download everything. Please try again." });
+    if (!r.ok) toast({ type: "error", title: "No file", description: r.reason ?? "Only owners and admins can download everything. Please try again." });
   }
   return (
     <Button loading={pending} onClick={go}>

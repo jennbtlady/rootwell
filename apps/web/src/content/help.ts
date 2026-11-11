@@ -8,7 +8,7 @@ export type HelpArticle = {
   title: string;
   summary: string;
   topic: "Start here" | "Gifts" | "Donors" | "Thank-yous and reports" | "Connections" | "Your account";
-  sections: { heading?: string; text?: string[]; steps?: string[] }[];
+  sections: { heading?: string; text?: string[]; steps?: string[]; link?: { href: string; label: string } }[];
 };
 
 export const HELP: HelpArticle[] = [
@@ -151,6 +151,14 @@ export const HELP: HelpArticle[] = [
     topic: "Your account",
     sections: [
       { text: ["Owners and admins use two-step sign-in: a password and a code from an authenticator app. It stops someone who guesses a password from reaching your donors."] },
+      {
+        heading: "Downloads need it too",
+        text: [
+          "Anything that takes many donors out of Rootwell at once needs two-step sign-in, whatever your role: report downloads, thank-you letters, year-end statements, the QuickBooks files, Download everything, and board links.",
+          "Staff can set it up any time. It takes about two minutes and an authenticator app on your phone. After that, Rootwell asks for a code each time you sign in.",
+        ],
+        link: { href: "/mfa/enroll?next=/app", label: "Set up two-step sign-in" },
+      },
       { text: ["Each organization's data is walled off from every other organization by the database itself. Card numbers never reach us: Stripe handles them."] },
     ],
   },

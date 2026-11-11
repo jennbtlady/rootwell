@@ -1,8 +1,10 @@
 import { createMiddleware } from "hono/factory";
 import { HTTPException } from "hono/http-exception";
 import { createRemoteJWKSet, decodeProtectedHeader, jwtVerify, type JWTPayload } from "jose";
-import { userClaims } from "@maple/db";
+import { mfaEnforcementOff, userClaims, withRls } from "@maple/db";
+import { secondStepNeeded } from "@maple/core/services";
 import type { ApiEnv } from "./env";
+import { getDb } from "./db";
 
 type Verifier = (token: string) => Promise<JWTPayload>;
 
@@ -55,6 +57,51 @@ export const requireUser = createMiddleware<ApiEnv>(async (c, next) => {
   if (typeof payload.sub !== "string") throw new HTTPException(401, { message: "Sign in required" });
 
   const aal = (payload as { aal?: string }).aal === "aal2" ? "aal2" : "aal1";
-  c.set("claims", userClaims(payload.sub, aal));
+  const claims = userClaims(payload.sub, aal);
+  c.set("claims", claims);
+
+  // Same rule as the /app layout: anyone with an authenticator, and owners and admins of a
+  // real organization, must finish the second step before the API serves them. Two calls
+  // stay open so a brand-new person can get set up: reading their own profile, and creating
+  // their first organization (they hold no role yet, so it exposes nothing).
+  if (aal === "aal1" && !mfaEnforcementOff() && !bootstrapCall(c.req.method, c.req.path)) {
+    const needed = await withRls(getDb(), claims, (tx) => secondStepNeeded(tx, claims.sub));
+    if (needed) throw twoStepRequired();
+  }
   await next();
 });
+
+function bootstrapCall(method: string, path: string): boolean {
+  const p = path.replace(/\/$/, "");
+  return (method === "GET" && p === "/api/v1/me") || (method === "POST" && p === "/api/v1/orgs");
+}
+
+function twoStepRequired() {
+  return new HTTPException(403, {
+    res: new Response(
+      JSON.stringify({ error: "Finish two-step sign-in first. Sign out and back in with your authenticator app.", code: "two_step_required" }),
+      { status: 403, headers: { "content-type": "application/json" } },
+    ),
+  });
+}
+
+/**
+ * For downloads and board links: anything that sends many donors' details out in one go.
+ * These need two-step sign-in whatever the person's role, so a phished staff password
+ * cannot pull the whole donor list.
+ */
+export const requireTwoStep = createMiddleware<ApiEnv>(async (c, next) => {
+  assertTwoStep(c.get("claims").aal);
+  await next();
+});
+
+/** The same check inline, for a route where only some requests are downloads. */
+export function assertTwoStep(aal: string) {
+  if (aal === "aal2" || mfaEnforcementOff()) return;
+  throw new HTTPException(403, {
+    res: new Response(
+      JSON.stringify({ error: "Downloads and board links need two-step sign-in. Help, Two-step sign-in and keeping data safe, shows how to set it up in about two minutes.", code: "two_step_required" }),
+      { status: 403, headers: { "content-type": "application/json" } },
+    ),
+  });
+}

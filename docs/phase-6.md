@@ -91,6 +91,11 @@ Also this phase, at Jenn's request:
 
 ## Rollback
 
+Migration `0013_launch_rate_limits`: drop `rate_limit_hits` and the functions in
+`drizzle/custom/0015_rate_limits.sql` (details in `docs/rate-limits.md`). The public routes
+run unlimited again.
+
+
 Migration `0012_phase6_dashboard_layouts`: drop `organizations.dashboard_layouts` and take
 `'layout'` back out of `app.board_view` in `0007_reporting.sql`. The dashboards fall back
 to the standard order.
@@ -446,9 +451,8 @@ files alone until it finishes.
 A production build cannot replace it. Production deliberately ignores
 `MFA_ENFORCEMENT=off` and refuses to fall back to the Stripe stand-ins, so a stray
 setting on a real server cannot weaken sign-in or fake payments. The tests rely on both.
-For the same reason the e2e job in `.github/workflows/ci.yml`, which runs against
-`next start`, will fail as written. It has not run yet, since the repo has no GitHub
-remote. Fix it before turning CI on.
+For the same reason the e2e job in `.github/workflows/ci.yml` runs against `next dev`
+too (fixed 2026-11-11; it used to run `next start` and would have failed).
 
 ## Typing before the page loads (2026-10-21)
 
@@ -489,3 +493,83 @@ The internal package scope stays `@maple/*`, since users never see it.
 The sign-in email subjects live in `supabase/config.toml`. The local auth server needs
 `supabase stop` and `supabase start` to use them, and the hosted project needs the same
 change in its dashboard.
+
+## Launch review (2026-10-23)
+
+A read-only review of security, design and strategy before launch.
+
+**Verdict.** The foundation is strong. Row-level security covers every table, and there is
+no plain database handle in app code. Role and two-step checks live in the database.
+Webhooks are signed, board links use hashed 192-bit tokens, and SQL is parameterized. CSV
+formula injection is handled, email HTML is escaped, Sentry scrubs PII, and there are no
+secrets in git. Three gaps must close before a paying customer.
+
+**Must fix before launch:**
+
+1. **Two-step sign-in is enforced on pages, not the API.**
+   - Where: `packages/api/src/auth.ts:57` records `aal` but never requires it.
+     `canExportEverything` (`packages/core/src/services/export-all.ts:83`) checks only the
+     role.
+   - Why it matters: a phished owner, admin or staff password can call
+     `/api/v1/orgs/:id/export/everything` or the report CSVs directly and read every donor.
+   - Fix: reject password-only (aal1) tokens for anyone who has a factor or holds owner or
+     admin. Require aal2 for the full export, report CSVs, statements, and board link
+     creation.
+   - Done 2026-11-11. `requireUser` in `packages/api/src/auth.ts` applies the /app layout's
+     rule (`secondStepNeeded` in `packages/core/src/services/profiles.ts`, using
+     `app.has_verified_factor()` from `drizzle/custom/0014_two_step_api.sql`). Two calls stay
+     open for setup: `GET /me` and creating a first organization. `requireTwoStep` guards
+     Download everything, report CSVs, letter and statement PDFs, QuickBooks files and new
+     board links for every role, with a "two_step_required" code. Download buttons show the
+     reason, and Help, Two-step sign-in links to the setup page for staff. Tests: the route
+     matrix in `packages/api/test/routes.test.ts`.
+2. **The Stripe stand-ins can run in production.**
+   - Where: `STRIPE_MODE=simulated` in `packages/api/src/integrations/index.ts:31,59`.
+   - Why it matters: it falls back to webhook secrets that are in the source code. Anyone
+     could forge an event that marks an organization paid or canceled.
+   - Fix: remove the escape hatch, or randomize the fallback secret for each process.
+   - Done 2026-11-11, both: `STRIPE_MODE` is gone, so a production build without keys
+     refuses Stripe and Stripe Billing, and the stand-ins sign with a secret made fresh for
+     each process. Tests: `packages/api/test/stripe-mode.test.ts`.
+3. **There are no rate limits.**
+   - Where: public checkout (`public-give.ts`), board links, sign-up and magic link, and the
+     bulk thank-you and statement email routes.
+   - Fix: Vercel WAF rules. Turn on captcha and email confirmation in the hosted Supabase
+     project, and record those settings in `docs/`.
+   - Done in code 2026-11-11, see `docs/rate-limits.md`: limits in the database on checkout
+     (per visitor and per page), board links (per visitor) and bulk thank-you and statement
+     email (per organization), plus a Cloudflare Turnstile bot check on giving pages, sign
+     in and sign up. Still to switch on when the accounts exist: Turnstile keys, captcha and
+     email confirmation in hosted Supabase, and Vercel firewall rules (steps in that doc).
+
+**Soon after:**
+- Owner-initiated deletion of a real organization. Today only the sample organization and
+  lapsed accounts can be deleted.
+- Security headers: `nosniff`, `Referrer-Policy`, `Permissions-Policy` and HSTS.
+- Board viewers can list staff emails (`orgs.ts:61`).
+- `invite_expires_at` is never enforced.
+- Store Mailchimp and Stripe error text scrubbed of emails.
+- Revoke `app.support_transfer_ownership` from `authenticated` until support tooling
+  exists.
+- Bump `fflate` to 0.8.3 or later (one moderate advisory).
+
+**Phase 6 criteria from the brief:**
+- Done: onboarding, help docs, continuity page, load test, backup drill.
+- Automated only: the accessibility audit. The manual screen reader and 200% zoom pass is
+  still to do.
+- Built but simulated: billing, which needs real Stripe keys.
+
+**Not code (Jenn):**
+- A privacy policy and terms of service.
+- The pricing number.
+- The domain.
+- Hosted Supabase (US region), Vercel, Resend, Sentry and Inngest accounts.
+- The Stripe product and price.
+- A support contact.
+- Two or three friendly nonprofits on the free trial before anyone pays.
+
+**Housekeeping:**
+- The CI browser job runs against `next start`, which ignores the test switches. Point it
+  at `next dev`. Done 2026-11-11.
+- The "No new tables or columns" note above was true for billing only. Statement sends,
+  import options and dashboard layouts came later.

@@ -292,6 +292,53 @@ describe.skipIf(!DATABASE_URL)("api routes against the database", () => {
     expect(((await mismatch.json()) as { error: string }).error).toMatch(/but the deposit slip says \$[0-9,.]+\. That is \$[0-9,.]+ (short|over)/);
   });
 
+  it("enforces two-step sign-in at the API the same way the pages do", async () => {
+    const code = async (r: Response) => ((await r.json()) as { code?: string }).code;
+
+    // An owner of a real organization who skipped the second step gets nothing but the
+    // calls a new person needs to get set up.
+    const ownerRead = await app.request(`/api/v1/orgs/${orgA}/constituents`, { headers: auth(ownerA, "aal1") });
+    expect(ownerRead.status).toBe(403);
+    expect(await code(ownerRead)).toBe("two_step_required");
+    expect((await app.request("/api/v1/me", { headers: auth(ownerA, "aal1") })).status).toBe(200);
+
+    // Staff without an authenticator can work, but cannot pull donors out in bulk.
+    expect((await app.request(`/api/v1/orgs/${orgA}/constituents`, { headers: auth(staffA, "aal1") })).status).toBe(200);
+    expect((await app.request(`/api/v1/orgs/${orgA}/reports/lybunt`, { headers: auth(staffA, "aal1") })).status).toBe(200);
+    for (const path of [
+      `/api/v1/orgs/${orgA}/reports/lybunt?format=csv`,
+      `/api/v1/orgs/${orgA}/export/everything`,
+      `/api/v1/orgs/${orgA}/statements/2026`,
+      `/api/v1/orgs/${orgA}/accounting/export?from=2026-01-01&to=2026-12-31`,
+    ]) {
+      const r = await app.request(path, { headers: auth(staffA, "aal1") });
+      expect(r.status, path).toBe(403);
+      expect(await code(r), path).toBe("two_step_required");
+    }
+    for (const [path, body] of [
+      [`/api/v1/orgs/${orgA}/board-links`, { label: "Board" }],
+      [`/api/v1/orgs/${orgA}/acks/letters`, { giftIds: [randomUUID()], templateId: "x" }],
+    ] as const) {
+      const r = await app.request(path, { method: "POST", headers: { ...auth(staffA, "aal1"), ...json }, body: JSON.stringify(body) });
+      expect(r.status, path).toBe(403);
+      expect(await code(r), path).toBe("two_step_required");
+    }
+    // With the second step done, the same download works.
+    expect((await app.request(`/api/v1/orgs/${orgA}/reports/lybunt?format=csv`, { headers: auth(staffA) })).status).toBe(200);
+
+    // Staff who set up an authenticator must use it, like owners.
+    const factor = randomUUID();
+    await db.execute(sql`insert into auth.mfa_factors (id, user_id, friendly_name, factor_type, status, created_at, updated_at)
+      values (${factor}, ${staffA.id}, 'phone', 'totp', 'verified', now(), now())`);
+    try {
+      const r = await app.request(`/api/v1/orgs/${orgA}/constituents`, { headers: auth(staffA, "aal1") });
+      expect(r.status).toBe(403);
+      expect((await app.request(`/api/v1/orgs/${orgA}/constituents`, { headers: auth(staffA) })).status).toBe(200);
+    } finally {
+      await db.execute(sql`delete from auth.mfa_factors where id = ${factor}`);
+    }
+  });
+
   it("scans duplicates, merges a pair, and undoes the merge through the API", async () => {
     const h = (u: U) => ({ ...auth(u), ...json });
     const mk = async (body: unknown) => ((await (await app.request(`/api/v1/orgs/${orgA}/constituents`, { method: "POST", headers: h(staffA), body: JSON.stringify(body) })).json()) as { id: string }).id;

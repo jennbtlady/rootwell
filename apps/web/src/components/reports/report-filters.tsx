@@ -32,9 +32,9 @@ export function ReportFilters({ orgId, reportId, params, values, campaigns }: { 
     setDownloading(true);
     const q = new URLSearchParams(search.toString());
     q.set("format", "csv");
-    const ok = await downloadWithAuth(`/api/v1/orgs/${orgId}/reports/${reportId}?${q.toString()}`, await accessToken(), `${reportId}.csv`);
+    const r = await downloadWithAuth(`/api/v1/orgs/${orgId}/reports/${reportId}?${q.toString()}`, await accessToken(), `${reportId}.csv`);
     setDownloading(false);
-    if (!ok) toast({ type: "error", title: "The download did not work", description: "Please try again." });
+    if (!r.ok) toast({ type: "error", title: "The download did not work", description: r.reason ?? "Please try again." });
   }
 
   return (

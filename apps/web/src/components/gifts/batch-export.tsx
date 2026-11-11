@@ -11,9 +11,9 @@ export function BatchExport({ orgId, batchId }: { orgId: string; batchId: string
   const [busy, setBusy] = useState<string | null>(null);
   async function get(format: "journal" | "deposits") {
     setBusy(format);
-    const ok = await downloadWithAuth(`/api/v1/orgs/${orgId}/accounting/export?batchId=${batchId}&format=${format}`, await accessToken(), `quickbooks-${format}.csv`);
+    const r = await downloadWithAuth(`/api/v1/orgs/${orgId}/accounting/export?batchId=${batchId}&format=${format}`, await accessToken(), `quickbooks-${format}.csv`);
     setBusy(null);
-    if (!ok) toast({ type: "error", title: "No file", description: "Please try again." });
+    if (!r.ok) toast({ type: "error", title: "No file", description: r.reason ?? "Please try again." });
   }
   return (
     <div className="flex flex-wrap gap-2">

@@ -5,6 +5,7 @@ import { grossUpForFee } from "@maple/core";
 import { Alert, AlertDescription, Button, Card, Checkbox, FormField, Input, Select } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { useEarlyTyping } from "@/lib/early-typing";
+import { BOT_CHECK_WAIT, useBotCheck } from "@/components/bot-check";
 
 const usd = (cents: number) => (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: cents % 100 ? 2 : 0 });
 
@@ -18,6 +19,7 @@ export function GiveForm({ slug, amounts, funds, allowMonthly, offerCoverFees }:
   const [pending, setPending] = useState(false);
   const name = useId();
   const form = useRef<HTMLFormElement>(null);
+  const bot = useBotCheck();
   // An amount tapped before the page's scripts loaded is the amount given.
   useEarlyTyping(form, (field, value, checked) => {
     if (field === `${name}-freq`) setMonthly(value === "monthly");
@@ -35,15 +37,18 @@ export function GiveForm({ slug, amounts, funds, allowMonthly, offerCoverFees }:
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (!valid) return setError("Enter an amount between $1 and $100,000.");
+    if (bot.required && !bot.token) return setError(BOT_CHECK_WAIT);
     setPending(true);
     setError(null);
     const res = await fetch(`/api/v1/public/give/${slug}/checkout`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ amount: dollars, monthly: allowMonthly && monthly, fundId: fundId || null, coverFee: cover && offerCoverFees }),
+      body: JSON.stringify({ amount: dollars, monthly: allowMonthly && monthly, fundId: fundId || null, coverFee: cover && offerCoverFees, botCheck: bot.token ?? undefined }),
     });
     if (!res.ok) {
       setPending(false);
+      // A token works once. Get a fresh one for the next try.
+      bot.reset();
       const body = (await res.json().catch(() => null)) as { error?: string; issues?: { message: string }[] } | null;
       return setError(body?.issues?.[0]?.message ?? body?.error ?? "Something went wrong. Please try again.");
     }
@@ -117,6 +122,7 @@ export function GiveForm({ slug, amounts, funds, allowMonthly, offerCoverFees }:
             onChange={(e) => setCover(e.target.checked)}
           />
         )}
+        {bot.element}
         {error && (
           <Alert variant="error">
             <AlertDescription>{error}</AlertDescription>

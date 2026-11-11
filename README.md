@@ -1,5 +1,7 @@
 # Rootwell
 
+Setting up on a new computer? Follow `docs/setup-new-computer.md`.
+
 A lightweight, multi-tenant donor database for tiny nonprofits. See `docs/lite-donor-crm-build-brief.md` for what and why, and `docs/build-plan.md` for how.
 
 ## Layout

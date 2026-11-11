@@ -28,6 +28,7 @@ import {
 } from "@maple/core/services";
 import type { ApiEnv } from "../env";
 import { getDb } from "../db";
+import { requireTwoStep } from "../auth";
 import { validate } from "../validate";
 import { SimulatedStripeGateway, decryptSecret, encryptSecret, mailchimpGateway, signState, stripeGateway, verifyState } from "../integrations";
 
@@ -240,6 +241,7 @@ export const integrationRoutes = new Hono<ApiEnv>()
   })
   .get(
     "/:orgId/accounting/export",
+    requireTwoStep,
     validate("param", orgParam),
     validate("query", accountingExportQuery.partial().extend({ batchId: z.string().uuid().optional(), format: z.enum(["journal", "deposits"]).default("journal") })),
     async (c) => {

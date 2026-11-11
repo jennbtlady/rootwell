@@ -38,6 +38,8 @@ export const checkoutRequest = z.object({
   monthly: z.boolean().default(false),
   fundId: z.string().uuid().nullish(),
   coverFee: z.boolean().default(false),
+  /** The Turnstile bot check token from the giving form. Checked on the server. */
+  botCheck: z.string().max(4096).optional(),
 });
 export type CheckoutRequest = z.infer<typeof checkoutRequest>;
 
