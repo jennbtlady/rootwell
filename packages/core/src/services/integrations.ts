@@ -7,7 +7,8 @@ import type { OrgBranding } from "../branding";
 
 export type Integration = {
   provider: IntegrationProvider;
-  status: "connected" | "error" | "disconnected";
+  /** needs_info: Stripe connected, but the account cannot take payments yet. */
+  status: "connected" | "error" | "disconnected" | "needs_info";
   accountId: string | null;
   config: Record<string, unknown>;
   lastSyncAt: string | null;
@@ -62,6 +63,17 @@ export async function updateIntegrationConfig(tx: Tx, orgId: string, provider: I
   const r = await tx.execute(sql`
     update integrations set config = config || ${JSON.stringify(patch)}::jsonb
      where org_id = ${orgId} and provider = ${provider}::integration_provider and status <> 'disconnected'`);
+  return r.count > 0;
+}
+
+/**
+ * Records whether a connected Stripe account can take payments (fundraising Phase 1). Only
+ * moves between connected and needs_info; a disconnected integration stays disconnected.
+ */
+export async function setStripeReady(tx: Tx, orgId: string, ready: boolean): Promise<boolean> {
+  const r = await tx.execute(sql`
+    update integrations set status = ${ready ? "connected" : "needs_info"}::integration_status
+     where org_id = ${orgId} and provider = 'stripe' and status in ('connected', 'needs_info')`);
   return r.count > 0;
 }
 

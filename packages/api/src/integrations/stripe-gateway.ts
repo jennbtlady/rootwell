@@ -24,8 +24,16 @@ export type CheckoutInput = {
   metadata: Record<string, string>;
 };
 
+/**
+ * Whether a connected account can take payments yet (fundraising Phase 1). A Standard account
+ * can connect before its owner has finished Stripe's own setup (bank details, identity). Until
+ * then giving pages stay off and the Stripe card says "needs more information".
+ */
+export type AccountStatus = { ready: boolean; dashboardUrl: string };
+
 export interface StripeGateway {
   readonly mode: "live" | "simulated";
+  accountStatus(accountId: string): Promise<AccountStatus>;
   connectUrl(state: string, redirectUri: string): string;
   completeConnect(code: string): Promise<{ accountId: string }>;
   deauthorize(accountId: string): Promise<void>;
@@ -76,6 +84,11 @@ export class LiveStripeGateway implements StripeGateway {
   }
   async deauthorize(accountId: string) {
     await this.stripe.oauth.deauthorize({ client_id: this.clientId, stripe_user_id: accountId });
+  }
+  async accountStatus(accountId: string) {
+    const a = await this.stripe.accounts.retrieve(accountId);
+    // A Standard account finishes its setup in its own Stripe dashboard.
+    return { ready: !!a.charges_enabled && !!a.details_submitted, dashboardUrl: "https://dashboard.stripe.com/account/onboarding" };
   }
   async createCheckout(accountId: string, i: CheckoutInput) {
     const s = await this.stripe.checkout.sessions.create(

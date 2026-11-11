@@ -27,9 +27,11 @@ export default async function GivingPagesPage({ params }: PageProps<"/app/orgs/[
       </div>
       {stripe?.status !== "connected" && (
         <Alert variant="warning">
-          <AlertTitle>Connect Stripe to take gifts</AlertTitle>
+          <AlertTitle>{stripe?.status === "needs_info" ? "Finish your Stripe setup to take gifts" : "Connect Stripe to take gifts"}</AlertTitle>
           <AlertDescription>
-            Your pages show a notice instead of a Give button until Stripe is connected.{" "}
+            {stripe?.status === "needs_info"
+              ? "Stripe is connected but still needs a few details, such as your bank account. Your pages show a notice instead of a Give button until Stripe is ready."
+              : "Your pages show a notice instead of a Give button until Stripe is connected."}{" "}
             <Link className="underline" href={`/app/orgs/${orgId}/settings/integrations`}>
               Go to Integrations
             </Link>

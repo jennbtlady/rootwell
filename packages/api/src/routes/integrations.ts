@@ -22,6 +22,7 @@ import {
   recordIntegrationRun,
   resolveWebhookAttention,
   saveIntegration,
+  setStripeReady,
   setAccountingSettings,
   updateDonationPage,
   updateIntegrationConfig,
@@ -30,7 +31,7 @@ import type { ApiEnv } from "../env";
 import { getDb } from "../db";
 import { requireTwoStep } from "../auth";
 import { validate } from "../validate";
-import { SimulatedStripeGateway, decryptSecret, encryptSecret, mailchimpGateway, signState, stripeGateway, verifyState } from "../integrations";
+import { SimulatedStripeGateway, decryptSecret, encryptSecret, mailchimpGateway, signState, stripeGateway, verifyState, type StripeGateway } from "../integrations";
 
 const orgParam = z.object({ orgId: z.string().uuid() });
 const idParam = orgParam.extend({ id: z.string().uuid() });
@@ -85,7 +86,35 @@ export const integrationRoutes = new Hono<ApiEnv>()
       return c.json({ error: "Stripe did not accept the connection. Start again." }, 400);
     }
     await withRls(getDb(), claims, (tx) => saveIntegration(tx, orgId, "stripe", { accountId, credentials: null }));
-    return c.json({ ok: true, accountId });
+    // A Standard account can connect before it can take payments. Ask Stripe.
+    const ready = await stripeGateway().accountStatus(accountId).then((s) => s.ready).catch(() => false);
+    if (!ready) await withRls(getDb(), claims, (tx) => setStripeReady(tx, orgId, false));
+    return c.json({ ok: true, accountId, ready });
+  })
+  // "Check again" on the Stripe card: asks Stripe whether the account can take payments now.
+  .post("/:orgId/integrations/stripe/refresh", validate("param", orgParam), async (c) => {
+    const { orgId } = c.req.valid("param");
+    const claims = c.get("claims");
+    if (!(await withRls(getDb(), claims, (tx) => canManageIntegrations(tx, orgId)))) return c.json(NO, 403);
+    const cur = await withRls(getDb(), claims, (tx) => getIntegration(tx, orgId, "stripe"));
+    if (!cur?.accountId || cur.status === "disconnected") return c.json({ error: "Stripe is not connected." }, 409);
+    let status: Awaited<ReturnType<StripeGateway["accountStatus"]>>;
+    try {
+      status = await stripeGateway().accountStatus(cur.accountId);
+    } catch {
+      return c.json({ error: "Stripe did not answer. Try again in a minute." }, 502);
+    }
+    await withRls(getDb(), claims, (tx) => setStripeReady(tx, orgId, status.ready));
+    return c.json({ ready: status.ready, dashboardUrl: status.dashboardUrl });
+  })
+  .get("/:orgId/integrations/stripe/setup-link", validate("param", orgParam), async (c) => {
+    const { orgId } = c.req.valid("param");
+    const claims = c.get("claims");
+    if (!(await withRls(getDb(), claims, (tx) => canManageIntegrations(tx, orgId)))) return c.json(NO, 403);
+    const cur = await withRls(getDb(), claims, (tx) => getIntegration(tx, orgId, "stripe"));
+    if (!cur?.accountId) return c.json({ error: "Stripe is not connected." }, 409);
+    const status = await stripeGateway().accountStatus(cur.accountId).catch(() => null);
+    return c.json({ url: status?.dashboardUrl ?? "https://dashboard.stripe.com/account/onboarding" });
   })
   .delete("/:orgId/integrations/stripe", validate("param", orgParam), async (c) => {
     const { orgId } = c.req.valid("param");

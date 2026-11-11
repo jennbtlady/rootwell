@@ -13,6 +13,7 @@ import { Alert, AlertDescription, AlertTitle, Badge, Button, Card, CardContent, 
 function Status({ i }: { i: Integration | null }) {
   if (!i || i.status === "disconnected") return <Badge>Not connected</Badge>;
   if (i.status === "error") return <Badge variant="error">Needs attention</Badge>;
+  if (i.status === "needs_info") return <Badge variant="warning">Needs more information</Badge>;
   return <Badge variant="success">Connected</Badge>;
 }
 
@@ -32,6 +33,7 @@ function StripeCard({ orgId, stripe, stripeMode }: { orgId: string; stripe: Inte
   const toast = useToast();
   const [pending, setPending] = useState<string | null>(null);
   const connected = stripe?.status === "connected";
+  const needsInfo = stripe?.status === "needs_info";
 
   async function connect() {
     setPending("connect");
@@ -48,6 +50,24 @@ function StripeCard({ orgId, stripe, stripeMode }: { orgId: string; stripe: Inte
     const res = await api().api.v1.orgs[":orgId"].integrations.stripe.$delete({ param: { orgId } });
     setPending(null);
     if (res.status !== 204) return toast({ type: "error", title: "Not disconnected", description: await errorMessage(res) });
+    router.refresh();
+  }
+  // A Standard account finishes its setup in its own Stripe dashboard. Open it in a new tab,
+  // then "Check again" here.
+  async function finishSetup() {
+    setPending("setup");
+    const res = await api().api.v1.orgs[":orgId"].integrations.stripe["setup-link"].$get({ param: { orgId } });
+    setPending(null);
+    if (!res.ok) return toast({ type: "error", title: "Could not open Stripe", description: await errorMessage(res) });
+    window.open((await res.json()).url, "_blank", "noopener");
+  }
+  async function checkAgain() {
+    setPending("check");
+    const res = await api().api.v1.orgs[":orgId"].integrations.stripe.refresh.$post({ param: { orgId } });
+    setPending(null);
+    if (!res.ok) return toast({ type: "error", title: "Could not check", description: await errorMessage(res) });
+    const r = await res.json();
+    toast(r.ready ? { type: "success", title: "Stripe is ready", description: "Your giving pages can take gifts now." } : { type: "error", title: "Stripe still needs details", description: "Finish setup in Stripe, then check again." });
     router.refresh();
   }
   async function simulatePayout() {
@@ -75,7 +95,28 @@ function StripeCard({ orgId, stripe, stripeMode }: { orgId: string; stripe: Inte
             <AlertDescription>Stripe keys are not set up on this server, so a stand-in is used. No real cards are charged.</AlertDescription>
           </Alert>
         )}
-        {connected ? (
+        {needsInfo && (
+          <Alert variant="warning">
+            <AlertTitle>Stripe needs a few more details</AlertTitle>
+            <AlertDescription>
+              Your Stripe account is connected, but Stripe needs more information, such as your bank account, before it can take gifts. Until then your giving pages say they are not taking gifts yet. Finish setup in Stripe, then come back and choose Check again.
+            </AlertDescription>
+          </Alert>
+        )}
+        {needsInfo ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <Button size="small" loading={pending === "setup"} onClick={finishSetup}>
+              Finish setup in Stripe
+            </Button>
+            <Button variant="secondary" size="small" loading={pending === "check"} onClick={checkAgain}>
+              Check again
+            </Button>
+            <span className="grow" />
+            <Button variant="destructive_secondary" size="small" loading={pending === "disconnect"} onClick={disconnect}>
+              Disconnect
+            </Button>
+          </div>
+        ) : connected ? (
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-30 text-text-weak">
               Account <span className="font-mono">{stripe?.accountId}</span>

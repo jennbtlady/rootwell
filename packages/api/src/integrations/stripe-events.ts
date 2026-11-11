@@ -2,6 +2,7 @@ import type Stripe from "stripe";
 import { systemClaims, withPublic, withRls } from "@maple/db";
 import {
   disconnectIntegration,
+  setStripeReady,
   endRecurringPlan,
   ensureRecurringPlan,
   failWebhookEvent,
@@ -129,6 +130,14 @@ async function handle(gw: StripeGateway, orgId: string, account: string, event: 
       );
       if (r.missing.length) return { outcome: `deposit batch made, but ${r.missing.length} payment(s) in it have no gift yet`, needsAttention: true };
       return { outcome: `deposit batch made with ${r.attached} gift(s)` };
+    }
+
+    // The account's owner finished (or lost) Stripe's own setup. Ask Stripe rather than trust
+    // the event body, so a stale event cannot turn payments back on.
+    case "account.updated": {
+      const { ready } = await gw.accountStatus(account);
+      const changed = await withRls(db, claims, (tx) => setStripeReady(tx, orgId, ready));
+      return { outcome: changed ? (ready ? "Stripe account can take payments" : "Stripe account needs more information") : "no change" };
     }
 
     case "account.application.deauthorized": {
