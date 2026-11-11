@@ -13,7 +13,7 @@ export default async function MfaEnrollPage({ searchParams }: PageProps<"/mfa/en
       <CardHeader>
         <CardTitle>Set up two-step sign-in</CardTitle>
         <CardDescription>
-          Owners and admins protect donor data with a second step: a code from an app on your phone. This takes about two minutes.
+          A second step protects donor data: a code from an app on your phone. Owners and admins need it to use Rootwell, and everyone needs it to download donor lists. This takes about two minutes.
         </CardDescription>
       </CardHeader>
       <CardContent>

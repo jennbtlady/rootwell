@@ -34,3 +34,14 @@ export async function mfaRequiredFor(tx: Tx, userId: string): Promise<boolean> {
   `);
   return rows.length > 0;
 }
+
+/**
+ * True when this person must finish two-step sign-in before the API serves them: they have
+ * a verified authenticator, or mfaRequiredFor() says their role needs one. The same rule
+ * the /app layout applies to pages.
+ */
+export async function secondStepNeeded(tx: Tx, userId: string): Promise<boolean> {
+  const rows = await tx.execute(sql`select app.has_verified_factor() as ok`);
+  if ((rows[0] as { ok: boolean } | undefined)?.ok) return true;
+  return mfaRequiredFor(tx, userId);
+}

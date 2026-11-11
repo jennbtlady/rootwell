@@ -49,6 +49,13 @@ export default async function HelpArticlePage({ params }: PageProps<"/app/help/[
               ))}
             </ol>
           )}
+          {s.link && (
+            <p className="text-40 leading-7">
+              <Link href={s.link.href} className={anchorClass}>
+                {s.link.label}
+              </Link>
+            </p>
+          )}
         </section>
       ))}
     </article>

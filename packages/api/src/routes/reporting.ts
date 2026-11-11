@@ -26,6 +26,7 @@ import {
 } from "@maple/core/services";
 import type { ApiEnv } from "../env";
 import { getDb } from "../db";
+import { assertTwoStep, requireTwoStep } from "../auth";
 import { validate } from "../validate";
 import { getMailer, textToHtml } from "../email/mailer";
 import { renderLetters, renderStatements } from "../pdf/documents";
@@ -98,7 +99,7 @@ export const reporting = new Hono<ApiEnv>()
     const items = await withRls(getDb(), c.get("claims"), (tx) => listShareLinks(tx, orgId));
     return c.json({ items });
   })
-  .post("/:orgId/board-links", validate("param", orgParam), validate("json", z.object({ label: z.string().trim().min(1).max(80) })), async (c) => {
+  .post("/:orgId/board-links", requireTwoStep, validate("param", orgParam), validate("json", z.object({ label: z.string().trim().min(1).max(80) })), async (c) => {
     const { orgId } = c.req.valid("param");
     const created = await withRls(getDb(), c.get("claims"), (tx) => createShareLink(tx, orgId, c.req.valid("json").label));
     return c.json(created, 201);
@@ -119,6 +120,7 @@ export const reporting = new Hono<ApiEnv>()
   .get("/:orgId/reports/:reportId", validate("param", orgParam.extend({ reportId: z.enum(REPORT_IDS) })), validate("query", reportParams.extend({ format: z.enum(["json", "csv"]).default("json") })), async (c) => {
     const { orgId, reportId } = c.req.valid("param");
     const { format, ...params } = c.req.valid("query");
+    if (format === "csv") assertTwoStep(c.get("claims").aal);
     const result = await withRls(getDb(), c.get("claims"), async (tx) => {
       const { role } = await roleIn(tx, orgId);
       if (!role) return "missing" as const;
@@ -194,7 +196,7 @@ export const reporting = new Hono<ApiEnv>()
     const failed = results.filter((r) => r.status === "failed");
     return c.json({ sent: results.length - failed.length, failed: failed.length, skipped, firstError: failed[0]?.error ?? null });
   })
-  .post("/:orgId/acks/letters", validate("param", orgParam), validate("json", z.object({ giftIds, templateId: z.string(), markSent: z.boolean().default(false) })), async (c) => {
+  .post("/:orgId/acks/letters", requireTwoStep, validate("param", orgParam), validate("json", z.object({ giftIds, templateId: z.string(), markSent: z.boolean().default(false) })), async (c) => {
     const { orgId } = c.req.valid("param");
     const { giftIds: ids, templateId, markSent } = c.req.valid("json");
     const out = await withRls(getDb(), c.get("claims"), async (tx) => {
@@ -215,7 +217,7 @@ export const reporting = new Hono<ApiEnv>()
     return c.json({ marked: ids.length });
   })
   // ---- annual statements (owners and admins)
-  .get("/:orgId/statements/:year", validate("param", orgParam.extend({ year: z.coerce.number().int().min(2000).max(2100) })), async (c) => {
+  .get("/:orgId/statements/:year", requireTwoStep, validate("param", orgParam.extend({ year: z.coerce.number().int().min(2000).max(2100) })), async (c) => {
     const { orgId, year } = c.req.valid("param");
     const out = await withRls(getDb(), c.get("claims"), async (tx) => {
       const { role } = await roleIn(tx, orgId);

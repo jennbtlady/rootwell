@@ -252,9 +252,9 @@ function QuickBooksCard({ orgId, accounting }: { orgId: string; accounting: Acco
   }
   async function download(format: "journal" | "deposits") {
     setPending(format);
-    const ok = await downloadWithAuth(`/api/v1/orgs/${orgId}/accounting/export?format=${format}&from=${from}&to=${to}`, await accessToken(), `quickbooks-${format}.csv`);
+    const r = await downloadWithAuth(`/api/v1/orgs/${orgId}/accounting/export?format=${format}&from=${from}&to=${to}`, await accessToken(), `quickbooks-${format}.csv`);
     setPending(null);
-    if (!ok) toast({ type: "error", title: "No file", description: "Check the dates and try again." });
+    if (!r.ok) toast({ type: "error", title: "No file", description: r.reason ?? "Check the dates and try again." });
   }
   const field = (k: keyof typeof a, label: string, help: string, placeholder: string) => (
     <FormField id={`qb-${k}`} label={label} optional help={help}>

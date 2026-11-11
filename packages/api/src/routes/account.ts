@@ -5,12 +5,13 @@ import { withRls } from "@maple/db";
 import { canExportEverything, exportEverything } from "@maple/core/services";
 import type { ApiEnv } from "../env";
 import { getDb } from "../db";
+import { requireTwoStep } from "../auth";
 import { validate } from "../validate";
 
 const orgParam = z.object({ orgId: z.string().uuid() });
 
 /** The continuity export: every record as spreadsheets in one zip. Works while read only. */
-export const accountRoutes = new Hono<ApiEnv>().get("/:orgId/export/everything", validate("param", orgParam), async (c) => {
+export const accountRoutes = new Hono<ApiEnv>().get("/:orgId/export/everything", requireTwoStep, validate("param", orgParam), async (c) => {
   const { orgId } = c.req.valid("param");
   const out = await withRls(getDb(), c.get("claims"), async (tx) => ((await canExportEverything(tx, orgId)) ? exportEverything(tx, orgId) : null));
   if (!out) return c.json({ error: "Only owners and admins can download everything." }, 403);
