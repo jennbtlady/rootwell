@@ -3,6 +3,7 @@ import type { Tx } from "./types";
 import type { AccountingSettings, DonationPageInput, IntegrationProvider } from "../schemas/integrations";
 import { DEFAULT_ACCOUNTS, type AccountNames, type ExportBatch } from "../accounting";
 import { uuidArray } from "./online";
+import type { OrgBranding } from "../branding";
 
 export type Integration = {
   provider: IntegrationProvider;
@@ -190,9 +191,12 @@ export type PublicDonationPage = {
   funds: { id: string; name: string }[];
   stripeAccount: string | null;
   sample: boolean;
+  /** The organization's brand for this public page (fundraising Phase 1). */
+  branding: OrgBranding;
+  logoPath: string | null;
 };
 
-/** Runs as the anonymous role. */
+/** Runs as the anonymous role. Null when the page is off or the organization lacks Donations. */
 export async function publicDonationPage(tx: Tx, slug: string): Promise<PublicDonationPage | null> {
   const r = await tx.execute(sql`select app.public_donation_page(${slug}) as p`);
   return ((r[0] as { p: PublicDonationPage | null } | undefined)?.p ?? null) as PublicDonationPage | null;

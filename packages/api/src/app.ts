@@ -17,6 +17,7 @@ import { billingRoutes, billingSim, billingWebhook, readOnlyGuard } from "./rout
 import { accountRoutes } from "./routes/account";
 import { cronRoutes, trackActivity } from "./routes/cron";
 import { handleApiError } from "./errors";
+import { requireModule } from "./modules";
 
 /**
  * The whole HTTP API. Mounted in apps/web at /api/v1 and, later, called by apps/mobile
@@ -38,6 +39,13 @@ export const app = new Hono<ApiEnv>()
   .use("/orgs/:orgId", readOnlyGuard)
   .use("/orgs/:orgId/*", trackActivity)
   .use("/orgs/:orgId", trackActivity)
+  // Giving pages and taking payments are the Donations module (fundraising Phase 1).
+  // Disconnecting Stripe stays open, so an organization can always remove access.
+  .use("/orgs/:orgId/donation-pages", requireModule("donations"))
+  .use("/orgs/:orgId/donation-pages/*", requireModule("donations"))
+  .use("/orgs/:orgId/integrations/stripe/connect", requireModule("donations"))
+  .use("/orgs/:orgId/integrations/stripe/complete", requireModule("donations"))
+  .use("/orgs/:orgId/integrations/stripe/simulate-payout", requireModule("donations"))
   .route("/me", me)
   .route("/orgs", orgs)
   .route("/orgs", coding)

@@ -3,6 +3,7 @@ import type { CreateOrganizationInput, OrgProfileInput } from "../schemas/organi
 import type { OrgRole } from "../schemas/membership";
 import type { OrgDetail, OrgSummary, Tx } from "./types";
 import { resolveLayout } from "../dashboard-layout";
+import { isModuleKey } from "../modules";
 
 export async function listMyOrgs(tx: Tx): Promise<OrgSummary[]> {
   const rows = await tx.execute(sql`
@@ -21,13 +22,14 @@ export async function listMyOrgs(tx: Tx): Promise<OrgSummary[]> {
 export async function getOrg(tx: Tx, orgId: string): Promise<OrgDetail | null> {
   const rows = await tx.execute(sql`
     select o.id, o.name, o.ein, o.address, o.fiscal_year_start_month, o.timezone, o.hide_board_names, o.sample_org_enabled,
-           o.subscription_status, o.trial_ends_at, o.dashboard_layouts, m.role
+           o.subscription_status, o.trial_ends_at, o.dashboard_layouts, o.branding, o.logo_path, m.role,
+           coalesce((select array_agg(om.module::text order by om.module) from organization_modules om where om.org_id = o.id), '{}') as modules
       from organizations o
       join org_memberships m on m.org_id = o.id and m.user_id = app.uid() and m.status = 'active'
      where o.id = ${orgId}
   `);
   const o = rows[0] as
-    | { id: string; name: string; ein: string | null; address: OrgDetail["address"] | null; fiscal_year_start_month: number; timezone: string; hide_board_names: boolean; sample_org_enabled: boolean; subscription_status: string; trial_ends_at: string | null; dashboard_layouts: Record<string, unknown> | null; role: OrgRole }
+    | { id: string; name: string; ein: string | null; address: OrgDetail["address"] | null; fiscal_year_start_month: number; timezone: string; hide_board_names: boolean; sample_org_enabled: boolean; subscription_status: string; trial_ends_at: string | null; dashboard_layouts: Record<string, unknown> | null; branding: OrgDetail["branding"] | null; logo_path: string | null; role: OrgRole; modules: string[] }
     | undefined;
   if (!o) return null;
   return {
@@ -42,6 +44,9 @@ export async function getOrg(tx: Tx, orgId: string): Promise<OrgDetail | null> {
     subscriptionStatus: o.subscription_status,
     trialEndsAt: o.trial_ends_at,
     role: o.role,
+    modules: o.modules.filter(isModuleKey),
+    branding: o.branding ?? {},
+    logoPath: o.logo_path,
     dashboardLayouts: { staff: resolveLayout("staff", o.dashboard_layouts?.staff), board: resolveLayout("board", o.dashboard_layouts?.board) },
   };
 }

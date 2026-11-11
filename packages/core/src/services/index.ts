@@ -17,3 +17,4 @@ export * from "./setup";
 export * from "./export-all";
 export * from "./lapse";
 export * from "./rate-limits";
+export * from "./modules";

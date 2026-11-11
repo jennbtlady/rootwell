@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getAccountingSettings, listIntegrations } from "@maple/core/services";
+import { getAccountingSettings, listIntegrations, listOrgModules } from "@maple/core/services";
 import { stripeGateway } from "@maple/api/integrations";
 import { requireSession, withSession } from "@/lib/session";
 import { Heading } from "@/components/ui";
@@ -10,7 +10,8 @@ export const metadata: Metadata = { title: "Integrations" };
 export default async function IntegrationsPage({ params }: PageProps<"/app/orgs/[orgId]/settings/integrations">) {
   const { orgId } = await params;
   const session = await requireSession();
-  const [items, accounting] = await withSession(session, (tx) => Promise.all([listIntegrations(tx, orgId), getAccountingSettings(tx, orgId)]));
+  const [items, accounting, modules] = await withSession(session, (tx) => Promise.all([listIntegrations(tx, orgId), getAccountingSettings(tx, orgId), listOrgModules(tx, orgId)]));
+  const stripe = items.find((i) => i.provider === "stripe") ?? null;
   return (
     <div className="flex flex-col gap-4">
       <div>
@@ -23,7 +24,10 @@ export default async function IntegrationsPage({ params }: PageProps<"/app/orgs/
       </div>
       <IntegrationsSettings
         orgId={orgId}
-        stripe={items.find((i) => i.provider === "stripe") ?? null}
+        stripe={stripe}
+        // Stripe is for the Donations module. A connection made earlier stays visible so it
+        // can be disconnected.
+        showStripe={modules.includes("donations") || (stripe !== null && stripe.status !== "disconnected")}
         mailchimp={items.find((i) => i.provider === "mailchimp") ?? null}
         stripeMode={stripeGateway().mode}
         accounting={accounting ?? { depositAccount: null, feeAccount: null, defaultIncomeAccount: null }}

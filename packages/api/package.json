@@ -13,7 +13,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "load-test": "tsx scripts/load-test.ts"
+    "load-test": "tsx scripts/load-test.ts",
+    "modules": "tsx scripts/modules.ts"
   },
   "dependencies": {
     "@hono/zod-validator": "^0.9.1",

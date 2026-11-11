@@ -13,3 +13,5 @@ export * from "./schemas/integrations";
 export * from "./accounting";
 export * from "./fees";
 export * from "./dashboard-layout";
+export * from "./modules";
+export * from "./branding";

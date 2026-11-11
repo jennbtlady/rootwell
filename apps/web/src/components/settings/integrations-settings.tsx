@@ -16,10 +16,10 @@ function Status({ i }: { i: Integration | null }) {
   return <Badge variant="success">Connected</Badge>;
 }
 
-export function IntegrationsSettings(props: { orgId: string; stripe: Integration | null; mailchimp: Integration | null; stripeMode: "live" | "simulated"; accounting: AccountingSettings }) {
+export function IntegrationsSettings(props: { orgId: string; stripe: Integration | null; mailchimp: Integration | null; stripeMode: "live" | "simulated"; accounting: AccountingSettings; showStripe: boolean }) {
   return (
     <div className="flex flex-col gap-4">
-      <StripeCard {...props} />
+      {props.showStripe && <StripeCard {...props} />}
       <MailchimpCard {...props} />
       <QuickBooksCard {...props} />
     </div>

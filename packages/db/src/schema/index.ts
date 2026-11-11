@@ -12,3 +12,4 @@ export * from "./imports";
 export * from "./reporting";
 export * from "./integrations";
 export * from "./rate-limits";
+export * from "./modules";

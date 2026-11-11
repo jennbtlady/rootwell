@@ -1,6 +1,9 @@
 import { boolean, integer, jsonb, pgTable, smallint, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { rowMeta, uuidPk } from "./_shared";
 
+/** Same shape as OrgBranding in packages/core/src/branding.ts, which owns the rules. */
+type OrgBranding = { primaryColor?: string; accentColor?: string; headerImagePath?: string };
+
 export type GiftEntryStandards = {
   requiredFields?: string[];
   defaultFundId?: string | null;
@@ -29,6 +32,11 @@ export const organizations = pgTable("organizations", {
   fiscalYearStartMonth: integer("fiscal_year_start_month").notNull().default(1),
   timezone: text("timezone").notNull().default("America/New_York"),
   logoPath: text("logo_path"),
+  /**
+   * How public pages look (fundraising Phase 1): brand colors and a header image. The logo is
+   * logo_path above. Image paths point into the public "branding" storage bucket.
+   */
+  branding: jsonb("branding").$type<OrgBranding>().notNull().default({}),
   giftEntryStandards: jsonb("gift_entry_standards").$type<GiftEntryStandards>().notNull().default({}),
   hideBoardNames: boolean("hide_board_names").notNull().default(true),
   /** Card order and visibility for each dashboard, one layout per organization: { staff: [{ id, shown }], board: [...] }. Empty means the default layout. */

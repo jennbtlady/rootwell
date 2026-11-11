@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { ModuleKey } from "@maple/core";
 import { cn } from "@/lib/cn";
 
 /** Settings, grouped so the list reads as three short lists, not one long one. */
-export function SettingsNav({ orgId }: { orgId: string }) {
+export function SettingsNav({ orgId, modules }: { orgId: string; modules: ModuleKey[] }) {
   const path = usePathname();
   const base = `/app/orgs/${orgId}/settings`;
   const groups = [
@@ -23,7 +24,10 @@ export function SettingsNav({ orgId }: { orgId: string }) {
       items: [
         { href: `${base}/coding`, label: "Funds, campaigns, appeals" },
         { href: `${base}/gift-standards`, label: "Gift entry rules" },
-        { href: `${base}/giving`, label: "Giving pages" },
+        // Only with the Donations module (fundraising Phase 1). The list hides what an
+        // organization does not have; the API refuses it too.
+        ...(modules.includes("donations") ? [{ href: `${base}/giving`, label: "Giving pages" }] : []),
+        ...(modules.includes("donations") ? [{ href: `${base}/branding`, label: "Public page look" }] : []),
       ],
     },
     {

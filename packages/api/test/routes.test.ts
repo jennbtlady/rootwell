@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createDb, userClaims, withRls, type Db } from "@maple/db";
+import { createDb, systemClaims, userClaims, withRls, type Db } from "@maple/db";
 import { app, setDb, setSupabaseAdmin, setVerifier } from "../src";
 
 /**
@@ -337,6 +337,29 @@ describe.skipIf(!DATABASE_URL)("api routes against the database", () => {
     } finally {
       await db.execute(sql`delete from auth.mfa_factors where id = ${factor}`);
     }
+  });
+
+  it("starts every organization with Donations, and refuses giving routes without it", async () => {
+    const pages = () => app.request(`/api/v1/orgs/${orgA}/donation-pages`, { headers: auth(ownerA) });
+    const connect = () => app.request(`/api/v1/orgs/${orgA}/integrations/stripe/connect`, { method: "POST", headers: auth(ownerA) });
+    expect((await pages()).status).toBe(200);
+
+    // Only the system actor changes modules. An owner cannot turn one on or off.
+    const asOwner = await withRls(db, userClaims(ownerA.id, "aal2"), (tx) => tx.execute(sql`delete from organization_modules where org_id = ${orgA}`));
+    expect(asOwner.count).toBe(0);
+
+    await withRls(db, systemClaims(orgA), (tx) => tx.execute(sql`delete from organization_modules where org_id = ${orgA} and module = 'donations'`));
+    try {
+      for (const r of [await pages(), await connect()]) {
+        expect(r.status).toBe(403);
+        expect(((await r.json()) as { code: string }).code).toBe("module_off");
+      }
+      // Other organizations are not affected.
+      expect((await app.request(`/api/v1/orgs/${orgB}/donation-pages`, { headers: auth(ownerB) })).status).toBe(200);
+    } finally {
+      await withRls(db, systemClaims(orgA), (tx) => tx.execute(sql`insert into organization_modules (org_id, module) values (${orgA}, 'donations')`));
+    }
+    expect((await pages()).status).toBe(200);
   });
 
   it("scans duplicates, merges a pair, and undoes the merge through the API", async () => {
