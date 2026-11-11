@@ -6,10 +6,11 @@ import { Alert, AlertDescription, Button, Card, Checkbox, FormField, Input, Sele
 import { cn } from "@/lib/cn";
 import { useEarlyTyping } from "@/lib/early-typing";
 import { BOT_CHECK_WAIT, useBotCheck } from "@/components/bot-check";
+import { openCheckout } from "@/components/give/embed-bridge";
 
 const usd = (cents: number) => (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: cents % 100 ? 2 : 0 });
 
-export function GiveForm({ slug, amounts, funds, allowMonthly, offerCoverFees }: { slug: string; amounts: number[]; funds: { id: string; name: string }[]; allowMonthly: boolean; offerCoverFees: boolean }) {
+export function GiveForm({ slug, amounts, funds, allowMonthly, offerCoverFees, embedded = false }: { slug: string; amounts: number[]; funds: { id: string; name: string }[]; allowMonthly: boolean; offerCoverFees: boolean; embedded?: boolean }) {
   const [choice, setChoice] = useState<string>(String(amounts[1] ?? amounts[0] ?? ""));
   const [other, setOther] = useState("");
   const [monthly, setMonthly] = useState(false);
@@ -17,6 +18,8 @@ export function GiveForm({ slug, amounts, funds, allowMonthly, offerCoverFees }:
   const [cover, setCover] = useState(offerCoverFees);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  // In an embed frame without the embed script, the donor opens checkout with a click.
+  const [manualCheckout, setManualCheckout] = useState<string | null>(null);
   const name = useId();
   const form = useRef<HTMLFormElement>(null);
   const bot = useBotCheck();
@@ -52,7 +55,11 @@ export function GiveForm({ slug, amounts, funds, allowMonthly, offerCoverFees }:
       const body = (await res.json().catch(() => null)) as { error?: string; issues?: { message: string }[] } | null;
       return setError(body?.issues?.[0]?.message ?? body?.error ?? "Something went wrong. Please try again.");
     }
-    window.location.assign(((await res.json()) as { url: string }).url);
+    const { url } = (await res.json()) as { url: string };
+    if ((await openCheckout(url, embedded)) === "needs_click") {
+      setPending(false);
+      setManualCheckout(url);
+    }
   }
 
   const pill = (checked: boolean) =>
@@ -123,6 +130,16 @@ export function GiveForm({ slug, amounts, funds, allowMonthly, offerCoverFees }:
           />
         )}
         {bot.element}
+        {manualCheckout && (
+          <Alert>
+            <AlertDescription>
+              Payment opens on Stripe&rsquo;s secure page.{" "}
+              <a href={manualCheckout} target="_blank" rel="noopener" className="font-semibold underline">
+                Continue to secure payment
+              </a>
+            </AlertDescription>
+          </Alert>
+        )}
         {error && (
           <Alert variant="error">
             <AlertDescription>{error}</AlertDescription>
