@@ -489,3 +489,67 @@ The internal package scope stays `@maple/*`, since users never see it.
 The sign-in email subjects live in `supabase/config.toml`. The local auth server needs
 `supabase stop` and `supabase start` to use them, and the hosted project needs the same
 change in its dashboard.
+
+## Launch review (2026-10-23)
+
+A read-only review of security, design and strategy before launch.
+
+**Verdict.** The foundation is strong. Row-level security covers every table, and there is
+no plain database handle in app code. Role and two-step checks live in the database.
+Webhooks are signed, board links use hashed 192-bit tokens, and SQL is parameterized. CSV
+formula injection is handled, email HTML is escaped, Sentry scrubs PII, and there are no
+secrets in git. Three gaps must close before a paying customer.
+
+**Must fix before launch:**
+
+1. **Two-step sign-in is enforced on pages, not the API.**
+   - Where: `packages/api/src/auth.ts:57` records `aal` but never requires it.
+     `canExportEverything` (`packages/core/src/services/export-all.ts:83`) checks only the
+     role.
+   - Why it matters: a phished owner, admin or staff password can call
+     `/api/v1/orgs/:id/export/everything` or the report CSVs directly and read every donor.
+   - Fix: reject password-only (aal1) tokens for anyone who has a factor or holds owner or
+     admin. Require aal2 for the full export, report CSVs, statements, and board link
+     creation.
+2. **The Stripe stand-ins can run in production.**
+   - Where: `STRIPE_MODE=simulated` in `packages/api/src/integrations/index.ts:31,59`.
+   - Why it matters: it falls back to webhook secrets that are in the source code. Anyone
+     could forge an event that marks an organization paid or canceled.
+   - Fix: remove the escape hatch, or randomize the fallback secret for each process.
+3. **There are no rate limits.**
+   - Where: public checkout (`public-give.ts`), board links, sign-up and magic link, and the
+     bulk thank-you and statement email routes.
+   - Fix: Vercel WAF rules. Turn on captcha and email confirmation in the hosted Supabase
+     project, and record those settings in `docs/`.
+
+**Soon after:**
+- Owner-initiated deletion of a real organization. Today only the sample organization and
+  lapsed accounts can be deleted.
+- Security headers: `nosniff`, `Referrer-Policy`, `Permissions-Policy` and HSTS.
+- Board viewers can list staff emails (`orgs.ts:61`).
+- `invite_expires_at` is never enforced.
+- Store Mailchimp and Stripe error text scrubbed of emails.
+- Revoke `app.support_transfer_ownership` from `authenticated` until support tooling
+  exists.
+- Bump `fflate` to 0.8.3 or later (one moderate advisory).
+
+**Phase 6 criteria from the brief:**
+- Done: onboarding, help docs, continuity page, load test, backup drill.
+- Automated only: the accessibility audit. The manual screen reader and 200% zoom pass is
+  still to do.
+- Built but simulated: billing, which needs real Stripe keys.
+
+**Not code (Jenn):**
+- A privacy policy and terms of service.
+- The pricing number.
+- The domain.
+- Hosted Supabase (US region), Vercel, Resend, Sentry and Inngest accounts.
+- The Stripe product and price.
+- A support contact.
+- Two or three friendly nonprofits on the free trial before anyone pays.
+
+**Housekeeping:**
+- The CI browser job runs against `next start`, which ignores the test switches. Point it
+  at `next dev`.
+- The "No new tables or columns" note above was true for billing only. Statement sends,
+  import options and dashboard layouts came later.
