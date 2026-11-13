@@ -26,13 +26,13 @@ test.describe.serial("phase 5 online giving", () => {
 
   test("an owner makes a giving page", async ({ page }) => {
     await signIn(page, s.owner);
-    await page.goto(`${org}/settings/giving/new`);
+    await page.goto(`${org}/fundraising/pages/new`);
     await page.getByLabel("Title").fill("Spring groceries");
     await page.getByLabel("Web address").fill(slug);
     await page.getByLabel("Message to donors").fill("Every $25 feeds a family for a week.");
     await expectAccessible(page, "giving page editor");
     await page.getByRole("button", { name: "Make page" }).click();
-    await page.waitForURL(`**${org}/settings/giving`);
+    await page.waitForURL(`**${org}/fundraising/pages`);
     await expect(page.getByRole("link", { name: new RegExp(`/give/${slug}`) })).toBeVisible();
   });
 

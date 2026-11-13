@@ -121,7 +121,7 @@ function StripeCard({ orgId, stripe, stripeMode }: { orgId: string; stripe: Inte
             <p className="text-30 text-text-weak">
               Account <span className="font-mono">{stripe?.accountId}</span>
             </p>
-            <Link href={`/app/orgs/${orgId}/settings/giving`} className="text-30 text-text-link underline">
+            <Link href={`/app/orgs/${orgId}/fundraising/pages`} className="text-30 text-text-link underline">
               Set up giving pages
             </Link>
             <span className="grow" />

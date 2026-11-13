@@ -5,11 +5,13 @@ import { getBilling, getOrg } from "@maple/core/services";
 import { requireSession, withSession } from "@/lib/session";
 import { Badge } from "@/components/ui";
 import { PrimaryNav } from "@/components/orgs/primary-nav";
+import { AppSwitch } from "@/components/orgs/app-switch";
 import { BillingBanner } from "@/components/billing/billing-banner";
 
 /**
- * Every page inside one organization: its name, a Settings link for owners and admins,
- * and the five main areas. See docs/navigation.md.
+ * Every page inside one organization: its name, the CRM | Fundraising switch when the
+ * organization has Fundraising, a Settings link for owners and admins, and the main areas of
+ * the side you are on. See docs/navigation.md.
  */
 export default async function OrgLayout({ params, children }: LayoutProps<"/app/orgs/[orgId]">) {
   const { orgId } = await params;
@@ -19,6 +21,7 @@ export default async function OrgLayout({ params, children }: LayoutProps<"/app/
   if (!org) notFound();
   const canManage = org.role === "owner" || org.role === "admin";
   const boardOnly = org.role === "board_viewer";
+  const sides: ("crm" | "fundraising")[] = !boardOnly && org.modules.includes("donations") ? ["crm", "fundraising"] : ["crm"];
 
   return (
     <div className="flex flex-col gap-4 pb-20 sm:pb-0">
@@ -27,6 +30,7 @@ export default async function OrgLayout({ params, children }: LayoutProps<"/app/
           {org.name}
         </Link>
         {org.isSample && <Badge variant="new">Sample</Badge>}
+        <AppSwitch orgId={orgId} sides={sides} />
         <span className="grow" />
         {canManage && (
           <Link href={`/app/orgs/${orgId}/settings`} className="rounded-20 px-1 text-30 font-medium text-text-link outline-none hover:underline focus-visible:shadow-focus">

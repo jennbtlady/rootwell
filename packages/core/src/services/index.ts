@@ -20,3 +20,4 @@ export * from "./rate-limits";
 export * from "./modules";
 export * from "./animals";
 export * from "./receipts";
+export * from "./fundraising";

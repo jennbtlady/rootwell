@@ -2,6 +2,16 @@
 
 What changed, newest first, in plain language. Details live in `docs/`.
 
+## CRM and Fundraising, two sides of the app (2026-11-12, branch `fundraising/app-switch`)
+
+- **A switch in the header** reads "CRM | Fundraising", for organizations with online giving.
+- **Fundraising has its own menu:** Overview (setup steps, money raised online, monthly
+  donors, the latest online gifts) and Giving pages (with Animals to sponsor).
+- **Settings keeps the one-time setup** under "Fundraising setup": Public page look and
+  Online receipts. Old links to giving pages in Settings still work.
+
+See `docs/navigation.md` and the decision in `docs/navigation-standard.md`.
+
 ## Fundraising Phase 2: Donations (2026-11-12, branch `fundraising/phase-2-donations`)
 
 - **Refunds keep the books right.** A refund in Stripe adds a matching negative entry on the

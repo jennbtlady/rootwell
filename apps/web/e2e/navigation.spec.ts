@@ -44,6 +44,45 @@ test.describe("navigation standard", () => {
     await page.waitForURL(`**${org}/settings`);
   });
 
+  test("the header switches between the CRM and Fundraising, each with its own areas", async ({ page }) => {
+    await signIn(page, s.owner);
+    await page.goto(org);
+    const sw = page.getByRole("navigation", { name: "Switch app" });
+    await expect(sw.getByRole("link")).toHaveText(["CRM", "Fundraising"]);
+    await expect(sw.getByRole("link", { name: "CRM" })).toHaveAttribute("aria-current", "page");
+
+    await sw.getByRole("link", { name: "Fundraising" }).click();
+    await page.waitForURL(`**${org}/fundraising`);
+    await expect(sw.getByRole("link", { name: "Fundraising" })).toHaveAttribute("aria-current", "page");
+    const fr = page.getByRole("navigation", { name: "Fundraising", exact: true }).filter({ visible: true });
+    await expect(fr.getByRole("link")).toHaveText(["Overview", "Giving pages"]);
+    await expect(fr.getByRole("link", { name: "Overview" })).toHaveAttribute("aria-current", "page");
+
+    // Settings keeps only the one-time setup; old giving page addresses still work.
+    await page.goto(`${org}/settings/giving`);
+    await page.waitForURL(`**${org}/fundraising/pages`);
+    await expect(fr.getByRole("link", { name: "Giving pages" })).toHaveAttribute("aria-current", "page");
+    await page.goto(`${org}/settings`);
+    const settings = page.getByRole("navigation", { name: "Settings" });
+    await expect(settings.getByRole("link", { name: "Public page look" })).toBeVisible();
+    await expect(settings.getByRole("link", { name: "Giving pages" })).toHaveCount(0);
+
+    await sw.getByRole("link", { name: "CRM" }).click();
+    await page.waitForURL((u) => u.pathname === org);
+    await expect(page.getByRole("navigation", { name: "Main" }).filter({ visible: true }).getByRole("link")).toHaveText(AREAS);
+  });
+
+  test("on a phone the switch fits and the bottom bar follows the side", async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await signIn(page, s.owner);
+    await page.goto(`${org}/fundraising`);
+    const bar = page.getByRole("navigation", { name: "Fundraising", exact: true }).filter({ visible: true });
+    await expect(bar.getByRole("link")).toHaveText(["Overview", "Giving pages"]);
+    await expect(page.getByRole("navigation", { name: "Switch app" })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
+    await expectAccessible(page, "fundraising overview on a phone");
+  });
+
   test("staff see the five areas but no Settings link", async ({ page }) => {
     await signIn(page, s.staff);
     await page.goto(org);

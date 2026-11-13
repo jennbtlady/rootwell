@@ -8,7 +8,7 @@ import { EmbedCode } from "@/components/settings/embed-code";
 
 export const metadata: Metadata = { title: "Edit giving page" };
 
-export default async function EditGivingPage({ params }: PageProps<"/app/orgs/[orgId]/settings/giving/[pageId]">) {
+export default async function EditGivingPage({ params }: PageProps<"/app/orgs/[orgId]/fundraising/pages/[pageId]">) {
   const { orgId, pageId } = await params;
   if (!/^[0-9a-f-]{36}$/.test(pageId)) notFound();
   const session = await requireSession();

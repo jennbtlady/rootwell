@@ -1,17 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getIntegration, listDonationPages } from "@maple/core/services";
+import { getIntegration, getOrg, listDonationPages } from "@maple/core/services";
 import { requireSession, withSession } from "@/lib/session";
 import { Alert, AlertDescription, AlertTitle, Badge, EmptyState, Heading, Table, TBody, TD, TH, THead, TR } from "@/components/ui";
 import { buttonVariants } from "@/components/ui/button";
 
 export const metadata: Metadata = { title: "Giving pages" };
 
-export default async function GivingPagesPage({ params }: PageProps<"/app/orgs/[orgId]/settings/giving">) {
+export default async function GivingPagesPage({ params }: PageProps<"/app/orgs/[orgId]/fundraising/pages">) {
   const { orgId } = await params;
   const session = await requireSession();
-  const [pages, stripe] = await withSession(session, (tx) => Promise.all([listDonationPages(tx, orgId), getIntegration(tx, orgId, "stripe")]));
-  const base = `/app/orgs/${orgId}/settings/giving`;
+  const [pages, stripe, org] = await withSession(session, (tx) => Promise.all([listDonationPages(tx, orgId), getIntegration(tx, orgId, "stripe"), getOrg(tx, orgId)]));
+  const canEdit = org?.role === "owner" || org?.role === "admin";
+  const base = `/app/orgs/${orgId}/fundraising/pages`;
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -21,9 +22,11 @@ export default async function GivingPagesPage({ params }: PageProps<"/app/orgs/[
           </Heading>
           <p className="mt-1 max-w-2xl text-30 leading-5 text-text-weak">A page on the web where people give to you by card. Share its link in emails, on social media, or on your website.</p>
         </div>
-        <Link href={`${base}/new`} className={buttonVariants({ variant: "primary" })}>
-          New giving page
-        </Link>
+        {canEdit && (
+          <Link href={`${base}/new`} className={buttonVariants({ variant: "primary" })}>
+            New giving page
+          </Link>
+        )}
       </div>
       {stripe?.status !== "connected" && (
         <Alert variant="warning">
@@ -32,9 +35,13 @@ export default async function GivingPagesPage({ params }: PageProps<"/app/orgs/[
             {stripe?.status === "needs_info"
               ? "Stripe is connected but still needs a few details, such as your bank account. Your pages show a notice instead of a Give button until Stripe is ready."
               : "Your pages show a notice instead of a Give button until Stripe is connected."}{" "}
-            <Link className="underline" href={`/app/orgs/${orgId}/settings/integrations`}>
-              Go to Integrations
-            </Link>
+            {canEdit ? (
+              <Link className="underline" href={`/app/orgs/${orgId}/settings/integrations`}>
+                Connect Stripe in Settings
+              </Link>
+            ) : (
+              "An owner or admin can connect it in Settings."
+            )}
           </AlertDescription>
         </Alert>
       )}
@@ -62,9 +69,11 @@ export default async function GivingPagesPage({ params }: PageProps<"/app/orgs/[
                 </TD>
                 <TD>{p.active ? <Badge variant="success">On</Badge> : <Badge>Off</Badge>}</TD>
                 <TD align="right">
-                  <Link className="text-text-link underline" href={`${base}/${p.id}`}>
-                    Edit<span className="sr-only"> {p.title}</span>
-                  </Link>
+                  {canEdit && (
+                    <Link className="text-text-link underline" href={`${base}/${p.id}`}>
+                      Edit<span className="sr-only"> {p.title}</span>
+                    </Link>
+                  )}
                 </TD>
               </TR>
             ))}

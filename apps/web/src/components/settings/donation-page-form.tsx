@@ -36,7 +36,7 @@ export function DonationPageForm({ orgId, funds, campaigns, animals = [], page }
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const back = `/app/orgs/${orgId}/settings/giving`;
+  const back = `/app/orgs/${orgId}/fundraising/pages`;
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -144,7 +144,7 @@ export function DonationPageForm({ orgId, funds, campaigns, animals = [], page }
             <legend className="mb-1 text-30 font-semibold">Animals donors can sponsor</legend>
             <p className="text-20 text-text-weak">
               Donors can pick one. Their gift goes to that animal&rsquo;s fund. Keep the list in{" "}
-              <a className="text-text-link underline" href={`/app/orgs/${orgId}/settings/animals`}>
+              <a className="text-text-link underline" href={`/app/orgs/${orgId}/fundraising/animals`}>
                 Animals to sponsor
               </a>
               .

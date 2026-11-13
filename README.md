@@ -49,7 +49,7 @@ Without Stripe keys the app uses a built-in stand-in, marked "Test mode" everywh
 online giving: in Settings, Integrations, choose Connect Stripe, then on the stand-in's page
 either "Connect test account" (ready to take gifts) or "Connect a test account that still needs
 details" (shows "Needs more information" until you finish setup on the stand-in's page). Make a
-giving page in Settings, Giving pages, and give on it as a donor. "Make a test deposit" on the
+giving page in Fundraising, Giving pages, and give on it as a donor. "Make a test deposit" on the
 Stripe card turns test gifts into a deposit batch. Real test-mode keys: see `docs/phase-5.md`.
 
 Receipts and tribute notices from test gifts land in the local mail catcher at

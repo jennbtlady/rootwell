@@ -96,7 +96,7 @@ export const HELP: HelpArticle[] = [
       {
         steps: [
           "Go to Settings, Integrations, and choose Connect Stripe. Sign in to Stripe, or make a free account.",
-          "Go to Settings, Giving pages, and make a page. Pick the funds donors can choose and the suggested amounts.",
+          "Switch to Fundraising at the top of the page, open Giving pages, and make a page. Pick the funds donors can choose and the suggested amounts.",
           "Share the page's link in emails, on social media, or on your website.",
         ],
       },
