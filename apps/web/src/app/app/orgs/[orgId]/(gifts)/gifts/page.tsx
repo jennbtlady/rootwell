@@ -6,6 +6,7 @@ import { formatDate, formatMoney } from "@/lib/format";
 import { Badge, EmptyState, Heading, Table, TBody, TD, TH, THead, TR } from "@/components/ui";
 import { anchorClass } from "@/components/ui/text";
 import { ListPager } from "@/components/constituents/list-pager";
+import { GiftExtras } from "@/components/gifts/gift-extras";
 
 export const metadata: Metadata = { title: "Gifts" };
 const PAGE = 50;
@@ -73,10 +74,18 @@ export default async function GiftsPage({ params, searchParams }: PageProps<"/ap
                     </Link>
                   </TD>
                   <TD align="right">{formatMoney(g.amount)}</TD>
-                  <TD className={g.fundName ? "" : "text-text-warning"}>{g.fundName ?? "No fund"}</TD>
+                  <TD className={g.fundName ? "" : "text-text-warning"}>
+                    {g.fundName ?? "No fund"}
+                    <GiftExtras g={g} />
+                  </TD>
                   <TD className="text-text-weak">{g.campaignName ?? ""}</TD>
                   <TD>
                     {g.postedAt ? <Badge variant="success">Posted</Badge> : <Badge variant="warning">Open</Badge>}
+                    {g.giftType === "refund" && (
+                      <Badge className="ml-1" variant="neutral">
+                        Refund
+                      </Badge>
+                    )}
                     {g.postedAt && !g.acknowledgedAt && (
                       <Badge className="ml-1" variant="neutral">
                         Not thanked

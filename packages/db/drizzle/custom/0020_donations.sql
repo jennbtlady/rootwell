@@ -211,3 +211,33 @@ language sql stable security definer set search_path = public as $$
 $$;
 revoke all on function app.alert_recipients(uuid) from public;
 grant execute on function app.alert_recipients(uuid) to authenticated;
+
+-- The sample organization shows Phase 2 (CLAUDE.md rule 6): its giving page offers tributes
+-- and a message box, one online gift was given in memory of a pet with a note, and the other
+-- was partly refunded. It is a food pantry, so it has no animals to sponsor. A trigger on the
+-- sample's first online gift rather than an edit to app.seed_sample_data (0004).
+create or replace function app.sample_phase2() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare v_other uuid;
+begin
+  if not exists (select 1 from organizations where id = new.org_id and sample_org_enabled) then return new; end if;
+  update donation_pages set allow_tribute = true, allow_message = true where org_id = new.org_id and slug like 'sample-%';
+  update gifts set donor_message = 'For the Saturday volunteers. You are wonderful.' where id = new.id;
+  insert into gift_tributes (org_id, gift_id, kind, honoree_name) values (new.org_id, new.id, 'memory', 'Biscuit, our old beagle') on conflict do nothing;
+  return new;
+end $$;
+drop trigger if exists sample_phase2 on gifts;
+create trigger sample_phase2 after insert on gifts for each row when (new.external_id = 'ch_sample_1') execute function app.sample_phase2();
+
+create or replace function app.sample_refund() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if not exists (select 1 from organizations where id = new.org_id and sample_org_enabled) then return new; end if;
+  insert into gifts (org_id, constituent_id, amount, gift_date, fund_id, campaign_id, payment_method, gift_type, reference, external_source, external_id,
+                     deductible_amount, net_amount, source_platform, reverses_gift_id, acknowledged_at, acknowledgment_method, notes)
+  values (new.org_id, new.constituent_id, -10, current_date, new.fund_id, new.campaign_id, 'card', 'refund', 're_sample_1', 'stripe', 're_sample_1',
+          -10, -10, 'stripe', new.id, now(), 'Not needed (refund)', 'Refunded in Stripe. The donor meant to give $40.');
+  return new;
+end $$;
+drop trigger if exists sample_refund on gifts;
+create trigger sample_refund after insert on gifts for each row when (new.external_id = 'ch_sample_2') execute function app.sample_refund();

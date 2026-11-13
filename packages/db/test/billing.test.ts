@@ -87,6 +87,13 @@ describe.skipIf(!hasDb)("billing and read-only access", () => {
     const sampleId = ((await as(db, owner, (tx) => tx.execute(sql`select app.create_sample_org() as id`)))[0] as { id: string }).id;
     await asSystem(db, sampleId, (tx) => tx.execute(sql`update organizations set subscription_status = 'canceled' where id = ${sampleId}`));
     expect(((await as(db, owner, (tx) => tx.execute(sql`select app.org_writable(${sampleId}) as w`)))[0] as { w: boolean }).w).toBe(true);
+    // Fundraising Phase 2 in the sample: a tribute with a message, and a partial refund.
+    const extras = (await as(db, owner, (tx) => tx.execute(sql`
+      select (select count(*) from gift_tributes where org_id = ${sampleId})::int as tributes,
+             (select count(*) from gifts where org_id = ${sampleId} and donor_message is not null)::int as messages,
+             (select sum(amount)::text from gifts where org_id = ${sampleId} and gift_type = 'refund') as refunds,
+             (select bool_and(allow_tribute and allow_message) from donation_pages where org_id = ${sampleId}) as page`)))[0];
+    expect(extras).toEqual({ tributes: 1, messages: 1, refunds: "-10.00", page: true });
     await db.execute(sql`delete from organizations where id = ${sampleId}`);
     await db.execute(sql`delete from auth.users where id = ${owner.id}`);
   });

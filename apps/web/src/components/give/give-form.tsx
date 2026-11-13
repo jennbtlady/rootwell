@@ -2,7 +2,8 @@
 
 import { useId, useRef, useState, type FormEvent } from "react";
 import { grossUpForFee } from "@maple/core";
-import { Alert, AlertDescription, Button, Card, Checkbox, FormField, Input, Select } from "@/components/ui";
+import { Alert, AlertDescription, Button, Card, Checkbox, FormField, Input, Select, Textarea } from "@/components/ui";
+import { brandingImageUrl } from "@/lib/brand";
 import { cn } from "@/lib/cn";
 import { useEarlyTyping } from "@/lib/early-typing";
 import { BOT_CHECK_WAIT, useBotCheck } from "@/components/bot-check";
@@ -10,12 +11,44 @@ import { openCheckout } from "@/components/give/embed-bridge";
 
 const usd = (cents: number) => (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: cents % 100 ? 2 : 0 });
 
-export function GiveForm({ slug, amounts, funds, allowMonthly, offerCoverFees, embedded = false }: { slug: string; amounts: number[]; funds: { id: string; name: string }[]; allowMonthly: boolean; offerCoverFees: boolean; embedded?: boolean }) {
+export type GiveAnimal = { id: string; name: string; description: string | null; photoPath: string | null };
+
+export function GiveForm({
+  slug,
+  orgName,
+  amounts,
+  funds,
+  allowMonthly,
+  offerCoverFees,
+  animals = [],
+  allowTribute = false,
+  allowMessage = false,
+  embedded = false,
+}: {
+  slug: string;
+  orgName: string;
+  amounts: number[];
+  funds: { id: string; name: string }[];
+  allowMonthly: boolean;
+  offerCoverFees: boolean;
+  animals?: GiveAnimal[];
+  allowTribute?: boolean;
+  allowMessage?: boolean;
+  embedded?: boolean;
+}) {
   const [choice, setChoice] = useState<string>(String(amounts[1] ?? amounts[0] ?? ""));
   const [other, setOther] = useState("");
   const [monthly, setMonthly] = useState(false);
   const [fundId, setFundId] = useState(funds[0]?.id ?? "");
   const [cover, setCover] = useState(offerCoverFees);
+  // Fundraising Phase 2: sponsor an animal, give in honor or memory of someone, leave a note.
+  const [animalId, setAnimalId] = useState("");
+  const [tributeOn, setTributeOn] = useState(false);
+  const [tributeKind, setTributeKind] = useState<"honor" | "memory">("honor");
+  const [honoree, setHonoree] = useState("");
+  const [notifyName, setNotifyName] = useState("");
+  const [notifyEmail, setNotifyEmail] = useState("");
+  const [message, setMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   // In an embed frame without the embed script, the donor opens checkout with a click.
@@ -40,13 +73,23 @@ export function GiveForm({ slug, amounts, funds, allowMonthly, offerCoverFees, e
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (!valid) return setError("Enter an amount between $1 and $100,000.");
+    if (tributeOn && !honoree.trim()) return setError("Type the name of the person or pet this gift honors, or uncheck the tribute box.");
     if (bot.required && !bot.token) return setError(BOT_CHECK_WAIT);
     setPending(true);
     setError(null);
     const res = await fetch(`/api/v1/public/give/${slug}/checkout`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ amount: dollars, monthly: allowMonthly && monthly, fundId: fundId || null, coverFee: cover && offerCoverFees, botCheck: bot.token ?? undefined }),
+      body: JSON.stringify({
+        amount: dollars,
+        monthly: allowMonthly && monthly,
+        fundId: animalId ? null : fundId || null,
+        coverFee: cover && offerCoverFees,
+        animalId: animalId || null,
+        tribute: allowTribute && tributeOn ? { kind: tributeKind, honoreeName: honoree, notifyName: notifyName || null, notifyEmail: notifyEmail || null } : null,
+        message: allowMessage && message.trim() ? message.trim() : null,
+        botCheck: bot.token ?? undefined,
+      }),
     });
     if (!res.ok) {
       setPending(false);
@@ -107,7 +150,34 @@ export function GiveForm({ slug, amounts, funds, allowMonthly, offerCoverFees, e
             {(f) => <Input {...f} inputMode="decimal" insertBefore="$" autoFocus name={`${name}-other`} value={other} onChange={(e) => setOther(e.target.value)} />}
           </FormField>
         )}
-        {funds.length > 1 && (
+        {animals.length > 0 && (
+          <fieldset>
+            <legend className="mb-2 text-30 font-semibold">Sponsor an animal (optional)</legend>
+            <div className="flex flex-col gap-2">
+              <label className={cn(pill(animalId === ""), "justify-start text-30")}>
+                <input type="radio" className="sr-only" name={`${name}-animal`} value="" checked={animalId === ""} onChange={() => setAnimalId("")} />
+                No, give where it is needed
+              </label>
+              {animals.map((a) => {
+                const photo = brandingImageUrl(a.photoPath);
+                return (
+                  <label key={a.id} className={cn(pill(animalId === a.id), "justify-start gap-3 py-2 text-left")}>
+                    <input type="radio" className="sr-only" name={`${name}-animal`} value={a.id} checked={animalId === a.id} onChange={() => setAnimalId(a.id)} />
+                    {photo && (
+                      // eslint-disable-next-line @next/next/no-img-element -- an organization's own upload, any size
+                      <img src={photo} alt="" className="size-14 shrink-0 rounded-20 object-cover" />
+                    )}
+                    <span className="flex flex-col">
+                      <span>Sponsor {a.name}</span>
+                      {a.description && <span className="text-30 font-normal text-text-weak">{a.description}</span>}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
+        )}
+        {funds.length > 1 && !animalId && (
           <FormField id={`${name}-fund`} label="Where your gift goes">
             {(f) => (
               <Select {...f} name={`${name}-fund`} value={fundId} onChange={(e) => setFundId(e.target.value)}>
@@ -118,6 +188,45 @@ export function GiveForm({ slug, amounts, funds, allowMonthly, offerCoverFees, e
                 ))}
               </Select>
             )}
+          </FormField>
+        )}
+        {allowTribute && (
+          <div className="flex flex-col gap-3">
+            <Checkbox label="Give in honor or memory of someone" help="A person or a pet." name={`${name}-tribute`} checked={tributeOn} onChange={(e) => setTributeOn(e.target.checked)} />
+            {tributeOn && (
+              <div className="flex flex-col gap-3 border-l-2 border-border-weak pl-4">
+                <fieldset>
+                  <legend className="sr-only">Kind of tribute</legend>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(
+                      [
+                        ["honor", "In honor of"],
+                        ["memory", "In memory of"],
+                      ] as const
+                    ).map(([v, l]) => (
+                      <label key={v} className={pill(tributeKind === v)}>
+                        <input type="radio" className="sr-only" name={`${name}-tkind`} value={v} checked={tributeKind === v} onChange={() => setTributeKind(v)} />
+                        {l}
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+                <FormField id={`${name}-honoree`} label="Their name" required>
+                  {(f) => <Input {...f} autoComplete="off" maxLength={120} value={honoree} onChange={(e) => setHonoree(e.target.value)} />}
+                </FormField>
+                <FormField id={`${name}-nname`} label="Let someone know: their name" optional>
+                  {(f) => <Input {...f} autoComplete="off" maxLength={120} value={notifyName} onChange={(e) => setNotifyName(e.target.value)} />}
+                </FormField>
+                <FormField id={`${name}-nemail`} label="Their email" optional help={`${orgName} emails them that you gave. The amount stays private.`}>
+                  {(f) => <Input {...f} type="email" autoComplete="off" maxLength={200} value={notifyEmail} onChange={(e) => setNotifyEmail(e.target.value)} />}
+                </FormField>
+              </div>
+            )}
+          </div>
+        )}
+        {allowMessage && (
+          <FormField id={`${name}-message`} label={`A message for ${orgName}`} optional help="Up to 500 characters.">
+            {(f) => <Textarea {...f} rows={3} maxLength={500} value={message} onChange={(e) => setMessage(e.target.value)} />}
           </FormField>
         )}
         {offerCoverFees && (

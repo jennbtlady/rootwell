@@ -22,7 +22,7 @@ export default async function ThanksPage({ params }: PageProps<"/give/[slug]/tha
         </Heading>
         <p className="whitespace-pre-line text-40 leading-7">
           {page.thankYou ??
-            `Your gift to ${page.orgName} was received. Stripe will email you a receipt.`}
+            `Your gift to ${page.orgName} was received. A receipt is on its way to your email.`}
         </p>
         <p>
           <Link className="text-text-link underline" href={`/give/${slug}`}>
