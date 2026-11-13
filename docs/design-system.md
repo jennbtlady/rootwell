@@ -79,7 +79,7 @@ Force Blue reads as a muted color, which suits its job as the "context" series. 
 also name series in words, so color is never the only cue.
 
 **Logo (Jenn, 2026-10-21).** The full Rootwell logo is Jenn's artwork,
-`public/brand/rootwell-logo.png` (600 by 175, transparent), shown by
+`public/brand/rootwell-logo.png` (600 by 186, transparent; updated 2026-11-13), shown by
 `components/brand/logo.tsx` in three sizes on the header, sign-in pages and landing page.
 Its alt text is "Rootwell", because the image carries the name. Do not re-set the name in
 type beside the mark; use the logo file. The mark alone (a lime heart of roots with a pink
