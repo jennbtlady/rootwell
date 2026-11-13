@@ -150,6 +150,7 @@ export async function endRecurringPlan(tx: Tx, orgId: string, subscriptionId: st
 export async function recordPayoutBatch(
   tx: Tx,
   orgId: string,
+  // Each item is a charge (a gift) or a refund or lost dispute (a refund entry, negative amount).
   p: { payoutId: string; arrivalDate: number; netCents: number; charges: { chargeId: string; amount: number; fee: number }[] },
 ): Promise<{ batchId: string; attached: number; missing: string[]; created: boolean }> {
   await lock(tx, `payout:${orgId}:${p.payoutId}`);
@@ -163,7 +164,7 @@ export async function recordPayoutBatch(
     const r = await tx.execute(sql`
       insert into batches (org_id, batch_date, description, status, external_source, external_id, expected_total, expected_count, notes)
       select ${orgId}, (to_timestamp(${p.arrivalDate}) at time zone o.timezone)::date, ${"Stripe deposit"}, 'open', 'stripe', ${p.payoutId},
-             ${cents(gross)}, ${p.charges.length}, ${`Deposit to the bank: $${cents(p.netCents)}. Stripe fees: $${cents(fees)}. Gifts: $${cents(gross)}.`}
+             ${cents(gross)}, ${p.charges.length}, ${`Deposit to the bank: $${cents(p.netCents)}. Stripe fees: $${cents(fees)}. Gifts less refunds: $${cents(gross)}.`}
         from organizations o where o.id = ${orgId}
       returning id`);
     batchId = (r[0] as { id: string }).id;
@@ -203,10 +204,50 @@ export async function finishWebhookEvent(tx: Tx, id: string, result: { outcome: 
      where id = ${id}`);
 }
 
-/** Refunds are not undone automatically. A person decides whether to delete or adjust the gift. */
-export async function flagRefund(tx: Tx, orgId: string, chargeId: string): Promise<{ giftId: string | null }> {
-  const r = await tx.execute(sql`select id from gifts where org_id = ${orgId} and external_source = 'stripe' and external_id = ${chargeId} limit 1`);
-  return { giftId: r.length ? (r[0] as { id: string }).id : null };
+/**
+ * A refund or a lost dispute on an online gift (fundraising Phase 2). The gift itself never
+ * changes: a second, negative entry on the day of the refund points back at it, with the
+ * same donor, fund, campaign and animal. Totals net out, the books stay right for the month
+ * the gift came in, and the refund shows in the month it happened.
+ *
+ * `externalId` is Stripe's id for the refund (re_...) or the dispute (dp_...), so the same
+ * refund arriving twice makes one entry, and the deposit it comes out of can find it.
+ * Refund entries need no thank-you, so they are made already marked as done.
+ */
+export async function recordReversal(
+  tx: Tx,
+  orgId: string,
+  r: { chargeId: string; externalId: string; amountCents: number; at: number; kind: "refund" | "dispute" },
+): Promise<{ giftId: string | null; entryId: string | null; created: boolean }> {
+  await lock(tx, `gift:${orgId}:stripe:${r.chargeId}`);
+  const orig = await tx.execute(sql`
+    select id, amount::numeric as amount, coalesce(deductible_amount, amount)::numeric as deductible
+      from gifts where org_id = ${orgId} and external_source = 'stripe' and external_id = ${r.chargeId} and gift_type <> 'refund' limit 1`);
+  if (!orig.length) return { giftId: null, entryId: null, created: false };
+  const g = orig[0] as { id: string; amount: string; deductible: string };
+  const existing = await tx.execute(sql`select id from gifts where org_id = ${orgId} and external_source = 'stripe' and external_id = ${r.externalId} limit 1`);
+  if (existing.length) return { giftId: g.id, entryId: (existing[0] as { id: string }).id, created: false };
+
+  // Never reverse more than is left of the gift, whatever order refunds and disputes arrive in.
+  const done = await tx.execute(sql`select coalesce(-sum(amount), 0)::numeric as done from gifts where org_id = ${orgId} and reverses_gift_id = ${g.id}`);
+  const giftCents = Math.round(Number(g.amount) * 100);
+  const leftCents = giftCents - Math.round(Number((done[0] as { done: string }).done) * 100);
+  const amountCents = Math.min(r.amountCents, leftCents);
+  if (amountCents <= 0) return { giftId: g.id, entryId: null, created: false };
+  // The deductible part comes back in proportion: a full refund takes all of it back.
+  const deductibleCents = Math.round((Number(g.deductible) * 100 * amountCents) / giftCents);
+  const note = r.kind === "dispute" ? "The donor's bank took this back after a dispute." : "Refunded in Stripe.";
+
+  const ins = await tx.execute(sql`
+    insert into gifts (org_id, constituent_id, amount, gift_date, fund_id, campaign_id, appeal_id, sponsor_animal_id, payment_method, gift_type,
+                       reference, external_source, external_id, deductible_amount, net_amount, source_platform, recurring_plan_id,
+                       reverses_gift_id, acknowledged_at, acknowledgment_method, notes)
+    select g.org_id, g.constituent_id, ${cents(-amountCents)}, (to_timestamp(${r.at}) at time zone o.timezone)::date, g.fund_id, g.campaign_id, g.appeal_id,
+           g.sponsor_animal_id, g.payment_method, 'refund', ${r.externalId}, 'stripe', ${r.externalId}, ${cents(-deductibleCents)},
+           ${cents(-amountCents)}, g.source_platform, g.recurring_plan_id, g.id, now(), 'Not needed (refund)', ${note}
+      from gifts g join organizations o on o.id = g.org_id where g.id = ${g.id}
+    returning id`);
+  return { giftId: g.id, entryId: (ins[0] as { id: string }).id, created: true };
 }
 
 /** Records the error and leaves the event unprocessed, so the platform's retry runs it again. */

@@ -133,12 +133,14 @@ export async function updateGift(tx: Tx, orgId: string, id: string, g: GiftInput
            campaign_id = ${g.campaignId ?? null}, appeal_id = ${g.appealId ?? null}, payment_method = ${g.paymentMethod}::payment_method, gift_type = ${g.giftType}::gift_type,
            check_number = ${g.checkNumber ?? null}, reference = ${g.reference ?? null}, fair_market_value = ${g.fairMarketValue ?? null}, deductible_amount = ${g.deductibleAmount ?? null},
            notes = ${g.notes ?? null}, pledge_id = ${g.pledgeId ?? null}, recurring_plan_id = ${g.recurringPlanId ?? null}
-     where id = ${id} and org_id = ${orgId}`);
+     where id = ${id} and org_id = ${orgId} and gift_type <> 'refund'`);
+  // Refund entries come from Stripe and are never edited here; see recordReversal.
   return r.count > 0;
 }
 
 export async function deleteGift(tx: Tx, orgId: string, id: string): Promise<boolean> {
-  const r = await tx.execute(sql`delete from gifts where id = ${id} and org_id = ${orgId}`);
+  // A gift with a refund entry pointing at it stays, so the refund never points at nothing.
+  const r = await tx.execute(sql`delete from gifts where id = ${id} and org_id = ${orgId} and not exists (select 1 from gifts x where x.org_id = ${orgId} and x.reverses_gift_id = ${id})`);
   return r.count > 0;
 }
 

@@ -64,6 +64,12 @@ export const donationPages = pgTable(
     amounts: integer("amounts").array().notNull().default(sql`'{25,50,100,250}'::int[]`),
     allowMonthly: boolean("allow_monthly").notNull().default(true),
     offerCoverFees: boolean("offer_cover_fees").notNull().default(true),
+    /** Fundraising Phase 2: let donors give in honor or memory of someone. */
+    allowTribute: boolean("allow_tribute").notNull().default(false),
+    /** Fundraising Phase 2: a box for an optional message to the organization. */
+    allowMessage: boolean("allow_message").notNull().default(false),
+    /** Fundraising Phase 2: animals donors can sponsor on this page, in order. */
+    animalIds: uuid("animal_ids").array().notNull().default(sql`'{}'::uuid[]`),
     active: boolean("active").notNull().default(true),
     ...rowMeta,
   },

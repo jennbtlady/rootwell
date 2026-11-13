@@ -4,6 +4,9 @@ import { rowMeta, uuidPk } from "./_shared";
 /** Same shape as OrgBranding in packages/core/src/branding.ts, which owns the rules. */
 type OrgBranding = { primaryColor?: string; accentColor?: string; headerImagePath?: string };
 
+/** Same shape as ReceiptSettings in packages/core/src/receipts.ts, which owns the rules. */
+type ReceiptSettings = { enabled?: boolean; taxStatement?: string; thankYou?: string; signature?: string };
+
 export type GiftEntryStandards = {
   requiredFields?: string[];
   defaultFundId?: string | null;
@@ -37,6 +40,8 @@ export const organizations = pgTable("organizations", {
    * logo_path above. Image paths point into the public "branding" storage bucket.
    */
   branding: jsonb("branding").$type<OrgBranding>().notNull().default({}),
+  /** Automatic email receipts for online gifts (fundraising Phase 2). */
+  receipts: jsonb("receipts").$type<ReceiptSettings>().notNull().default({}),
   giftEntryStandards: jsonb("gift_entry_standards").$type<GiftEntryStandards>().notNull().default({}),
   hideBoardNames: boolean("hide_board_names").notNull().default(true),
   /** Card order and visibility for each dashboard, one layout per organization: { staff: [{ id, shown }], board: [...] }. Empty means the default layout. */

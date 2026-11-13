@@ -42,7 +42,14 @@ export interface StripeGateway {
   verifyWebhook(rawBody: string, signature: string | null): Stripe.Event;
   paymentDetails(accountId: string, paymentIntentId: string): Promise<PaymentInfo>;
   invoiceDetails(accountId: string, invoiceId: string): Promise<InvoiceInfo>;
+  /**
+   * What a payout is made of. `chargeId` is the id a gift or refund entry carries in
+   * external_id: a charge (ch_), a refund (re_, negative amount) or a lost dispute (dp_,
+   * negative amount, with Stripe's dispute fee as `fee`).
+   */
   payoutCharges(accountId: string, payoutId: string): Promise<{ chargeId: string; fee: number; amount: number }[]>;
+  /** Refunds on a charge that went through, in cents, oldest first. */
+  chargeRefunds(accountId: string, chargeId: string): Promise<{ id: string; amount: number; created: number }[]>;
 }
 
 function addr(a: Stripe.Address | null | undefined): PaymentInfo["address"] {
@@ -142,11 +149,23 @@ export class LiveStripeGateway implements StripeGateway {
   }
   async payoutCharges(accountId: string, payoutId: string) {
     const out: { chargeId: string; fee: number; amount: number }[] = [];
-    for await (const bt of this.stripe.balanceTransactions.list({ payout: payoutId, type: "charge", limit: 100 }, { stripeAccount: accountId })) {
+    for await (const bt of this.stripe.balanceTransactions.list({ payout: payoutId, limit: 100 }, { stripeAccount: accountId })) {
       const src = typeof bt.source === "string" ? bt.source : bt.source?.id;
-      if (src) out.push({ chargeId: src, fee: bt.fee, amount: bt.amount });
+      if (!src) continue;
+      // Gifts, refunds, and money a dispute took back. Everything else (the payout itself,
+      // Stripe's own adjustments) is not a gift and stays out of the batch.
+      if (bt.type === "charge" || bt.type === "payment" || bt.type === "refund" || bt.type === "payment_refund" || (bt.type === "adjustment" && src.startsWith("dp_"))) {
+        out.push({ chargeId: src, fee: bt.fee, amount: bt.amount });
+      }
     }
     return out;
+  }
+  async chargeRefunds(accountId: string, chargeId: string) {
+    const out: { id: string; amount: number; created: number }[] = [];
+    for await (const r of this.stripe.refunds.list({ charge: chargeId, limit: 100 }, { stripeAccount: accountId })) {
+      if (r.status === "succeeded" || r.status === "pending") out.push({ id: r.id, amount: r.amount, created: r.created });
+    }
+    return out.sort((a, b) => a.created - b.created);
   }
 }
 

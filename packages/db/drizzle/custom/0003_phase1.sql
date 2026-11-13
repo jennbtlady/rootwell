@@ -101,9 +101,9 @@ create unique index if not exists constituent_addresses_primary_uq on constituen
 alter table relationships drop constraint if exists relationships_not_self;
 alter table relationships add constraint relationships_not_self check (from_constituent_id <> to_constituent_id);
 
--- Money is positive.
-alter table gifts drop constraint if exists gifts_amount_positive;
-alter table gifts add constraint gifts_amount_positive check (amount > 0);
+-- Money is positive, except refund entries. The rule lives in 0020_donations.sql since
+-- fundraising Phase 2, because this file reruns on every migrate and would fail once a
+-- refund entry exists.
 
 -- Child rows must belong to their parent's org. The policies already scope org_id, but
 -- this stops a mismatched pair from ever being written.

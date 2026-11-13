@@ -14,13 +14,17 @@ export const PAYMENT_METHOD_LABEL: Record<(typeof PAYMENT_METHODS)[number], stri
   other: "Other",
 };
 
-export const GIFT_TYPE_LABEL: Record<(typeof GIFT_TYPES)[number], string> = {
+/** Types a stored gift can have. "refund" entries are made only from Stripe (fundraising Phase 2). */
+export type StoredGiftType = (typeof GIFT_TYPES)[number] | "refund";
+
+export const GIFT_TYPE_LABEL: Record<StoredGiftType, string> = {
   one_time: "One-time gift",
   recurring: "Recurring gift",
   pledge: "Pledge",
   pledge_payment: "Pledge payment",
   in_kind: "In-kind gift",
   soft_credit: "Soft credit",
+  refund: "Refund",
 };
 
 export const giftInput = z.object({

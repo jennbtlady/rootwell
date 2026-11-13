@@ -11,6 +11,8 @@ import { Badge, Button, Card, Heading, Table, TBody, TD, TH, THead, TR, useToast
 const NAMES: Record<string, string> = { stripe: "Stripe", mailchimp: "Mailchimp" };
 const EVENT: Record<string, string> = {
   "charge.refunded": "Refund",
+  "charge.dispute.created": "Dispute",
+  "charge.dispute.closed": "Dispute decided",
   "payout.paid": "Deposit",
   "checkout.session.completed": "Online gift",
   "invoice.paid": "Monthly gift",

@@ -11,7 +11,9 @@ export const constituentType = pgEnum("constituent_type", ["person", "household"
 export const contactPointType = pgEnum("contact_point_type", ["home", "work", "mobile", "mailing", "other"]);
 export const interactionType = pgEnum("interaction_type", ["call", "meeting", "email", "letter", "event", "note", "other"]);
 export const batchStatus = pgEnum("batch_status", ["open", "posted"]);
-export const giftType = pgEnum("gift_type", ["one_time", "recurring", "pledge", "pledge_payment", "in_kind", "soft_credit"]);
+export const giftType = pgEnum("gift_type", ["one_time", "recurring", "pledge", "pledge_payment", "in_kind", "soft_credit", "refund"]);
+/** In honor of or in memory of someone (fundraising Phase 2). */
+export const tributeKind = pgEnum("tribute_kind", ["honor", "memory"]);
 export const paymentMethod = pgEnum("payment_method", ["check", "cash", "card", "ach", "stock", "in_kind", "other"]);
 export const externalSource = pgEnum("external_source", ["manual", "stripe", "import"]);
 export const recurringFrequency = pgEnum("recurring_frequency", ["monthly", "quarterly", "annual"]);

@@ -7,10 +7,10 @@ import {
   ensureRecurringPlan,
   failWebhookEvent,
   finishWebhookEvent,
-  flagRefund,
   orgForIntegrationAccount,
   recordOnlineGift,
   recordPayoutBatch,
+  recordReversal,
   recordWebhookEvent,
   type OnlineDonor,
 } from "@maple/core/services";
@@ -117,9 +117,40 @@ async function handle(gw: StripeGateway, orgId: string, account: string, event: 
       return { outcome: ended ? "monthly gift ended" : "no matching monthly gift" };
     }
 
+    // A refund, whole or part. Each Stripe refund becomes one negative entry that reverses
+    // part of the gift (fundraising Phase 2). Ask Stripe for the refunds rather than trust the
+    // event body, so a partial refund arriving twice is still one entry.
     case "charge.refunded": {
-      const r = await withRls(db, claims, (tx) => flagRefund(tx, orgId, String(obj.id)));
-      return { outcome: r.giftId ? "refunded: check this gift and adjust or delete it" : "refund for a payment we have no gift for", needsAttention: true };
+      const chargeId = String(obj.id);
+      const refunds = await gw.chargeRefunds(account, chargeId);
+      let made = 0;
+      let known = true;
+      for (const rf of refunds) {
+        const r = await withRls(db, claims, (tx) => recordReversal(tx, orgId, { chargeId, externalId: rf.id, amountCents: rf.amount, at: rf.created, kind: "refund" }));
+        if (!r.giftId) known = false;
+        if (r.created) made++;
+      }
+      if (!known) return { outcome: "refund for a payment we have no gift for", needsAttention: true };
+      return { outcome: made ? "refund recorded against the gift" : "refund already recorded" };
+    }
+
+    // A donor's bank questions a charge. The money is on hold, so nothing changes in the books
+    // yet, but someone has to answer in Stripe before the deadline.
+    case "charge.dispute.created": {
+      const due = Number((obj.evidence_details as { due_by?: number } | undefined)?.due_by ?? 0);
+      const by = due ? ` by ${new Date(due * 1000).toLocaleDateString("en-US", { month: "long", day: "numeric", timeZone: "UTC" })}` : "";
+      return { outcome: `a donor's bank disputed this gift: answer in Stripe${by}`, needsAttention: true };
+    }
+
+    // Won: nothing changes. Lost: the money goes back, so the gift gets a reversing entry.
+    case "charge.dispute.closed": {
+      if (obj.status === "won") return { outcome: "dispute won: the gift stands" };
+      if (obj.status !== "lost") return { outcome: "dispute closed" };
+      const r = await withRls(db, claims, (tx) =>
+        recordReversal(tx, orgId, { chargeId: String(obj.charge), externalId: String(obj.id), amountCents: Number(obj.amount ?? 0), at: event.created, kind: "dispute" }),
+      );
+      if (!r.giftId) return { outcome: "lost dispute for a payment we have no gift for", needsAttention: true };
+      return { outcome: "dispute lost: the gift was reversed, and Stripe charged a dispute fee", needsAttention: true };
     }
 
     case "payout.paid": {
