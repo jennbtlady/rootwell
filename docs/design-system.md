@@ -83,13 +83,15 @@ also name series in words, so color is never the only cue.
 `components/brand/logo.tsx` in three sizes on the header, sign-in pages and landing page.
 Its alt text is "Rootwell", because the image carries the name. Do not re-set the name in
 type beside the mark; use the logo file. The mark alone (a lime heart of roots with a pink
-bud) is `public/brand/rootwell-mark.svg`, cropped from Jenn's `rootwell_icon.svg`, for
-square spaces.
+bud) is `public/brand/rootwell-mark.svg`, cropped from Jenn's `rootwell_icon_noBG.svg`
+(updated 2026-11-13), for square spaces. The artwork's lime is #B1D850, a little deeper
+than Lime Cream; it is used only in the logo and mark, never as a UI color.
 
 The app icons (browser tab, home screen, iPhone) put the mark on a Crimson Violet tile,
 where its pale colors stand out. The home-screen version has extra margin for phones
-that crop icons into circles. The PNGs are rendered from the SVGs. The pale mark on Old
-Lace is soft (about 1.2:1), which is fine for a logo: WCAG exempts logotypes, and the name
+that crop icons into circles. The PNGs are rendered from the SVGs in a browser (any
+headless Chromium), at 192, 512, 512 maskable and 180 for iPhone. The pale mark on the
+page background is soft, which is fine for a logo: WCAG exempts logotypes, and the name
 carries the brand.
 
 To change a color, edit `overrides.css`, rerun the contrast checks for every pair it
