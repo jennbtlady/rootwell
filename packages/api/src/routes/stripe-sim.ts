@@ -46,6 +46,7 @@ export const stripeSim = new Hono<ApiEnv>()
 <form method="post" action="/api/v1/stripe-sim/connect">
   <input type="hidden" name="state" value="${esc(state)}"><input type="hidden" name="redirect_uri" value="${esc(redirect)}">
   <button type="submit">Connect test account</button>
+  <button type="submit" name="needs_info" value="1" style="background:#fff;color:#0263e0;border:1px solid #0263e0">Connect a test account that still needs details</button>
 </form>`,
       ),
     );
@@ -56,11 +57,29 @@ export const stripeSim = new Hono<ApiEnv>()
     const origin = process.env.NEXT_PUBLIC_APP_URL ?? new URL(c.req.url).origin;
     // Only ever send people back to this app.
     if (!redirect.startsWith(`${origin}/`)) return c.text("That return address is not allowed.", 400);
-    const code = sim()!.issueCode();
+    const code = sim()!.issueCode(form.get("needs_info") === "1");
     const u = new URL(redirect);
     u.searchParams.set("code", code);
     u.searchParams.set("state", String(form.get("state") ?? ""));
     return c.redirect(u.toString(), 303);
+  })
+  // Stands in for a Standard account's own Stripe dashboard, where its owner finishes setup.
+  .get("/account/:id", (c) => {
+    const acct = c.req.param("id");
+    return c.html(
+      page(
+        "Finish your Stripe account",
+        `<h1>Finish your Stripe account</h1>
+<p>Stripe needs a few more details (bank account and identity) before this account can take payments.</p>
+<form method="post" action="/api/v1/stripe-sim/account/${esc(acct)}">
+  <button type="submit">Finish account setup</button>
+</form>`,
+      ),
+    );
+  })
+  .post("/account/:id", async (c) => {
+    await sim()!.finishAccountSetup(c.req.param("id"));
+    return c.html(page("Account ready", "<h1>Your account is ready</h1><p>Go back to Rootwell. Your Stripe connection now says Connected.</p>"));
   })
   .get("/checkout/:id", (c) => {
     const s = sim()!.session(c.req.param("id"));

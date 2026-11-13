@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { withRls } from "@maple/db";
-import { createOrganizationInput, inviteMemberInput, orgProfileInput, setMemberRoleInput, transferOwnershipInput } from "@maple/core";
+import { brandingInput, createOrganizationInput, inviteMemberInput, orgProfileInput, setMemberRoleInput, transferOwnershipInput } from "@maple/core";
 import {
   createOrg,
   createSampleOrg,
@@ -11,6 +11,7 @@ import {
   listMembers,
   listMyOrgs,
   removeMember,
+  saveBranding,
   setMemberRole,
   transferOwnership,
   updateOrgProfile,
@@ -19,6 +20,7 @@ import type { ApiEnv } from "../env";
 import { getDb } from "../db";
 import { supabaseAdmin } from "../supabase-admin";
 import { validate } from "../validate";
+import { requireModule } from "../modules";
 
 const idParam = z.object({ orgId: z.string().uuid() });
 const memberParams = z.object({ orgId: z.string().uuid(), memberId: z.string().uuid() });
@@ -49,6 +51,15 @@ export const orgs = new Hono<ApiEnv>()
     const { orgId } = c.req.valid("param");
     const ok = await withRls(getDb(), c.get("claims"), (tx) => updateOrgProfile(tx, orgId, c.req.valid("json")));
     if (!ok) return c.json({ error: "Only owners and admins can change the organization's details." }, 403);
+    return c.json({ ok: true });
+  })
+  // How public pages look: brand colors, logo, header image (fundraising Phase 1). The images
+  // are uploaded to the branding bucket first; this saves which ones to use.
+  .put("/:orgId/branding", requireModule("donations"), validate("param", idParam), validate("json", brandingInput), async (c) => {
+    const { orgId } = c.req.valid("param");
+    const r = await withRls(getDb(), c.get("claims"), (tx) => saveBranding(tx, orgId, c.req.valid("json")));
+    if (r === "bad_path") return c.json({ error: "That image is not one of this organization's uploads." }, 400);
+    if (r === "missing") return c.json({ error: "Only owners and admins can change how public pages look." }, 403);
     return c.json({ ok: true });
   })
   .delete("/:orgId", validate("param", idParam), async (c) => {

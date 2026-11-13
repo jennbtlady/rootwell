@@ -139,6 +139,23 @@ tailwind-merge reads `text-text-inverse` as a font size and silently drops it ne
 9. Phone first. Check every screen at 375px before calling it done.
 10. Dark mode exists in the tokens (`.dark`) but no screen is designed for it yet. Do not add a toggle until that work is scheduled.
 
+## Public pages (fundraising Phase 1)
+
+Admin screens use the Rootwell palette above. Public pages (giving pages now; fundraiser and
+event pages later) carry each nonprofit's own brand instead.
+
+- `PublicShell` (`apps/web/src/components/give/public-shell.tsx`) frames every public page:
+  header image, logo and name, the content, and a small "Powered by Rootwell" at the foot.
+- `brandStyle()` (`apps/web/src/lib/brand.ts`) redefines the primary tokens on that wrapper
+  only, so every `Button`, link and focus ring inside follows the organization's colors. It is
+  the one place outside `overrides.css` that sets tokens, because the values come from each
+  organization at runtime. Text on a primary button switches between white and near-black,
+  whichever reads better (`textOn()` in `packages/core/src/branding.ts`).
+- `--brand-accent` carries the accent color for progress bars and highlights.
+- The settings preview renders `PublicShell` itself, so it always matches the real page.
+- Contrast: `brandingWarnings()` warns when the main color is under 4.5:1 for links on white or
+  for button text, and when the accent is under 3:1 on white. Saving is still allowed.
+
 ## Mobile app
 
 Phase 7's Expo app reads the same token values. `tokens.css` is the source; a small script

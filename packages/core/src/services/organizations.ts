@@ -3,6 +3,8 @@ import type { CreateOrganizationInput, OrgProfileInput } from "../schemas/organi
 import type { OrgRole } from "../schemas/membership";
 import type { OrgDetail, OrgSummary, Tx } from "./types";
 import { resolveLayout } from "../dashboard-layout";
+import { isModuleKey } from "../modules";
+import type { BrandingInput, OrgBranding } from "../branding";
 
 export async function listMyOrgs(tx: Tx): Promise<OrgSummary[]> {
   const rows = await tx.execute(sql`
@@ -21,13 +23,14 @@ export async function listMyOrgs(tx: Tx): Promise<OrgSummary[]> {
 export async function getOrg(tx: Tx, orgId: string): Promise<OrgDetail | null> {
   const rows = await tx.execute(sql`
     select o.id, o.name, o.ein, o.address, o.fiscal_year_start_month, o.timezone, o.hide_board_names, o.sample_org_enabled,
-           o.subscription_status, o.trial_ends_at, o.dashboard_layouts, m.role
+           o.subscription_status, o.trial_ends_at, o.dashboard_layouts, o.branding, o.logo_path, m.role,
+           coalesce((select array_agg(om.module::text order by om.module) from organization_modules om where om.org_id = o.id), '{}') as modules
       from organizations o
       join org_memberships m on m.org_id = o.id and m.user_id = app.uid() and m.status = 'active'
      where o.id = ${orgId}
   `);
   const o = rows[0] as
-    | { id: string; name: string; ein: string | null; address: OrgDetail["address"] | null; fiscal_year_start_month: number; timezone: string; hide_board_names: boolean; sample_org_enabled: boolean; subscription_status: string; trial_ends_at: string | null; dashboard_layouts: Record<string, unknown> | null; role: OrgRole }
+    | { id: string; name: string; ein: string | null; address: OrgDetail["address"] | null; fiscal_year_start_month: number; timezone: string; hide_board_names: boolean; sample_org_enabled: boolean; subscription_status: string; trial_ends_at: string | null; dashboard_layouts: Record<string, unknown> | null; branding: OrgDetail["branding"] | null; logo_path: string | null; role: OrgRole; modules: string[] }
     | undefined;
   if (!o) return null;
   return {
@@ -42,6 +45,9 @@ export async function getOrg(tx: Tx, orgId: string): Promise<OrgDetail | null> {
     subscriptionStatus: o.subscription_status,
     trialEndsAt: o.trial_ends_at,
     role: o.role,
+    modules: o.modules.filter(isModuleKey),
+    branding: o.branding ?? {},
+    logoPath: o.logo_path,
     dashboardLayouts: { staff: resolveLayout("staff", o.dashboard_layouts?.staff), board: resolveLayout("board", o.dashboard_layouts?.board) },
   };
 }
@@ -66,6 +72,24 @@ export async function createOrg(tx: Tx, input: CreateOrganizationInput): Promise
 }
 
 /** Owners and admins (with two-step sign-in) update the organization's own details. RLS enforces it. */
+/**
+ * Saves the look of public pages (fundraising Phase 1). Images must sit in this organization's
+ * own folder of the branding bucket, so one organization cannot point at another's uploads.
+ * Owners and admins only, by RLS on organizations. Returns "bad_path" for a foreign image.
+ */
+export async function saveBranding(tx: Tx, orgId: string, input: BrandingInput): Promise<"ok" | "missing" | "bad_path"> {
+  for (const p of [input.logoPath, input.headerImagePath]) if (p && !p.startsWith(`${orgId}/`)) return "bad_path";
+  const branding: OrgBranding = {
+    ...(input.primaryColor ? { primaryColor: input.primaryColor } : {}),
+    ...(input.accentColor ? { accentColor: input.accentColor } : {}),
+    ...(input.headerImagePath ? { headerImagePath: input.headerImagePath } : {}),
+  };
+  const r = await tx.execute(sql`
+    update organizations set branding = ${JSON.stringify(branding)}::jsonb, logo_path = ${input.logoPath}
+     where id = ${orgId}`);
+  return r.count > 0 ? "ok" : "missing";
+}
+
 export async function updateOrgProfile(tx: Tx, orgId: string, input: OrgProfileInput): Promise<boolean> {
   const r = await tx.execute(sql`
     update organizations

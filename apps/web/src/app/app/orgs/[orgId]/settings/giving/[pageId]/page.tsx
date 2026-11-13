@@ -4,6 +4,7 @@ import { getDonationPage, listCoding } from "@maple/core/services";
 import { requireSession, withSession } from "@/lib/session";
 import { Heading } from "@/components/ui";
 import { DonationPageForm } from "@/components/settings/donation-page-form";
+import { EmbedCode } from "@/components/settings/embed-code";
 
 export const metadata: Metadata = { title: "Edit giving page" };
 
@@ -18,6 +19,7 @@ export default async function EditGivingPage({ params }: PageProps<"/app/orgs/[o
       <Heading variant="heading30" as="h1" noMargin>
         Edit giving page
       </Heading>
+      <EmbedCode origin={(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000").replace(/\/$/, "")} slug={page.slug} active={page.active} />
       <DonationPageForm orgId={orgId} funds={funds} campaigns={campaigns} page={page} />
     </div>
   );

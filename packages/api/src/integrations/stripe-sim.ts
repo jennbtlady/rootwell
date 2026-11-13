@@ -11,7 +11,7 @@ import { type CheckoutInput, type InvoiceInfo, type PaymentInfo, type StripeGate
 type SimCharge = PaymentInfo & { accountId: string; paidOut: boolean; invoiceId?: string; subscriptionId?: string };
 type SimSession = { id: string; accountId: string; input: CheckoutInput; done: boolean };
 
-type SimState = { charges: Map<string, SimCharge>; sessions: Map<string, SimSession>; codes: Map<string, string>; subs: Map<string, { accountId: string; metadata: Record<string, string>; amount: number; email: string | null }>; sent: Stripe.Event[] };
+type SimState = { charges: Map<string, SimCharge>; sessions: Map<string, SimSession>; codes: Map<string, string>; needsInfo?: Set<string>; subs: Map<string, { accountId: string; metadata: Record<string, string>; amount: number; email: string | null }>; sent: Stripe.Event[] };
 const g = globalThis as unknown as { __mapleStripeSim?: SimState };
 const state: SimState = (g.__mapleStripeSim ??= { charges: new Map(), sessions: new Map(), codes: new Map(), subs: new Map(), sent: [] });
 
@@ -32,11 +32,25 @@ export class SimulatedStripeGateway implements StripeGateway {
   connectUrl(st: string, redirectUri: string) {
     return `${this.baseUrl()}/api/v1/stripe-sim/connect?${new URLSearchParams({ state: st, redirect_uri: redirectUri }).toString()}`;
   }
-  /** The simulator's consent page calls this, then redirects back with the code. */
-  issueCode(): string {
+  /**
+   * The simulator's consent page calls this, then redirects back with the code. With
+   * `needsInfo`, the account connects but cannot take payments until its setup is finished on
+   * the simulator's account page, like a Standard account that still owes Stripe details.
+   */
+  issueCode(needsInfo = false): string {
     const code = id("ac");
-    state.codes.set(code, id("acct"));
+    const acct = id("acct");
+    state.codes.set(code, acct);
+    if (needsInfo) (state.needsInfo ??= new Set()).add(acct);
     return code;
+  }
+  async accountStatus(accountId: string) {
+    return { ready: !state.needsInfo?.has(accountId), dashboardUrl: `${this.baseUrl()}/api/v1/stripe-sim/account/${accountId}` };
+  }
+  /** The simulator's account page: finish setup, then tell Rootwell the way Stripe would. */
+  async finishAccountSetup(accountId: string) {
+    state.needsInfo?.delete(accountId);
+    await this.emit(accountId, "account.updated", { id: accountId, object: "account", charges_enabled: true, details_submitted: true });
   }
   async completeConnect(code: string) {
     const acct = state.codes.get(code);

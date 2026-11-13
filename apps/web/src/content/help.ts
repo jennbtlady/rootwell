@@ -100,6 +100,14 @@ export const HELP: HelpArticle[] = [
           "Share the page's link in emails, on social media, or on your website.",
         ],
       },
+      {
+        heading: "Your look, on your website",
+        text: [
+          "Settings, Public page look sets your colors, logo and a header photo. Your giving pages use them, and Rootwell appears only as a small note at the bottom. If a color is hard to read, the page tells you what to change.",
+          "To put the form right on your own website, open a giving page in Settings and copy the code under Share and embed. In WordPress, add a Custom HTML block and paste it in. Payment still opens on Stripe's secure page.",
+        ],
+      },
+      { heading: "If Stripe needs more information", text: ["Stripe sometimes needs your bank account or other details before it can take gifts. The Stripe card then says Needs more information. Choose Finish setup in Stripe, then come back and choose Check again."] },
       { heading: "What happens next", text: ["Each gift is added for you and matched to the donor if they are already here. When Stripe pays out to your bank, the deposit becomes a batch. Check it against the bank and post it like any other batch."] },
       { heading: "Refunds", text: ["A refund shows on Data health. Decide whether to adjust or remove the gift, then mark it as done."] },
     ],

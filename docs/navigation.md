@@ -25,7 +25,7 @@ disclosure: administrative, so it is out of the main row, but visible text, neve
 Inside, one grouped list:
 
 - Your organization: Team, Account and export, Billing
-- Gifts: Funds, campaigns, appeals; Gift entry rules; Giving pages
+- Gifts: Funds, campaigns, appeals; Gift entry rules; Giving pages and Public page look (Donations module only)
 - Connections: Stripe, Mailchimp, QuickBooks; Board sharing; Past imports
 
 Help is a visible "Help" link in the top bar on every signed-in page.

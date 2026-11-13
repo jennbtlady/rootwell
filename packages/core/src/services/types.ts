@@ -1,6 +1,8 @@
 import type { RlsTx } from "@maple/db";
 import type { OrgRole } from "../schemas/membership";
 import type { DashboardView, LayoutItem } from "../dashboard-layout";
+import type { ModuleKey } from "../modules";
+import type { OrgBranding } from "../branding";
 
 /** Every service takes the RLS-scoped transaction first. Nothing here opens its own. */
 export type Tx = RlsTx;
@@ -36,6 +38,11 @@ export type OrgDetail = {
   subscriptionStatus: string;
   trialEndsAt: string | null;
   role: OrgRole;
+  /** The modules this organization has (packages/core/src/modules.ts). */
+  modules: ModuleKey[];
+  /** How public pages look. Image paths point into the public "branding" storage bucket. */
+  branding: OrgBranding;
+  logoPath: string | null;
   /** Card order and visibility per dashboard, already resolved against the current card list. */
   dashboardLayouts: Record<DashboardView, LayoutItem[]>;
 };

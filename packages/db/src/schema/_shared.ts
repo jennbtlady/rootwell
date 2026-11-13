@@ -18,13 +18,16 @@ export const recurringFrequency = pgEnum("recurring_frequency", ["monthly", "qua
 export const recurringStatus = pgEnum("recurring_status", ["active", "paused", "ended"]);
 export const pledgeStatus = pgEnum("pledge_status", ["open", "fulfilled", "written_off"]);
 export const duplicateStatus = pgEnum("duplicate_status", ["open", "merged", "not_duplicate"]);
+/** Parts of Rootwell an organization can have. Bundles map to these in packages/core/src/modules.ts. */
+export const orgModule = pgEnum("org_module", ["donations", "peer_fundraising", "events", "auction"]);
 export const importKind = pgEnum("import_kind", ["constituents", "constituents_gifts"]);
 export const importStatus = pgEnum("import_status", ["uploading", "ready", "committed", "rolled_back"]);
 export const importRowAction = pgEnum("import_row_action", ["create", "match", "review", "skip", "error"]);
 export const ackChannel = pgEnum("ack_channel", ["letter", "email", "phone", "in_person"]);
 export const ackStatus = pgEnum("ack_status", ["sent", "marked", "failed"]);
 export const integrationProvider = pgEnum("integration_provider", ["stripe", "mailchimp"]);
-export const integrationStatus = pgEnum("integration_status", ["connected", "error", "disconnected"]);
+/** needs_info: a Stripe account connected but not yet able to take payments (fundraising Phase 1). */
+export const integrationStatus = pgEnum("integration_status", ["connected", "error", "disconnected", "needs_info"]);
 
 /**
  * Columns every tenant-scoped table carries. created_by/updated_by are filled by the

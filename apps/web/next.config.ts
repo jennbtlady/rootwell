@@ -10,19 +10,32 @@ const nextConfig: NextConfig = {
   transpilePackages: ["@maple/api", "@maple/core", "@maple/db"],
   // The Postgres driver must stay a real Node module, not a bundled one.
   serverExternalPackages: ["postgres"],
-  // No other site may show any page of this app inside a frame. This stops clickjacking:
-  // a hidden frame of a signed-in screen under a decoy page. The CSP rule is the modern
-  // one; X-Frame-Options covers older browsers. When embedded giving forms are built,
-  // allow framing for /give/* only (see docs/phase-5.md).
   async headers() {
+    // Framing. No other site may show a page of this app inside a frame, which stops
+    // clickjacking: a hidden frame of a signed-in screen under a decoy page. The CSP rule is
+    // the modern one; X-Frame-Options covers older browsers. The one exception is the public
+    // giving pages, /give/*, which nonprofits embed on their own websites with /embed.js
+    // (fundraising Phase 1). A later rule can override a header but not remove one, so the
+    // "no framing" rules skip /give/ by regex rather than being overridden there.
+    const noFraming = [
+      { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
+      { key: "X-Frame-Options", value: "DENY" },
+    ];
     return [
+      // Everywhere (launch review, "soon after"): no MIME sniffing, no full URLs sent to other
+      // sites, no camera, microphone or location, and HTTPS only once a browser has seen it.
       {
         source: "/:path*",
         headers: [
-          { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
-          { key: "X-Frame-Options", value: "DENY" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+          { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
         ],
       },
+      { source: "/", headers: noFraming },
+      { source: "/:path((?!give/).*)", headers: noFraming },
+      { source: "/give/:path*", headers: [{ key: "Content-Security-Policy", value: "frame-ancestors *" }] },
     ];
   },
   turbopack: {

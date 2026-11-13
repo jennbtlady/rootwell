@@ -3,10 +3,12 @@ import type { Tx } from "./types";
 import type { AccountingSettings, DonationPageInput, IntegrationProvider } from "../schemas/integrations";
 import { DEFAULT_ACCOUNTS, type AccountNames, type ExportBatch } from "../accounting";
 import { uuidArray } from "./online";
+import type { OrgBranding } from "../branding";
 
 export type Integration = {
   provider: IntegrationProvider;
-  status: "connected" | "error" | "disconnected";
+  /** needs_info: Stripe connected, but the account cannot take payments yet. */
+  status: "connected" | "error" | "disconnected" | "needs_info";
   accountId: string | null;
   config: Record<string, unknown>;
   lastSyncAt: string | null;
@@ -61,6 +63,17 @@ export async function updateIntegrationConfig(tx: Tx, orgId: string, provider: I
   const r = await tx.execute(sql`
     update integrations set config = config || ${JSON.stringify(patch)}::jsonb
      where org_id = ${orgId} and provider = ${provider}::integration_provider and status <> 'disconnected'`);
+  return r.count > 0;
+}
+
+/**
+ * Records whether a connected Stripe account can take payments (fundraising Phase 1). Only
+ * moves between connected and needs_info; a disconnected integration stays disconnected.
+ */
+export async function setStripeReady(tx: Tx, orgId: string, ready: boolean): Promise<boolean> {
+  const r = await tx.execute(sql`
+    update integrations set status = ${ready ? "connected" : "needs_info"}::integration_status
+     where org_id = ${orgId} and provider = 'stripe' and status in ('connected', 'needs_info')`);
   return r.count > 0;
 }
 
@@ -190,9 +203,12 @@ export type PublicDonationPage = {
   funds: { id: string; name: string }[];
   stripeAccount: string | null;
   sample: boolean;
+  /** The organization's brand for this public page (fundraising Phase 1). */
+  branding: OrgBranding;
+  logoPath: string | null;
 };
 
-/** Runs as the anonymous role. */
+/** Runs as the anonymous role. Null when the page is off or the organization lacks Donations. */
 export async function publicDonationPage(tx: Tx, slug: string): Promise<PublicDonationPage | null> {
   const r = await tx.execute(sql`select app.public_donation_page(${slug}) as p`);
   return ((r[0] as { p: PublicDonationPage | null } | undefined)?.p ?? null) as PublicDonationPage | null;
