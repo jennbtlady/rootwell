@@ -2,6 +2,25 @@
 
 What changed, newest first, in plain language. Details live in `docs/`.
 
+## Fundraising Phase 2: Donations (2026-11-12, branch `fundraising/phase-2-donations`)
+
+- **Refunds keep the books right.** A refund in Stripe adds a matching negative entry on the
+  refund day. The gift stays as it was. Totals net out; refunds never count as gifts.
+- **Disputes** show on Data Health with the date to answer by. A lost dispute is reversed
+  the same way.
+- **Automatic receipts.** Every online gift gets an email receipt with what the IRS asks
+  for, from your organization's name. It counts as the thank-you. Settings, Online receipts.
+- **Sponsor an animal.** Settings, Animals to sponsor. Giving pages can show them, and the
+  gift goes to the animal's fund.
+- **In honor or memory.** Donors can name a person or pet, and ask you to email someone.
+  That email leaves out the amount.
+- **A message box** on giving pages, when you turn it on.
+- **Monthly donors** can change their card or stop, from a private link in their receipt.
+- **A warning email** to owners and admins when a giving page suddenly gets far more
+  checkouts than usual.
+
+See `docs/fundraising/phase-2.md`.
+
 ## Fundraising Phase 1: Foundation (2026-11-11, branch `fundraising/phase-1-foundation`)
 
 - **Modules.** Each organization has a set of modules. Everyone has Donations. People raising

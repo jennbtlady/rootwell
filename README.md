@@ -52,6 +52,11 @@ details" (shows "Needs more information" until you finish setup on the stand-in'
 giving page in Settings, Giving pages, and give on it as a donor. "Make a test deposit" on the
 Stripe card turns test gifts into a deposit batch. Real test-mode keys: see `docs/phase-5.md`.
 
+Receipts and tribute notices from test gifts land in the local mail catcher at
+http://127.0.0.1:54324. A monthly gift's receipt has the donor's private link; open it to try
+changing the card or stopping the gift on the stand-in. To try a refund or a dispute, use the
+API tests in `packages/api/test/stripe-refunds.test.ts`, which drive the stand-in.
+
 ## Modules (fundraising)
 
 Each organization has a set of modules: `donations` (every organization has it),

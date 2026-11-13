@@ -109,7 +109,10 @@ export const HELP: HelpArticle[] = [
       },
       { heading: "If Stripe needs more information", text: ["Stripe sometimes needs your bank account or other details before it can take gifts. The Stripe card then says Needs more information. Choose Finish setup in Stripe, then come back and choose Check again."] },
       { heading: "What happens next", text: ["Each gift is added for you and matched to the donor if they are already here. When Stripe pays out to your bank, the deposit becomes a batch. Check it against the bank and post it like any other batch."] },
-      { heading: "Refunds", text: ["A refund shows on Data health. Decide whether to adjust or remove the gift, then mark it as done."] },
+      { heading: "Receipts", text: ["Every online gift gets a receipt by email right away. It counts as your thank-you, so these gifts do not wait on your thank-you list. Change the wording in Settings, Online receipts."] },
+      { heading: "Refunds", text: ["When you refund a gift in Stripe, Rootwell adds a matching negative entry on the refund day. The gift itself stays as it was, so last month's books do not change. Your totals go down by the refund, and the refund comes out of the next Stripe deposit batch."] },
+      { heading: "Disputes", text: ["If a donor's bank disputes a gift, it shows on Data health with the date to answer by. Answer in Stripe. If the bank sides with the donor, Rootwell reverses the gift the same way as a refund."] },
+      { heading: "Monthly donors", text: ["Each monthly receipt has a private link. The donor can change their card or stop the gift there, without an account. You see the change on their record."] },
     ],
   },
   {
