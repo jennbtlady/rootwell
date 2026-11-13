@@ -38,8 +38,8 @@ test.describe.serial("accessibility audit", () => {
       `${org}/settings/billing`,
       `${org}/settings/coding`,
       `${org}/settings/gift-standards`,
-      `${org}/settings/giving`,
-      `${org}/settings/giving/new`,
+      `${org}/fundraising/pages`,
+      `${org}/fundraising/pages/new`,
       `${org}/settings/integrations`,
       `${org}/settings/board`,
     ];

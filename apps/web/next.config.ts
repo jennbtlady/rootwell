@@ -10,6 +10,15 @@ const nextConfig: NextConfig = {
   transpilePackages: ["@maple/api", "@maple/core", "@maple/db"],
   // The Postgres driver must stay a real Node module, not a bundled one.
   serverExternalPackages: ["postgres"],
+  // Giving pages and animals moved from Settings to the Fundraising side (2026-11-12).
+  // Old bookmarks and links keep working.
+  async redirects() {
+    return [
+      { source: "/app/orgs/:orgId/settings/giving", destination: "/app/orgs/:orgId/fundraising/pages", permanent: false },
+      { source: "/app/orgs/:orgId/settings/giving/:path*", destination: "/app/orgs/:orgId/fundraising/pages/:path*", permanent: false },
+      { source: "/app/orgs/:orgId/settings/animals", destination: "/app/orgs/:orgId/fundraising/animals", permanent: false },
+    ];
+  },
   async headers() {
     // Framing. No other site may show a page of this app inside a frame, which stops
     // clickjacking: a hidden frame of a signed-in screen under a decoy page. The CSP rule is

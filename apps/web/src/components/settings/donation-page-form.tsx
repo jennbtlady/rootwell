@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import type { CodingRow, DonationPage } from "@maple/core/services";
 import { api, errorMessage } from "@/lib/api";
+import { useEarlyTyping } from "@/lib/early-typing";
 import { Alert, AlertDescription, Button, Card, Checkbox, FormField, Input, Select, Textarea, useToast, useConfirm } from "@/components/ui";
 
 const slugify = (s: string) =>
@@ -36,7 +37,19 @@ export function DonationPageForm({ orgId, funds, campaigns, animals = [], page }
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const back = `/app/orgs/${orgId}/settings/giving`;
+  const back = `/app/orgs/${orgId}/fundraising/pages`;
+  // Text typed before the page's scripts loaded (a slow phone, a first visit) is kept.
+  const formRef = useRef<HTMLFormElement>(null);
+  useEarlyTyping(formRef, (field, value) => {
+    if (field === "title") setTitle(value);
+    if (field === "slug" && value) {
+      setSlug(value.toLowerCase());
+      setSlugTouched(true);
+    }
+    if (field === "intro") setIntro(value);
+    if (field === "amounts") setAmounts(value);
+    if (field === "thankYou") setThankYou(value);
+  });
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -79,7 +92,7 @@ export function DonationPageForm({ orgId, funds, campaigns, animals = [], page }
 
   return (
     <Card>
-      <form method="post" onSubmit={submit} className="flex flex-col gap-4" noValidate>
+      <form ref={formRef} method="post" onSubmit={submit} className="flex flex-col gap-4" noValidate>
         {formError && (
           <Alert variant="error">
             <AlertDescription>{formError}</AlertDescription>
@@ -89,6 +102,7 @@ export function DonationPageForm({ orgId, funds, campaigns, animals = [], page }
           {(f) => (
             <Input
               {...f}
+              name="title"
               value={title}
               onChange={(e) => {
                 setTitle(e.target.value);
@@ -101,6 +115,7 @@ export function DonationPageForm({ orgId, funds, campaigns, animals = [], page }
           {(f) => (
             <Input
               {...f}
+              name="slug"
               insertBefore="/give/"
               value={slug}
               onChange={(e) => {
@@ -111,7 +126,7 @@ export function DonationPageForm({ orgId, funds, campaigns, animals = [], page }
           )}
         </FormField>
         <FormField id="dp-intro" label="Message to donors" optional error={errors.intro} help="A few sentences on what a gift does.">
-          {(f) => <Textarea {...f} rows={4} value={intro} onChange={(e) => setIntro(e.target.value)} />}
+          {(f) => <Textarea {...f} name="intro" rows={4} value={intro} onChange={(e) => setIntro(e.target.value)} />}
         </FormField>
         <fieldset className="flex flex-col gap-2">
           <legend className="mb-1 text-30 font-semibold">Funds donors can choose</legend>
@@ -133,7 +148,7 @@ export function DonationPageForm({ orgId, funds, campaigns, animals = [], page }
           )}
         </FormField>
         <FormField id="dp-amounts" label="Suggested amounts" required error={errors.amounts} help="Whole dollars, separated by commas. Donors can also type their own.">
-          {(f) => <Input {...f} inputMode="numeric" value={amounts} onChange={(e) => setAmounts(e.target.value)} />}
+          {(f) => <Input {...f} name="amounts" inputMode="numeric" value={amounts} onChange={(e) => setAmounts(e.target.value)} />}
         </FormField>
         <Checkbox label="Let donors give every month" checked={allowMonthly} onChange={(e) => setAllowMonthly(e.target.checked)} />
         <Checkbox label="Ask donors to cover the card fee" help="Adds about 2.2% plus 30 cents if they agree, so the full gift reaches you." checked={offerCoverFees} onChange={(e) => setOfferCoverFees(e.target.checked)} />
@@ -144,7 +159,7 @@ export function DonationPageForm({ orgId, funds, campaigns, animals = [], page }
             <legend className="mb-1 text-30 font-semibold">Animals donors can sponsor</legend>
             <p className="text-20 text-text-weak">
               Donors can pick one. Their gift goes to that animal&rsquo;s fund. Keep the list in{" "}
-              <a className="text-text-link underline" href={`/app/orgs/${orgId}/settings/animals`}>
+              <a className="text-text-link underline" href={`/app/orgs/${orgId}/fundraising/animals`}>
                 Animals to sponsor
               </a>
               .
@@ -160,7 +175,7 @@ export function DonationPageForm({ orgId, funds, campaigns, animals = [], page }
           </fieldset>
         )}
         <FormField id="dp-thanks" label="Thank-you message" optional help="Shown after they give.">
-          {(f) => <Textarea {...f} rows={3} value={thankYou} onChange={(e) => setThankYou(e.target.value)} />}
+          {(f) => <Textarea {...f} name="thankYou" rows={3} value={thankYou} onChange={(e) => setThankYou(e.target.value)} />}
         </FormField>
         <Checkbox label="Page is on" help="Turn off to stop taking gifts without deleting the page." checked={active} onChange={(e) => setActive(e.target.checked)} />
         <div className="flex flex-wrap gap-2">

@@ -50,21 +50,21 @@ Three colors needed small changes to pass WCAG AA, and those are what the app us
 
 | Color | Role | Rule |
 |---|---|---|
-| Crimson Violet #500030 | Primary buttons, links, focus ring, selected states, chart "this year" | Passes everywhere: white on it 15.2:1, on Old Lace 13.5:1. Hover and pressed go deeper (#3A0023), never lighter. |
-| Air Force Blue #638494 | Decoration only, such as the chart's "last year" bars | Fails for normal text (white on it 3.99:1). When it carries text, as in information alerts, use **#567280** (5.1:1 with white, 4.5:1 on Old Lace). |
+| Crimson Violet #500030 | Primary buttons, links, focus ring, selected states, chart "this year" | Passes everywhere: white on it 15.2:1, on the page 14.5:1. Hover and pressed go deeper (#3A0023), never lighter. |
+| Air Force Blue #638494 | Decoration only, such as the chart's "last year" bars | Fails for normal text (white on it 3.99:1). When it carries text, as in information alerts, use **#567280** (5.1:1 with white, 4.9:1 on the page). |
 | Lime Cream #CBEC89 | Light highlight backgrounds: "New" badges, the sample notice (as the tint #EEF8DA) | Background only, with Crimson or dark text. Never text, icons or borders that must be seen. |
 | Cherry Blossom #FFA6B5 | Light highlight backgrounds: pressed and selected tints (#FCE8EC, #FFD3DB) | Background only. Too pale for text, borders or icons. |
-| Old Lace #F8F1E2 | Page background | Cards and fields stay white and keep their border (white on Old Lace is only 1.12:1). |
+| Lime Mist #F8FCE6 | Page background (Jenn, 2026-11-13; it was Old Lace #F8F1E2) | Cards and fields stay white and keep their border (white on the page is only 1.05:1). |
 
-Supporting colors chosen to pass on Old Lace and white:
+Supporting colors chosen to pass on the page and on white:
 
 | Token | Value | Check |
 |---|---|---|
-| Body text | #2A1A22 | 14.7:1 on Old Lace |
-| Weak text, icons | #645A5E | 5.9:1 on Old Lace, 6.6:1 on white |
-| Field borders | #8F7F86 | 3.4:1 on Old Lace, 3.8:1 on white (fields need 3:1) |
-| Error | #C2001F | 5.6:1 on Old Lace (Paste's #DB132A was 4.51:1) |
-| Focus ring | Crimson at 70% | 6.1:1 on Old Lace |
+| Body text | #2A1A22 | 15.8:1 on the page |
+| Weak text, icons | #645A5E | 6.3:1 on the page, 6.6:1 on white |
+| Field borders | #8F7F86 | 3.6:1 on the page, 3.8:1 on white (fields need 3:1) |
+| Error | #C2001F | 6.0:1 on the page (Paste's #DB132A was 4.51:1) |
+| Focus ring | Crimson at 70% | 6.3:1 on the page |
 
 Lime reads as "good" and pink as "bad" to many people, so neither is used for status.
 Success, warning and error keep their own colors, and always come with an icon and words.
@@ -79,17 +79,19 @@ Force Blue reads as a muted color, which suits its job as the "context" series. 
 also name series in words, so color is never the only cue.
 
 **Logo (Jenn, 2026-10-21).** The full Rootwell logo is Jenn's artwork,
-`public/brand/rootwell-logo.png` (600 by 175, transparent), shown by
+`public/brand/rootwell-logo.png` (600 by 186, transparent; updated 2026-11-13), shown by
 `components/brand/logo.tsx` in three sizes on the header, sign-in pages and landing page.
 Its alt text is "Rootwell", because the image carries the name. Do not re-set the name in
 type beside the mark; use the logo file. The mark alone (a lime heart of roots with a pink
-bud) is `public/brand/rootwell-mark.svg`, cropped from Jenn's `rootwell_icon.svg`, for
-square spaces.
+bud) is `public/brand/rootwell-mark.svg`, cropped from Jenn's `rootwell_icon_noBG.svg`
+(updated 2026-11-13), for square spaces. The artwork's lime is #B1D850, a little deeper
+than Lime Cream; it is used only in the logo and mark, never as a UI color.
 
 The app icons (browser tab, home screen, iPhone) put the mark on a Crimson Violet tile,
 where its pale colors stand out. The home-screen version has extra margin for phones
-that crop icons into circles. The PNGs are rendered from the SVGs. The pale mark on Old
-Lace is soft (about 1.2:1), which is fine for a logo: WCAG exempts logotypes, and the name
+that crop icons into circles. The PNGs are rendered from the SVGs in a browser (any
+headless Chromium), at 192, 512, 512 maskable and 180 for iPhone. The pale mark on the
+page background is soft, which is fine for a logo: WCAG exempts logotypes, and the name
 carries the brand.
 
 To change a color, edit `overrides.css`, rerun the contrast checks for every pair it

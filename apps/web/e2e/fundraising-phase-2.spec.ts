@@ -17,8 +17,13 @@ test.describe.serial("fundraising phase 2: donations", () => {
 
   test("an owner adds an animal to sponsor", async ({ page }) => {
     await signIn(page, s.owner);
-    await page.goto(`${org}/settings`);
-    await page.getByRole("navigation", { name: "Settings" }).getByRole("link", { name: "Animals to sponsor" }).click();
+    // Fundraising is its own side of the app: the switch in the header, then Giving pages.
+    await page.goto(org);
+    await page.getByRole("navigation", { name: "Switch app" }).getByRole("link", { name: "Fundraising" }).click();
+    await expect(page.getByRole("heading", { name: "Fundraising", level: 1 })).toBeVisible();
+    await expectAccessible(page, "fundraising overview");
+    await page.getByRole("navigation", { name: "Fundraising", exact: true }).getByRole("link", { name: "Giving pages" }).click();
+    await page.getByRole("navigation", { name: "Giving pages" }).getByRole("link", { name: "Animals to sponsor" }).click();
     await expect(page.getByRole("heading", { name: "Animals to sponsor", level: 1 })).toBeVisible();
     await page.getByRole("button", { name: "Add an animal" }).click();
     await page.getByRole("textbox", { name: /Name$/ }).fill(animal);
@@ -48,7 +53,7 @@ test.describe.serial("fundraising phase 2: donations", () => {
     await page.getByRole("button", { name: "Connect test account" }).click();
     await page.waitForURL(/settings\/integrations\?connected=stripe/);
 
-    await page.goto(`${org}/settings/giving/new`);
+    await page.goto(`${org}/fundraising/pages/new`);
     await page.getByLabel("Title").fill("Sponsor a shelter pet");
     await page.getByLabel("Web address").fill(slug);
     await page.getByRole("checkbox", { name: "Let donors give in honor or memory of someone" }).check();
@@ -56,7 +61,7 @@ test.describe.serial("fundraising phase 2: donations", () => {
     await page.getByRole("checkbox", { name: animal }).check();
     await expectAccessible(page, "giving page editor with animals");
     await page.getByRole("button", { name: "Make page" }).click();
-    await page.waitForURL(`**${org}/settings/giving`);
+    await page.waitForURL(`**${org}/fundraising/pages`);
   });
 
   test("a donor on a phone sponsors the animal in memory of a pet", async ({ browser }) => {

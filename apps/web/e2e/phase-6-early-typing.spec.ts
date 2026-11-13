@@ -93,4 +93,17 @@ test.describe.serial("typing before the page's scripts load", () => {
     for (const bit of ["Nobody", "Leaked", "nobody", "Hidden", "example.org"]) expect(p.url()).not.toContain(bit);
     await ctx.close();
   });
+  test("a giving page typed before the scripts load can be saved", async ({ page }) => {
+    test.setTimeout(120_000);
+    await signIn(page, s.owner);
+    const ready = await openHeld(page, `${org}/fundraising/pages/new`);
+    await page.getByLabel("Title").fill("Early giving page");
+    await page.getByLabel("Web address").fill(`early-${s.run}`.toLowerCase());
+    await ready();
+    const make = page.getByRole("button", { name: "Make page" });
+    await expect(make).toBeEnabled();
+    await make.click();
+    await page.waitForURL(`**${org}/fundraising/pages`);
+    await expect(page.getByRole("link", { name: new RegExp(`/give/early-${s.run}`, "i") })).toBeVisible();
+  });
 });

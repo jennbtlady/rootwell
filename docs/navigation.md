@@ -3,7 +3,24 @@
 This is how the app follows `docs/navigation-standard.md`. Read both before changing any
 navigation, tab row, menu, or page header.
 
-## Main areas (level 1)
+## Two sides: CRM and Fundraising (Jenn, 2026-11-12)
+
+A switch in the header, beside the organization's name, reads "CRM | Fundraising". It shows
+only for organizations with the Donations module, and never for board viewers. Each side has
+its own main areas. The rule is in `docs/navigation-standard.md`. The switch is built as a list
+(`components/orgs/app-switch.tsx`), so a later side, such as a Board side, can join it.
+
+### Fundraising (under `/fundraising`)
+
+| Area | Opens | Level 2 tabs | Covers |
+|---|---|---|---|
+| Overview | `/fundraising` | none | Setup steps, raised online this year, monthly donors, latest online gifts (each links to the donor in the CRM) |
+| Giving pages | `/fundraising/pages` | Giving pages, Animals to sponsor | Giving pages and their editor, the animals list |
+
+Campaigns, People raising money and Events join this list as they are built (brief Phases 3
+and 4). One-time setup stays in Settings, under "Fundraising setup".
+
+## CRM main areas (level 1)
 
 Five, named for what people come to do. Always on screen: tabs across the top on a computer,
 a tab bar along the bottom on a phone (under 640px wide).
@@ -25,7 +42,8 @@ disclosure: administrative, so it is out of the main row, but visible text, neve
 Inside, one grouped list:
 
 - Your organization: Team, Account and export, Billing
-- Gifts: Funds, campaigns, appeals; Gift entry rules; Giving pages, Public page look, Online receipts and Animals to sponsor (Donations module only)
+- Gifts: Funds, campaigns, appeals; Gift entry rules
+- Fundraising setup (Donations module only): Public page look, Online receipts
 - Connections: Stripe, Mailchimp, QuickBooks; Board sharing; Past imports
 
 Help is a visible "Help" link in the top bar on every signed-in page.
@@ -51,7 +69,9 @@ Settings, Integrations. A fourth level means the content needs restructuring.
 Route groups keep the web addresses as they were while sharing each area's tab row:
 `app/app/orgs/[orgId]/(donors)`, `(gifts)`, `(reports)`. Components:
 `components/orgs/primary-nav.tsx` (level 1), `components/orgs/section-tabs.tsx` (level 2),
-`components/settings/settings-nav.tsx`.
+`components/settings/settings-nav.tsx`, `components/orgs/app-switch.tsx`. Old addresses
+`/settings/giving` and `/settings/animals` redirect to `/fundraising/pages` and
+`/fundraising/animals` (`next.config.ts`).
 
 ## Changes made on 2026-10-20
 

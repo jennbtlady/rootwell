@@ -6,7 +6,7 @@ import { DonationPageForm } from "@/components/settings/donation-page-form";
 
 export const metadata: Metadata = { title: "New giving page" };
 
-export default async function NewGivingPage({ params }: PageProps<"/app/orgs/[orgId]/settings/giving/new">) {
+export default async function NewGivingPage({ params }: PageProps<"/app/orgs/[orgId]/fundraising/pages/new">) {
   const { orgId } = await params;
   const session = await requireSession();
   const [funds, campaigns, animals] = await withSession(session, (tx) => Promise.all([listCoding(tx, "funds", orgId), listCoding(tx, "campaigns", orgId), listAnimals(tx, orgId)]));

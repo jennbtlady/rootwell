@@ -24,14 +24,21 @@ export function SettingsNav({ orgId, modules }: { orgId: string; modules: Module
       items: [
         { href: `${base}/coding`, label: "Funds, campaigns, appeals" },
         { href: `${base}/gift-standards`, label: "Gift entry rules" },
-        // Only with the Donations module (fundraising Phase 1). The list hides what an
-        // organization does not have; the API refuses it too.
-        ...(modules.includes("donations") ? [{ href: `${base}/giving`, label: "Giving pages" }] : []),
-        ...(modules.includes("donations") ? [{ href: `${base}/branding`, label: "Public page look" }] : []),
-        ...(modules.includes("donations") ? [{ href: `${base}/receipts`, label: "Online receipts" }] : []),
-        ...(modules.includes("donations") ? [{ href: `${base}/animals`, label: "Animals to sponsor" }] : []),
       ],
     },
+    // One-time setup for the Fundraising side. Giving pages and animals live in Fundraising
+    // itself. Only with the Donations module; the API refuses it too.
+    ...(modules.includes("donations")
+      ? [
+          {
+            title: "Fundraising setup",
+            items: [
+              { href: `${base}/branding`, label: "Public page look" },
+              { href: `${base}/receipts`, label: "Online receipts" },
+            ],
+          },
+        ]
+      : []),
     {
       title: "Connections",
       items: [

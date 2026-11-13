@@ -8,11 +8,11 @@ import { AnimalsManager } from "@/components/settings/animals-manager";
 export const metadata: Metadata = { title: "Animals to sponsor" };
 
 /** The animals donors can sponsor on giving pages (fundraising Phase 2). Donations module only. */
-export default async function AnimalsPage({ params }: PageProps<"/app/orgs/[orgId]/settings/animals">) {
+export default async function AnimalsPage({ params }: PageProps<"/app/orgs/[orgId]/fundraising/animals">) {
   const { orgId } = await params;
   const session = await requireSession();
   const [org, animals, funds] = await withSession(session, (tx) => Promise.all([getOrg(tx, orgId), listAnimals(tx, orgId), listCoding(tx, "funds", orgId)]));
-  if (!org?.modules.includes("donations")) notFound();
+  if (!org) notFound();
   return (
     <div className="flex flex-col gap-4">
       <div>

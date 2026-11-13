@@ -20,3 +20,17 @@ Six rules govern every navigation decision. They are ordered by priority; when t
 4. **Shallow.** Three levels deep at most, counting the primary destination as level one. If a screen needs a fourth level, restructure the content instead of adding nesting.
 5. **Convention over novelty.** Use the platform's standard pattern (bottom tab bar on mobile, left sidebar or top bar on desktop). Non-technical users carry muscle memory from the apps they already use. A clever navigation pattern is a usability defect for this audience.
 6. **Progressive disclosure.** Show the few things most people need first. Advanced, rare, or administrative options appear only when someone asks for them, through a clearly labeled control. Appearing on the first screen is a signal of importance; do not spend that signal on secondary features.
+
+## Decision: separate sides of the app (Jenn, 2026-11-12)
+
+Rootwell has two sides: the CRM and Fundraising. They are treated as two products in one app,
+the way Gmail and Calendar are two products. A switch with two visible, labeled tabs ("CRM" and
+"Fundraising") sits in the header beside the organization's name. It is not an icon, a grid or
+a menu.
+
+- Each side has its own primary destinations, five at most, and the three-level rule applies
+  inside each side. The switch itself is not counted as a level.
+- Where the sides meet, they link to each other. Every online gift and every fundraiser is a
+  donor in the CRM, so nobody has to guess where a record lives.
+- An organization without Fundraising sees no switch.
+- A future third side (for example a Board side) joins the same switch, under the same rules.

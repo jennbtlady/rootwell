@@ -48,7 +48,7 @@ test.describe.serial("every form on a phone @mobile", () => {
       [`${org}/settings/team`, "team invite"],
       [`${org}/settings/coding`, "funds"],
       [`${org}/settings/gift-standards`, "gift entry rules"],
-      [`${org}/settings/giving/new`, "giving page editor"],
+      [`${org}/fundraising/pages/new`, "giving page editor"],
       [`${org}/settings/integrations`, "integrations"],
       [`${org}/settings/board`, "board sharing"],
       [`${org}/settings/billing`, "billing"],
@@ -89,11 +89,11 @@ test.describe.serial("every form on a phone @mobile", () => {
       await page.getByRole("button", { name: "Connect test account" }).click();
       await page.waitForURL(/settings\/integrations\?connected=stripe/);
     }
-    await page.goto(`${org}/settings/giving/new`);
+    await page.goto(`${org}/fundraising/pages/new`);
     await page.getByLabel("Title").fill("Phone giving");
     await page.getByLabel("Web address").fill(slug);
     await page.getByRole("button", { name: "Make page" }).click();
-    await page.waitForURL(`**${org}/settings/giving`);
+    await page.waitForURL(`**${org}/fundraising/pages`);
 
     const anon = await browser.newContext({ ...info.project.use });
     const give = await anon.newPage();
