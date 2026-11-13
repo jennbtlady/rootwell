@@ -56,10 +56,14 @@ export default async function GivePage({ params, searchParams }: PageProps<"/giv
         {page.stripeAccount ? (
           <GiveForm
             slug={slug}
+            orgName={page.orgName}
             amounts={page.amounts}
             funds={page.funds}
             allowMonthly={page.allowMonthly}
             offerCoverFees={page.offerCoverFees}
+            animals={page.animals ?? []}
+            allowTribute={page.allowTribute}
+            allowMessage={page.allowMessage}
             embedded={embedded}
           />
         ) : (

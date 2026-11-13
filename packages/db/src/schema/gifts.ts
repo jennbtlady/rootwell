@@ -1,8 +1,31 @@
-import { index, integer, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
-import { batchStatus, day, externalSource, giftType, money, paymentMethod, pledgeStatus, recurringFrequency, recurringStatus, rowMeta, uuidPk } from "./_shared";
+import { boolean, index, integer, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { batchStatus, day, externalSource, giftType, money, paymentMethod, pledgeStatus, recurringFrequency, recurringStatus, rowMeta, tributeKind, uuidPk } from "./_shared";
 import { appeals, campaigns, funds } from "./coding";
 import { constituents } from "./constituents";
 import { organizations } from "./organizations";
+
+/**
+ * Animals a donor can sponsor (fundraising Phase 2). The organization keeps the list; giving
+ * pages show the ones it picks. Gifts for an animal go to its fund.
+ */
+export const sponsorAnimals = pgTable(
+  "sponsor_animals",
+  {
+    id: uuidPk(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    description: text("description"),
+    /** In the public "branding" storage bucket, in the organization's own folder. */
+    photoPath: text("photo_path"),
+    fundId: uuid("fund_id").references(() => funds.id, { onDelete: "set null" }),
+    active: boolean("active").notNull().default(true),
+    sortOrder: integer("sort_order").notNull().default(0),
+    ...rowMeta,
+  },
+  (t) => [index("sponsor_animals_org_idx").on(t.orgId, t.sortOrder)],
+);
 
 /** Gifts are entered into a dated batch. An admin posts the batch, which locks its gifts. */
 export const batches = pgTable(
@@ -46,6 +69,7 @@ export const recurringPlans = pgTable(
     status: recurringStatus("status").notNull().default("active"),
     fundId: uuid("fund_id").references(() => funds.id, { onDelete: "set null" }),
     campaignId: uuid("campaign_id").references(() => campaigns.id, { onDelete: "set null" }),
+    sponsorAnimalId: uuid("sponsor_animal_id").references(() => sponsorAnimals.id, { onDelete: "set null" }),
     externalSource: externalSource("external_source").notNull().default("manual"),
     externalId: text("external_id"),
     ...rowMeta,
@@ -120,6 +144,11 @@ export const gifts = pgTable(
     pledgeId: uuid("pledge_id").references(() => pledges.id, { onDelete: "set null" }),
     /** For soft credits: the real gift this credit points at. */
     softCreditOfGiftId: uuid("soft_credit_of_gift_id"),
+    /** For refund entries: the gift this entry reverses. A refund's amount is negative. */
+    reversesGiftId: uuid("reverses_gift_id"),
+    /** The optional message a donor typed on the giving form. Kept apart from staff notes. */
+    donorMessage: text("donor_message"),
+    sponsorAnimalId: uuid("sponsor_animal_id").references(() => sponsorAnimals.id, { onDelete: "set null" }),
     postedAt: timestamp("posted_at", { withTimezone: true }),
     postedBy: uuid("posted_by"),
     ...rowMeta,
@@ -130,5 +159,30 @@ export const gifts = pgTable(
     index("gifts_batch_idx").on(t.batchId),
     index("gifts_fund_idx").on(t.fundId),
     index("gifts_org_external_idx").on(t.orgId, t.externalSource, t.externalId),
+    index("gifts_reverses_idx").on(t.reversesGiftId),
   ],
+);
+
+/**
+ * A gift given in honor of or in memory of a person or pet (fundraising Phase 2), with the
+ * optional person the donor asked us to tell. One per gift.
+ */
+export const giftTributes = pgTable(
+  "gift_tributes",
+  {
+    id: uuidPk(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    giftId: uuid("gift_id")
+      .notNull()
+      .references(() => gifts.id, { onDelete: "cascade" }),
+    kind: tributeKind("kind").notNull(),
+    honoreeName: text("honoree_name").notNull(),
+    notifyName: text("notify_name"),
+    notifyEmail: text("notify_email"),
+    notifiedAt: timestamp("notified_at", { withTimezone: true }),
+    ...rowMeta,
+  },
+  (t) => [uniqueIndex("gift_tributes_gift_uq").on(t.giftId), index("gift_tributes_org_idx").on(t.orgId)],
 );

@@ -42,7 +42,19 @@ export interface StripeGateway {
   verifyWebhook(rawBody: string, signature: string | null): Stripe.Event;
   paymentDetails(accountId: string, paymentIntentId: string): Promise<PaymentInfo>;
   invoiceDetails(accountId: string, invoiceId: string): Promise<InvoiceInfo>;
+  /**
+   * What a payout is made of. `chargeId` is the id a gift or refund entry carries in
+   * external_id: a charge (ch_), a refund (re_, negative amount) or a lost dispute (dp_,
+   * negative amount, with Stripe's dispute fee as `fee`).
+   */
   payoutCharges(accountId: string, payoutId: string): Promise<{ chargeId: string; fee: number; amount: number }[]>;
+  /**
+   * A page on Stripe where a monthly donor changes their card or stops their gift, for one
+   * subscription on a connected account (fundraising Phase 2). Comes back to `returnUrl`.
+   */
+  manageSubscriptionUrl(accountId: string, subscriptionId: string, returnUrl: string): Promise<string>;
+  /** Refunds on a charge that went through, in cents, oldest first. */
+  chargeRefunds(accountId: string, chargeId: string): Promise<{ id: string; amount: number; created: number }[]>;
 }
 
 function addr(a: Stripe.Address | null | undefined): PaymentInfo["address"] {
@@ -142,11 +154,47 @@ export class LiveStripeGateway implements StripeGateway {
   }
   async payoutCharges(accountId: string, payoutId: string) {
     const out: { chargeId: string; fee: number; amount: number }[] = [];
-    for await (const bt of this.stripe.balanceTransactions.list({ payout: payoutId, type: "charge", limit: 100 }, { stripeAccount: accountId })) {
+    for await (const bt of this.stripe.balanceTransactions.list({ payout: payoutId, limit: 100 }, { stripeAccount: accountId })) {
       const src = typeof bt.source === "string" ? bt.source : bt.source?.id;
-      if (src) out.push({ chargeId: src, fee: bt.fee, amount: bt.amount });
+      if (!src) continue;
+      // Gifts, refunds, and money a dispute took back. Everything else (the payout itself,
+      // Stripe's own adjustments) is not a gift and stays out of the batch.
+      if (bt.type === "charge" || bt.type === "payment" || bt.type === "refund" || bt.type === "payment_refund" || (bt.type === "adjustment" && src.startsWith("dp_"))) {
+        out.push({ chargeId: src, fee: bt.fee, amount: bt.amount });
+      }
     }
     return out;
+  }
+  async manageSubscriptionUrl(accountId: string, subscriptionId: string, returnUrl: string) {
+    const sub = await this.stripe.subscriptions.retrieve(subscriptionId, {}, { stripeAccount: accountId });
+    const customer = typeof sub.customer === "string" ? sub.customer : sub.customer.id;
+    // The nonprofit's own Stripe account may have no customer portal set up. Use one made
+    // for donors: change the card, or stop the gift. Nothing else.
+    let configuration: string | undefined;
+    for await (const c of this.stripe.billingPortal.configurations.list({ active: true, limit: 100 }, { stripeAccount: accountId })) {
+      if (c.metadata?.rootwell === "monthly-donors") configuration = c.id;
+    }
+    if (!configuration) {
+      configuration = (
+        await this.stripe.billingPortal.configurations.create(
+          {
+            business_profile: { headline: "Change your card or stop your monthly gift." },
+            features: { payment_method_update: { enabled: true }, subscription_cancel: { enabled: true, mode: "immediately" }, invoice_history: { enabled: true } },
+            metadata: { rootwell: "monthly-donors" },
+          },
+          { stripeAccount: accountId },
+        )
+      ).id;
+    }
+    const s = await this.stripe.billingPortal.sessions.create({ customer, configuration, return_url: returnUrl }, { stripeAccount: accountId });
+    return s.url;
+  }
+  async chargeRefunds(accountId: string, chargeId: string) {
+    const out: { id: string; amount: number; created: number }[] = [];
+    for await (const r of this.stripe.refunds.list({ charge: chargeId, limit: 100 }, { stripeAccount: accountId })) {
+      if (r.status === "succeeded" || r.status === "pending") out.push({ id: r.id, amount: r.amount, created: r.created });
+    }
+    return out.sort((a, b) => a.created - b.created);
   }
 }
 

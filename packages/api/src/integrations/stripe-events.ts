@@ -7,15 +7,18 @@ import {
   ensureRecurringPlan,
   failWebhookEvent,
   finishWebhookEvent,
-  flagRefund,
   orgForIntegrationAccount,
   recordOnlineGift,
   recordPayoutBatch,
+  recordReversal,
   recordWebhookEvent,
+  isFirstPayment,
+  tributeFromMetadata,
   type OnlineDonor,
 } from "@maple/core/services";
 import { getDb } from "../db";
 import type { PaymentInfo, StripeGateway } from "./stripe-gateway";
+import { sendGiftEmails } from "../email/receipts";
 
 type Outcome = { outcome: string; needsAttention?: boolean };
 
@@ -30,6 +33,10 @@ const meta = (m: Record<string, string> | null | undefined) => ({
   fundId: m?.fundId || null,
   campaignId: m?.campaignId || null,
   coverFeeCents: Number(m?.coverFeeCents ?? 0) || 0,
+  // Fundraising Phase 2: what the donor added on the giving form.
+  animalId: /^[0-9a-f-]{36}$/.test(m?.animalId ?? "") ? m!.animalId! : null,
+  donorMessage: m?.message?.trim() || null,
+  tribute: tributeFromMetadata(m),
 });
 
 /**
@@ -79,6 +86,7 @@ async function handle(gw: StripeGateway, orgId: string, account: string, event: 
             donor: donorFrom({ name: cd.name ?? null, email: cd.email ?? null, address: cd.address ?? null }),
             fundId: m.fundId,
             campaignId: m.campaignId,
+            animalId: m.animalId,
           }),
         );
         return { outcome: "monthly gift set up" };
@@ -90,9 +98,12 @@ async function handle(gw: StripeGateway, orgId: string, account: string, event: 
         recordOnlineGift(tx, orgId, {
           externalId: p.chargeId, platform: "stripe", amountCents: p.amount, feeCents: p.fee, netCents: p.net, feeCoveredCents: m.coverFeeCents,
           paidAt: p.created, donor: donorFrom(p), fundId: m.fundId, campaignId: m.campaignId,
+          animalId: m.animalId, donorMessage: m.donorMessage, tribute: m.tribute,
         }),
       );
-      return { outcome: r.created ? (r.matched ? "gift added to an existing donor" : "gift added with a new donor") : "gift already recorded" };
+      if (!r.created) return { outcome: "gift already recorded" };
+      const sent = await sendGiftEmails(orgId, r.giftId);
+      return { outcome: `${r.matched ? "gift added to an existing donor" : "gift added with a new donor"}${emailNote(sent)}`, needsAttention: sent.receipt === "failed" || sent.tribute === "failed" };
     }
 
     case "invoice.paid": {
@@ -102,14 +113,19 @@ async function handle(gw: StripeGateway, orgId: string, account: string, event: 
       if (m.orgId && m.orgId !== orgId) return { outcome: "metadata names a different organization", needsAttention: true };
       const r = await withRls(db, claims, async (tx) => {
         const plan = await ensureRecurringPlan(tx, orgId, {
-          subscriptionId: inv.subscriptionId, amountCents: inv.amount, startedAt: inv.created, donor: donorFrom(inv), fundId: m.fundId, campaignId: m.campaignId,
+          subscriptionId: inv.subscriptionId, amountCents: inv.amount, startedAt: inv.created, donor: donorFrom(inv), fundId: m.fundId, campaignId: m.campaignId, animalId: m.animalId,
         });
+        // A tribute and a message belong to the gift the donor made on the form: the first month.
+        const first = await isFirstPayment(tx, orgId, plan.planId);
         return recordOnlineGift(tx, orgId, {
           externalId: inv.chargeId, platform: "stripe", amountCents: inv.amount, feeCents: inv.fee, netCents: inv.net, feeCoveredCents: m.coverFeeCents,
           paidAt: inv.created, donor: donorFrom(inv), fundId: m.fundId, campaignId: m.campaignId, recurringPlanId: plan.planId, constituentId: plan.constituentId,
+          animalId: m.animalId, donorMessage: first ? m.donorMessage : null, tribute: first ? m.tribute : null,
         });
       });
-      return { outcome: r.created ? "monthly gift added" : "gift already recorded" };
+      if (!r.created) return { outcome: "gift already recorded" };
+      const sent = await sendGiftEmails(orgId, r.giftId);
+      return { outcome: `monthly gift added${emailNote(sent)}`, needsAttention: sent.receipt === "failed" || sent.tribute === "failed" };
     }
 
     case "customer.subscription.deleted": {
@@ -117,9 +133,40 @@ async function handle(gw: StripeGateway, orgId: string, account: string, event: 
       return { outcome: ended ? "monthly gift ended" : "no matching monthly gift" };
     }
 
+    // A refund, whole or part. Each Stripe refund becomes one negative entry that reverses
+    // part of the gift (fundraising Phase 2). Ask Stripe for the refunds rather than trust the
+    // event body, so a partial refund arriving twice is still one entry.
     case "charge.refunded": {
-      const r = await withRls(db, claims, (tx) => flagRefund(tx, orgId, String(obj.id)));
-      return { outcome: r.giftId ? "refunded: check this gift and adjust or delete it" : "refund for a payment we have no gift for", needsAttention: true };
+      const chargeId = String(obj.id);
+      const refunds = await gw.chargeRefunds(account, chargeId);
+      let made = 0;
+      let known = true;
+      for (const rf of refunds) {
+        const r = await withRls(db, claims, (tx) => recordReversal(tx, orgId, { chargeId, externalId: rf.id, amountCents: rf.amount, at: rf.created, kind: "refund" }));
+        if (!r.giftId) known = false;
+        if (r.created) made++;
+      }
+      if (!known) return { outcome: "refund for a payment we have no gift for", needsAttention: true };
+      return { outcome: made ? "refund recorded against the gift" : "refund already recorded" };
+    }
+
+    // A donor's bank questions a charge. The money is on hold, so nothing changes in the books
+    // yet, but someone has to answer in Stripe before the deadline.
+    case "charge.dispute.created": {
+      const due = Number((obj.evidence_details as { due_by?: number } | undefined)?.due_by ?? 0);
+      const by = due ? ` by ${new Date(due * 1000).toLocaleDateString("en-US", { month: "long", day: "numeric", timeZone: "UTC" })}` : "";
+      return { outcome: `a donor's bank disputed this gift: answer in Stripe${by}`, needsAttention: true };
+    }
+
+    // Won: nothing changes. Lost: the money goes back, so the gift gets a reversing entry.
+    case "charge.dispute.closed": {
+      if (obj.status === "won") return { outcome: "dispute won: the gift stands" };
+      if (obj.status !== "lost") return { outcome: "dispute closed" };
+      const r = await withRls(db, claims, (tx) =>
+        recordReversal(tx, orgId, { chargeId: String(obj.charge), externalId: String(obj.id), amountCents: Number(obj.amount ?? 0), at: event.created, kind: "dispute" }),
+      );
+      if (!r.giftId) return { outcome: "lost dispute for a payment we have no gift for", needsAttention: true };
+      return { outcome: "dispute lost: the gift was reversed, and Stripe charged a dispute fee", needsAttention: true };
     }
 
     case "payout.paid": {
@@ -148,6 +195,15 @@ async function handle(gw: StripeGateway, orgId: string, account: string, event: 
     default:
       return { outcome: "ignored" };
   }
+}
+
+/** A few words for Data Health about the receipt and tribute emails. No donor details. */
+function emailNote(s: Awaited<ReturnType<typeof sendGiftEmails>>): string {
+  const parts = [
+    s.receipt === "sent" ? "receipt sent" : s.receipt === "failed" ? "the receipt email did not send: thank this donor by hand" : s.receipt === "skipped" ? "no receipt email (no address, or the donor asked for no email)" : null,
+    s.tribute === "sent" ? "tribute notice sent" : s.tribute === "failed" ? "the tribute notice did not send" : null,
+  ].filter(Boolean);
+  return parts.length ? `; ${parts.join("; ")}` : "";
 }
 
 /** Store the event without donor contact details. The ids are enough to look it up in Stripe. */

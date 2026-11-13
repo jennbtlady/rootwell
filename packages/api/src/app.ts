@@ -10,6 +10,7 @@ import { dedupe } from "./routes/dedupe";
 import { imports } from "./routes/imports";
 import { reporting } from "./routes/reporting";
 import { integrationRoutes } from "./routes/integrations";
+import { donationRoutes } from "./routes/donations";
 import { webhooks } from "./routes/webhooks";
 import { publicGive } from "./routes/public-give";
 import { stripeSim } from "./routes/stripe-sim";
@@ -46,6 +47,9 @@ export const app = new Hono<ApiEnv>()
   .use("/orgs/:orgId/integrations/stripe/connect", requireModule("donations"))
   .use("/orgs/:orgId/integrations/stripe/complete", requireModule("donations"))
   .use("/orgs/:orgId/integrations/stripe/simulate-payout", requireModule("donations"))
+  .use("/orgs/:orgId/animals", requireModule("donations"))
+  .use("/orgs/:orgId/animals/*", requireModule("donations"))
+  .use("/orgs/:orgId/receipts", requireModule("donations"))
   .route("/me", me)
   .route("/orgs", orgs)
   .route("/orgs", coding)
@@ -55,6 +59,7 @@ export const app = new Hono<ApiEnv>()
   .route("/orgs", imports)
   .route("/orgs", reporting)
   .route("/orgs", integrationRoutes)
+  .route("/orgs", donationRoutes)
   .route("/orgs", billingRoutes)
   .route("/orgs", accountRoutes)
   .onError(handleApiError);

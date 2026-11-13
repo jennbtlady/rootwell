@@ -181,7 +181,8 @@ export async function statementDonors(tx: Tx, orgId: string, year: number, const
     select c.id, c.display_name, c.sort_name, (c.do_not_email or c.do_not_contact) as do_not_email,
            (select e.email from constituent_emails e where e.constituent_id = c.id order by e.is_primary desc limit 1) as email,
            (select row_to_json(a) from constituent_addresses a where a.constituent_id = c.id order by a.is_primary desc limit 1) as address,
-           json_agg(json_build_object('date', g.gift_date, 'amount', g.amount::text, 'deductible', coalesce(g.deductible_amount, g.amount)::text, 'fund', f.name,
+           json_agg(json_build_object('date', g.gift_date, 'amount', g.amount::text, 'deductible', coalesce(g.deductible_amount, g.amount)::text,
+                    'fund', case when g.gift_type = 'refund' then 'Refund' else f.name end,
                     'received', (g.amount - coalesce(g.deductible_amount, g.amount))::text) order by g.gift_date) as gifts,
            sum(g.amount)::text as total, sum(coalesce(g.deductible_amount, g.amount))::text as deductible_total,
            (select max(s.sent_at) from statement_sends s where s.constituent_id = c.id and s.tax_year = ${year} and s.channel = 'email' and s.status = 'sent') as emailed_at,
@@ -189,7 +190,11 @@ export async function statementDonors(tx: Tx, orgId: string, year: number, const
       from gifts g join constituents c on c.id = g.constituent_id left join funds f on f.id = g.fund_id
      where g.org_id = ${orgId} and g.posted_at is not null and g.gift_type not in ('soft_credit', 'pledge')
        and g.gift_date >= make_date(${year}, 1, 1) and g.gift_date < make_date(${year + 1}, 1, 1) and not c.deceased ${only}
-     group by c.id order by c.sort_name`);
+     group by c.id
+     -- Refund entries are in the list and net out of the totals. Someone whose gifts were
+     -- all refunded gets no statement.
+    having sum(g.amount) > 0
+     order by c.sort_name`);
   return rows.map((r) => {
     const x = r as Record<string, any>;
     const a = x.address as Record<string, string> | null;

@@ -29,12 +29,18 @@ export type Gift = {
   postedAt: string | null;
   createdAt: string;
   createdBy: string | null;
+  /** Fundraising Phase 2: what an online donor added, and refunds. */
+  donorMessage: string | null;
+  sponsorAnimalName: string | null;
+  tribute: { kind: "honor" | "memory"; honoreeName: string } | null;
+  reversesGiftId: string | null;
 };
 
 const giftSelect = sql`
   g.id, g.constituent_id, c.display_name as constituent_name, g.batch_id, g.amount::text, g.gift_date, g.fund_id, f.name as fund_name,
   g.campaign_id, ca.name as campaign_name, g.appeal_id, ap.name as appeal_name, g.payment_method, g.gift_type, g.check_number, g.reference,
-  g.external_source, g.fair_market_value::text, g.deductible_amount::text, g.acknowledged_at, g.acknowledgment_method, g.notes, g.posted_at, g.created_at, g.created_by
+  g.external_source, g.fair_market_value::text, g.deductible_amount::text, g.acknowledged_at, g.acknowledgment_method, g.notes, g.posted_at, g.created_at, g.created_by,
+  g.donor_message, sa.name as sponsor_animal_name, gt.kind as tribute_kind, gt.honoree_name as tribute_name, g.reverses_gift_id
 `;
 const giftFrom = sql`
   from gifts g
@@ -42,6 +48,8 @@ const giftFrom = sql`
   left join funds f on f.id = g.fund_id
   left join campaigns ca on ca.id = g.campaign_id
   left join appeals ap on ap.id = g.appeal_id
+  left join sponsor_animals sa on sa.id = g.sponsor_animal_id
+  left join gift_tributes gt on gt.gift_id = g.id
 `;
 
 function mapGift(r: Record<string, unknown>): Gift {
@@ -72,6 +80,10 @@ function mapGift(r: Record<string, unknown>): Gift {
     postedAt: s("posted_at"),
     createdAt: String(r.created_at),
     createdBy: s("created_by"),
+    donorMessage: s("donor_message"),
+    sponsorAnimalName: s("sponsor_animal_name"),
+    tribute: r.tribute_kind ? { kind: r.tribute_kind as "honor" | "memory", honoreeName: String(r.tribute_name) } : null,
+    reversesGiftId: s("reverses_gift_id"),
   };
 }
 
@@ -133,12 +145,14 @@ export async function updateGift(tx: Tx, orgId: string, id: string, g: GiftInput
            campaign_id = ${g.campaignId ?? null}, appeal_id = ${g.appealId ?? null}, payment_method = ${g.paymentMethod}::payment_method, gift_type = ${g.giftType}::gift_type,
            check_number = ${g.checkNumber ?? null}, reference = ${g.reference ?? null}, fair_market_value = ${g.fairMarketValue ?? null}, deductible_amount = ${g.deductibleAmount ?? null},
            notes = ${g.notes ?? null}, pledge_id = ${g.pledgeId ?? null}, recurring_plan_id = ${g.recurringPlanId ?? null}
-     where id = ${id} and org_id = ${orgId}`);
+     where id = ${id} and org_id = ${orgId} and gift_type <> 'refund'`);
+  // Refund entries come from Stripe and are never edited here; see recordReversal.
   return r.count > 0;
 }
 
 export async function deleteGift(tx: Tx, orgId: string, id: string): Promise<boolean> {
-  const r = await tx.execute(sql`delete from gifts where id = ${id} and org_id = ${orgId}`);
+  // A gift with a refund entry pointing at it stays, so the refund never points at nothing.
+  const r = await tx.execute(sql`delete from gifts where id = ${id} and org_id = ${orgId} and not exists (select 1 from gifts x where x.org_id = ${orgId} and x.reverses_gift_id = ${id})`);
   return r.count > 0;
 }
 

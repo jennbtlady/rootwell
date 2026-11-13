@@ -15,7 +15,7 @@ const slugify = (s: string) =>
     .replace(/^-+|-+$/g, "")
     .slice(0, 50);
 
-export function DonationPageForm({ orgId, funds, campaigns, page }: { orgId: string; funds: CodingRow[]; campaigns: CodingRow[]; page: DonationPage | null }) {
+export function DonationPageForm({ orgId, funds, campaigns, animals = [], page }: { orgId: string; funds: CodingRow[]; campaigns: CodingRow[]; animals?: { id: string; name: string; active: boolean }[]; page: DonationPage | null }) {
   const confirm = useConfirm();
   const router = useRouter();
   const toast = useToast();
@@ -29,6 +29,9 @@ export function DonationPageForm({ orgId, funds, campaigns, page }: { orgId: str
   const [amounts, setAmounts] = useState((page?.amounts ?? [25, 50, 100, 250]).join(", "));
   const [allowMonthly, setAllowMonthly] = useState(page?.allowMonthly ?? true);
   const [offerCoverFees, setOfferCoverFees] = useState(page?.offerCoverFees ?? true);
+  const [allowTribute, setAllowTribute] = useState(page?.allowTribute ?? false);
+  const [allowMessage, setAllowMessage] = useState(page?.allowMessage ?? false);
+  const [animalIds, setAnimalIds] = useState<string[]>(page?.animalIds ?? []);
   const [active, setActive] = useState(page?.active ?? true);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -49,7 +52,7 @@ export function DonationPageForm({ orgId, funds, campaigns, page }: { orgId: str
     if (Object.keys(errs).length) return;
     setPending(true);
     setFormError(null);
-    const json = { slug, title, intro: intro || null, thankYou: thankYou || null, fundIds, campaignId: campaignId || null, amounts: parsed, allowMonthly, offerCoverFees, active };
+    const json = { slug, title, intro: intro || null, thankYou: thankYou || null, fundIds, campaignId: campaignId || null, amounts: parsed, allowMonthly, offerCoverFees, allowTribute, allowMessage, animalIds, active };
     const res = page
       ? await api().api.v1.orgs[":orgId"]["donation-pages"][":id"].$put({ param: { orgId, id: page.id }, json })
       : await api().api.v1.orgs[":orgId"]["donation-pages"].$post({ param: { orgId }, json });
@@ -134,6 +137,28 @@ export function DonationPageForm({ orgId, funds, campaigns, page }: { orgId: str
         </FormField>
         <Checkbox label="Let donors give every month" checked={allowMonthly} onChange={(e) => setAllowMonthly(e.target.checked)} />
         <Checkbox label="Ask donors to cover the card fee" help="Adds about 2.2% plus 30 cents if they agree, so the full gift reaches you." checked={offerCoverFees} onChange={(e) => setOfferCoverFees(e.target.checked)} />
+        <Checkbox label="Let donors give in honor or memory of someone" help="They can name a person or pet, and ask you to email someone about the gift." checked={allowTribute} onChange={(e) => setAllowTribute(e.target.checked)} />
+        <Checkbox label="Let donors leave a message" help="A short note to you, shown on the gift." checked={allowMessage} onChange={(e) => setAllowMessage(e.target.checked)} />
+        {animals.length > 0 && (
+          <fieldset className="flex flex-col gap-2">
+            <legend className="mb-1 text-30 font-semibold">Animals donors can sponsor</legend>
+            <p className="text-20 text-text-weak">
+              Donors can pick one. Their gift goes to that animal&rsquo;s fund. Keep the list in{" "}
+              <a className="text-text-link underline" href={`/app/orgs/${orgId}/settings/animals`}>
+                Animals to sponsor
+              </a>
+              .
+            </p>
+            {animals.map((a) => (
+              <Checkbox
+                key={a.id}
+                label={a.active ? a.name : `${a.name} (hidden)`}
+                checked={animalIds.includes(a.id)}
+                onChange={(e) => setAnimalIds((xs) => (e.target.checked ? [...xs, a.id] : xs.filter((x) => x !== a.id)))}
+              />
+            ))}
+          </fieldset>
+        )}
         <FormField id="dp-thanks" label="Thank-you message" optional help="Shown after they give.">
           {(f) => <Textarea {...f} rows={3} value={thankYou} onChange={(e) => setThankYou(e.target.value)} />}
         </FormField>

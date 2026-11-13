@@ -28,6 +28,8 @@ export function SettingsNav({ orgId, modules }: { orgId: string; modules: Module
         // organization does not have; the API refuses it too.
         ...(modules.includes("donations") ? [{ href: `${base}/giving`, label: "Giving pages" }] : []),
         ...(modules.includes("donations") ? [{ href: `${base}/branding`, label: "Public page look" }] : []),
+        ...(modules.includes("donations") ? [{ href: `${base}/receipts`, label: "Online receipts" }] : []),
+        ...(modules.includes("donations") ? [{ href: `${base}/animals`, label: "Animals to sponsor" }] : []),
       ],
     },
     {

@@ -15,3 +15,4 @@ export * from "./fees";
 export * from "./dashboard-layout";
 export * from "./modules";
 export * from "./branding";
+export * from "./receipts";

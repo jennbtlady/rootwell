@@ -262,12 +262,18 @@ describe.skipIf(!DATABASE_URL)("integrations: online giving, payouts, Mailchimp,
     expect(Math.round((Number(gross) - Number(fee)) * 100)).toBe(Math.round(Number(net) * 100));
   });
 
-  it("a refund is flagged on Data Health until someone deals with it", async () => {
+  it("a refund adds a reversing entry; a dispute waits on Data Health until marked done", async () => {
     const chargeId = (await giftsFor(danaId))[0]!.external_id!;
     await gw.refund(accountId, chargeId);
-    const health = (await (await call(staff, "GET", "/integrations/health")).json()) as { needsAttention: { id: string; type: string; outcome: string }[] };
-    const item = health.needsAttention.find((x) => x.type === "charge.refunded")!;
-    expect(item.outcome).toMatch(/refunded/);
+    const rows = await giftsFor(danaId);
+    expect(rows.map((g) => g.gift_type)).toEqual(["one_time", "refund"]);
+    expect(Number(rows[1]!.amount)).toBe(-Number(rows[0]!.amount));
+
+    const samCharge = (await giftsFor(samId))[0]!.external_id!;
+    await gw.dispute(accountId, samCharge);
+    const health = (await (await call(staff, "GET", "/integrations/health")).json()) as { needsAttention: { id: string; type: string }[] };
+    expect(health.needsAttention.find((x) => x.type === "charge.refunded")).toBeUndefined();
+    const item = health.needsAttention.find((x) => x.type === "charge.dispute.created")!;
     expect((await call(staff, "POST", `/integrations/events/${item.id}/resolve`)).status).toBe(403);
     expect((await call(owner, "POST", `/integrations/events/${item.id}/resolve`)).status).toBe(200);
     const after = (await (await call(owner, "GET", "/integrations/health")).json()) as { needsAttention: { id: string }[] };

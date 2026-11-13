@@ -152,7 +152,7 @@ export async function staffHome(tx: Tx, orgId: string): Promise<StaffHome | null
       from gifts g join constituents c on c.id = g.constituent_id
      where g.org_id = ${orgId} and g.posted_at is not null and g.gift_type not in ('soft_credit', 'pledge')
        and g.gift_date >= (${fy}::date - interval '1 year') and g.gift_date < ${fy}::date
-       and not exists (select 1 from gifts n where n.constituent_id = c.id and n.gift_date >= ${fy}::date and n.gift_type <> 'soft_credit')
+       and not exists (select 1 from gifts n where n.constituent_id = c.id and n.gift_date >= ${fy}::date and n.gift_type not in ('soft_credit', 'refund'))
        and not c.deceased
      group by c.id, c.display_name
      order by sum(g.amount) desc

@@ -88,9 +88,11 @@ const summarySelect = sql`
 `;
 // Gift totals for each donor row, looked up per row through the (constituent_id,
 // gift_date) index. Only the rows being shown are summed, never the whole gifts table.
+// Refund entries (negative) net out of the totals but are not gifts, so counts and dates skip them.
 const giftJoin = sql`
-  left join lateral (select max(gift_date) as last_gift_on, sum(amount) as lifetime_total, count(*) as gift_count,
-                    min(gift_date) as first_gift_on,
+  left join lateral (select max(gift_date) filter (where gift_type <> 'refund') as last_gift_on, sum(amount) as lifetime_total,
+                    count(*) filter (where gift_type <> 'refund') as gift_count,
+                    min(gift_date) filter (where gift_type <> 'refund') as first_gift_on,
                     sum(amount) filter (where gift_date >= fy.s) as this_year_total,
                     sum(amount) filter (where gift_date >= fy.s - interval '1 year' and gift_date < fy.s) as last_year_total
                from gifts,

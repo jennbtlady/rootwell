@@ -18,3 +18,5 @@ export * from "./export-all";
 export * from "./lapse";
 export * from "./rate-limits";
 export * from "./modules";
+export * from "./animals";
+export * from "./receipts";

@@ -117,6 +117,9 @@ const mapPage = (r: Record<string, unknown>): DonationPage => ({
   amounts: ((r.amounts as number[] | null) ?? []).map(Number),
   allowMonthly: Boolean(r.allow_monthly),
   offerCoverFees: Boolean(r.offer_cover_fees),
+  allowTribute: Boolean(r.allow_tribute),
+  allowMessage: Boolean(r.allow_message),
+  animalIds: (r.animal_ids as string[] | null) ?? [],
   active: Boolean(r.active),
   createdAt: String(r.created_at),
 });
@@ -154,9 +157,10 @@ export async function createDonationPage(tx: Tx, orgId: string, p: DonationPageI
     await tx.execute(sql`savepoint dp`);
     try {
       const r = await tx.execute(sql`
-        insert into donation_pages (org_id, slug, title, intro, thank_you, fund_ids, campaign_id, amounts, allow_monthly, offer_cover_fees, active)
+        insert into donation_pages (org_id, slug, title, intro, thank_you, fund_ids, campaign_id, amounts, allow_monthly, offer_cover_fees,
+                                    allow_tribute, allow_message, animal_ids, active)
         values (${orgId}, ${p.slug}, ${p.title}, ${p.intro}, ${p.thankYou}, ${uuidArray(p.fundIds)}, ${p.campaignId ?? null}, ${intArray(p.amounts)},
-                ${p.allowMonthly}, ${p.offerCoverFees}, ${p.active})
+                ${p.allowMonthly}, ${p.offerCoverFees}, ${p.allowTribute}, ${p.allowMessage}, ${uuidArray(p.animalIds)}, ${p.active})
         returning id`);
       await tx.execute(sql`release savepoint dp`);
       return { id: (r[0] as { id: string }).id };
@@ -173,7 +177,8 @@ export async function updateDonationPage(tx: Tx, orgId: string, id: string, p: D
     try {
       const r = await tx.execute(sql`
         update donation_pages set slug = ${p.slug}, title = ${p.title}, intro = ${p.intro}, thank_you = ${p.thankYou}, fund_ids = ${uuidArray(p.fundIds)},
-               campaign_id = ${p.campaignId ?? null}, amounts = ${intArray(p.amounts)}, allow_monthly = ${p.allowMonthly}, offer_cover_fees = ${p.offerCoverFees}, active = ${p.active}
+               campaign_id = ${p.campaignId ?? null}, amounts = ${intArray(p.amounts)}, allow_monthly = ${p.allowMonthly}, offer_cover_fees = ${p.offerCoverFees},
+               allow_tribute = ${p.allowTribute}, allow_message = ${p.allowMessage}, animal_ids = ${uuidArray(p.animalIds)}, active = ${p.active}
          where org_id = ${orgId} and id = ${id}`);
       await tx.execute(sql`release savepoint dp`);
       return r.count > 0;
@@ -201,6 +206,10 @@ export type PublicDonationPage = {
   offerCoverFees: boolean;
   campaignId: string | null;
   funds: { id: string; name: string }[];
+  allowTribute: boolean;
+  allowMessage: boolean;
+  /** Shown animals the page offers, in the page's order (fundraising Phase 2). */
+  animals: { id: string; name: string; description: string | null; photoPath: string | null }[];
   stripeAccount: string | null;
   sample: boolean;
   /** The organization's brand for this public page (fundraising Phase 1). */

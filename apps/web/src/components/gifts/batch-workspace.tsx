@@ -12,6 +12,7 @@ import { Alert, AlertDescription, AlertTitle, Button, Combobox, EmptyState, Form
 import { anchorClass } from "@/components/ui/text";
 import { cn } from "@/lib/cn";
 import { PostBatchDialog } from "./post-batch-dialog";
+import { GiftExtras } from "@/components/gifts/gift-extras";
 
 type Props = {
   orgId: string;
@@ -93,13 +94,21 @@ export function BatchWorkspace({ orgId, batch, standards, funds, campaigns, appe
                   </TD>
                   <TD align="right">{formatMoney(g.amount)}</TD>
                   <TD className="text-text-weak">{formatDate(g.giftDate)}</TD>
-                  <TD>{g.fundName ?? ""}</TD>
+                  <TD>
+                    {g.fundName ?? ""}
+                    <GiftExtras g={g} />
+                  </TD>
                   <TD className="text-text-weak">{g.campaignName ?? ""}</TD>
                   <TD className="text-text-weak">
-                    {PAYMENT_METHOD_LABEL[g.paymentMethod as keyof typeof PAYMENT_METHOD_LABEL] ?? g.paymentMethod}
+                    {g.giftType === "refund" ? "Refund" : (PAYMENT_METHOD_LABEL[g.paymentMethod as keyof typeof PAYMENT_METHOD_LABEL] ?? g.paymentMethod)}
                     {g.checkNumber ? ` #${g.checkNumber}` : ""}
                   </TD>
-                  {open && (
+                  {open && g.giftType === "refund" && (
+                    <TD align="right" className="text-30 text-text-weak">
+                      From Stripe
+                    </TD>
+                  )}
+                  {open && g.giftType !== "refund" && (
                     <TD align="right">
                       <span className="flex justify-end gap-1">
                         {editing?.id === g.id ? (

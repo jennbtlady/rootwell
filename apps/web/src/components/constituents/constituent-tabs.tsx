@@ -10,6 +10,7 @@ import { formatDate, formatDateTime, formatMoney, today } from "@/lib/format";
 import { Alert, AlertDescription, Badge, Button, Checkbox, Combobox, EmptyState, FormField, Input, Select, Tab, TabList, TabPanel, Table, Tabs, TBody, TD, Textarea, TH, THead, TR, useConfirm } from "@/components/ui";
 import { anchorClass } from "@/components/ui/text";
 import type { ComboboxItem } from "@/components/ui";
+import { GiftExtras } from "@/components/gifts/gift-extras";
 
 const TYPE_LABEL: Record<string, string> = { call: "Call", meeting: "Meeting", email: "Email", letter: "Letter", event: "Event", note: "Note", other: "Other" };
 
@@ -75,10 +76,13 @@ function GiftsPanel({ orgId, gifts }: { orgId: string; gifts: Gift[] }) {
               </Link>
             </TD>
             <TD align="right">{formatMoney(g.amount)}</TD>
-            <TD>{g.fundName ?? ""}</TD>
+            <TD>
+              {g.fundName ?? ""}
+              <GiftExtras g={g} />
+            </TD>
             <TD className="text-text-weak">{g.campaignName ?? ""}</TD>
             <TD className="text-text-weak">
-              {g.paymentMethod === "check" && g.checkNumber ? `Check #${g.checkNumber}` : g.paymentMethod.replace("_", " ")}
+              {g.giftType === "refund" ? "Refund" : g.paymentMethod === "check" && g.checkNumber ? `Check #${g.checkNumber}` : g.paymentMethod.replace("_", " ")}
             </TD>
             <TD>{g.postedAt ? <Badge variant="success">Posted</Badge> : <Badge variant="warning">In open batch</Badge>}</TD>
           </TR>

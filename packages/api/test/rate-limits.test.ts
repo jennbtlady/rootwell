@@ -26,6 +26,7 @@ describe.skipIf(!DATABASE_URL)("rate limits and the bot check", () => {
   let db: Db;
   const owner = { id: randomUUID(), email: `rl-owner-${run}@test.invalid` };
   let orgId = "";
+  const mail: { to: string; subject: string }[] = [];
 
   beforeAll(async () => {
     db = createDb(DATABASE_URL);
@@ -34,7 +35,7 @@ describe.skipIf(!DATABASE_URL)("rate limits and the bot check", () => {
       const [, sub, aal] = token.split(":");
       return { sub, aal };
     });
-    setMailer({ from: "test", send: async () => {} });
+    setMailer({ from: "test", send: async (m) => void mail.push(m) });
     await db.execute(sql`
       insert into auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
       values (${owner.id}, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', ${owner.email}, '', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now())`);
@@ -46,6 +47,7 @@ describe.skipIf(!DATABASE_URL)("rate limits and the bot check", () => {
 
   afterAll(async () => {
     await db.execute(sql`delete from rate_limit_hits where bucket like ${`%${run}%`} or bucket = ${`bulkEmailOrg:${orgId}`}`);
+    await db.execute(sql`delete from donation_pages where org_id = ${orgId}`);
     await db.execute(sql`delete from organizations where id = ${orgId}`);
     await db.execute(sql`delete from auth.users where id = ${owner.id}`);
     setVerifier(undefined);
@@ -74,6 +76,21 @@ describe.skipIf(!DATABASE_URL)("rate limits and the bot check", () => {
     expect((await checkout(slug, ip(4))).status).toBe(429);
     // Another page is not affected.
     expect((await checkout(`${slug}-b`, ip(4))).status).toBe(404);
+  });
+
+  it("warns the owner once when a real giving page hits its limit", async () => {
+    const slug = `rl-alert-${run}`;
+    const made = await app.request(`/api/v1/orgs/${orgId}/donation-pages`, { method: "POST", headers: { authorization: `Bearer token:${owner.id}:aal2`, ...json }, body: JSON.stringify({ slug, title: "Spring appeal" }) });
+    expect(made.status).toBe(201);
+    mail.length = 0;
+    for (let i = 0; i < RATE_LIMITS.checkoutPage.limit; i++) {
+      // The page is not taking gifts (no Stripe), which is fine: every try still counts.
+      expect((await checkout(slug, `${ip(7)}-${i}`)).status).toBe(409);
+    }
+    expect(mail).toHaveLength(0);
+    expect((await checkout(slug, ip(8))).status).toBe(429);
+    expect((await checkout(slug, ip(9))).status).toBe(429);
+    expect(mail).toEqual([expect.objectContaining({ to: owner.email, subject: 'Unusual activity on your giving page "Spring appeal"' })]);
   });
 
   it("refuses a checkout that fails the bot check, before looking up the page", async () => {

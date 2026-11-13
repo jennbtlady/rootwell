@@ -78,7 +78,21 @@ export type OnlinePayment = {
   recurringPlanId?: string | null;
   constituentId?: string | null;
   note?: string | null;
+  /** Fundraising Phase 2: what the donor added on the giving form. */
+  donorMessage?: string | null;
+  animalId?: string | null;
+  tribute?: OnlineTribute | null;
 };
+
+export type OnlineTribute = { kind: "honor" | "memory"; honoreeName: string; notifyName: string | null; notifyEmail: string | null };
+
+/** The giving form's extras travel through Stripe as metadata. These read them back. */
+export function tributeFromMetadata(m: Record<string, string> | null | undefined): OnlineTribute | null {
+  const kind = m?.tributeKind;
+  const name = m?.tributeName?.trim();
+  if ((kind !== "honor" && kind !== "memory") || !name) return null;
+  return { kind, honoreeName: name.slice(0, 120), notifyName: m?.tributeNotifyName?.trim().slice(0, 120) || null, notifyEmail: m?.tributeNotifyEmail?.trim().toLowerCase().slice(0, 200) || null };
+}
 
 /**
  * Records a gift for a payment. Lands unposted and outside any batch; the payout later
@@ -95,27 +109,38 @@ export async function recordOnlineGift(tx: Tx, orgId: string, p: OnlinePayment):
   let matched = !!constituentId;
   if (!constituentId) ({ constituentId, matched } = await matchOrCreateDonor(tx, orgId, p.donor));
 
-  // Only use a fund or campaign that belongs to this organization and is still active.
-  const fund = p.fundId ? await tx.execute(sql`select id from funds where id = ${p.fundId} and org_id = ${orgId} and active`) : [];
+  // Only use a fund, campaign or animal that belongs to this organization and is still active.
+  // A sponsored animal's gift goes to the animal's fund when it has one.
+  const animal = p.animalId ? ((await tx.execute(sql`select id, fund_id from sponsor_animals where id = ${p.animalId} and org_id = ${orgId}`))[0] as { id: string; fund_id: string | null } | undefined) : undefined;
+  const fundId = animal?.fund_id ?? p.fundId;
+  const fund = fundId ? await tx.execute(sql`select id from funds where id = ${fundId} and org_id = ${orgId} and active`) : [];
   const campaign = p.campaignId ? await tx.execute(sql`select id from campaigns where id = ${p.campaignId} and org_id = ${orgId}`) : [];
 
   const r = await tx.execute(sql`
     insert into gifts (org_id, constituent_id, amount, gift_date, fund_id, campaign_id, payment_method, gift_type, reference,
-                       external_source, external_id, fee_amount, net_amount, fee_covered_amount, source_platform, recurring_plan_id, notes)
+                       external_source, external_id, fee_amount, net_amount, fee_covered_amount, source_platform, recurring_plan_id, notes,
+                       donor_message, sponsor_animal_id)
     select ${orgId}, ${constituentId}, ${cents(p.amountCents)}, (to_timestamp(${p.paidAt}) at time zone o.timezone)::date,
-           ${fund.length ? p.fundId : null}, ${campaign.length ? p.campaignId : null}, 'card', ${p.recurringPlanId ? "recurring" : "one_time"}::gift_type,
+           ${fund.length ? fundId : null}, ${campaign.length ? p.campaignId : null}, 'card', ${p.recurringPlanId ? "recurring" : "one_time"}::gift_type,
            ${p.externalId}, 'stripe', ${p.externalId}, ${cents(p.feeCents)}, ${cents(p.netCents)},
-           ${p.feeCoveredCents > 0 ? cents(p.feeCoveredCents) : null}, ${p.platform}, ${p.recurringPlanId ?? null}, ${p.note ?? null}
+           ${p.feeCoveredCents > 0 ? cents(p.feeCoveredCents) : null}, ${p.platform}, ${p.recurringPlanId ?? null}, ${p.note ?? null},
+           ${p.donorMessage?.trim().slice(0, 500) || null}, ${animal?.id ?? null}
       from organizations o where o.id = ${orgId}
     returning id`);
-  return { giftId: (r[0] as { id: string }).id, constituentId, created: true, matched };
+  const giftId = (r[0] as { id: string }).id;
+  if (p.tribute) {
+    await tx.execute(sql`
+      insert into gift_tributes (org_id, gift_id, kind, honoree_name, notify_name, notify_email)
+      values (${orgId}, ${giftId}, ${p.tribute.kind}::tribute_kind, ${p.tribute.honoreeName}, ${p.tribute.notifyName}, ${p.tribute.notifyEmail})`);
+  }
+  return { giftId, constituentId, created: true, matched };
 }
 
 /** One recurring plan per subscription. Safe to call from either the checkout or the first invoice. */
 export async function ensureRecurringPlan(
   tx: Tx,
   orgId: string,
-  s: { subscriptionId: string; amountCents: number; startedAt: number; donor: OnlineDonor; fundId: string | null; campaignId: string | null },
+  s: { subscriptionId: string; amountCents: number; startedAt: number; donor: OnlineDonor; fundId: string | null; campaignId: string | null; animalId?: string | null },
 ): Promise<{ planId: string; constituentId: string }> {
   await lock(tx, `plan:${orgId}:${s.subscriptionId}`);
   const existing = await tx.execute(sql`select id, constituent_id from recurring_plans where org_id = ${orgId} and external_source = 'stripe' and external_id = ${s.subscriptionId} limit 1`);
@@ -124,15 +149,23 @@ export async function ensureRecurringPlan(
     return { planId: e.id, constituentId: e.constituent_id };
   }
   const { constituentId } = await matchOrCreateDonor(tx, orgId, s.donor);
-  const fund = s.fundId ? await tx.execute(sql`select id from funds where id = ${s.fundId} and org_id = ${orgId} and active`) : [];
+  const animal = s.animalId ? ((await tx.execute(sql`select id, fund_id from sponsor_animals where id = ${s.animalId} and org_id = ${orgId}`))[0] as { id: string; fund_id: string | null } | undefined) : undefined;
+  const fundId = animal?.fund_id ?? s.fundId;
+  const fund = fundId ? await tx.execute(sql`select id from funds where id = ${fundId} and org_id = ${orgId} and active`) : [];
   const campaign = s.campaignId ? await tx.execute(sql`select id from campaigns where id = ${s.campaignId} and org_id = ${orgId}`) : [];
   const r = await tx.execute(sql`
-    insert into recurring_plans (org_id, constituent_id, amount, frequency, starts_on, status, fund_id, campaign_id, external_source, external_id)
+    insert into recurring_plans (org_id, constituent_id, amount, frequency, starts_on, status, fund_id, campaign_id, sponsor_animal_id, external_source, external_id)
     select ${orgId}, ${constituentId}, ${cents(s.amountCents)}, 'monthly', (to_timestamp(${s.startedAt}) at time zone o.timezone)::date, 'active',
-           ${fund.length ? s.fundId : null}, ${campaign.length ? s.campaignId : null}, 'stripe', ${s.subscriptionId}
+           ${fund.length ? fundId : null}, ${campaign.length ? s.campaignId : null}, ${animal?.id ?? null}, 'stripe', ${s.subscriptionId}
       from organizations o where o.id = ${orgId}
     returning id`);
   return { planId: (r[0] as { id: string }).id, constituentId };
+}
+
+/** True until a monthly gift's first payment is recorded. The tribute and message go with that one only. */
+export async function isFirstPayment(tx: Tx, orgId: string, planId: string): Promise<boolean> {
+  const r = await tx.execute(sql`select not exists (select 1 from gifts where org_id = ${orgId} and recurring_plan_id = ${planId} and gift_type <> 'refund') as first`);
+  return Boolean((r[0] as { first: boolean }).first);
 }
 
 export async function endRecurringPlan(tx: Tx, orgId: string, subscriptionId: string): Promise<boolean> {
@@ -150,6 +183,7 @@ export async function endRecurringPlan(tx: Tx, orgId: string, subscriptionId: st
 export async function recordPayoutBatch(
   tx: Tx,
   orgId: string,
+  // Each item is a charge (a gift) or a refund or lost dispute (a refund entry, negative amount).
   p: { payoutId: string; arrivalDate: number; netCents: number; charges: { chargeId: string; amount: number; fee: number }[] },
 ): Promise<{ batchId: string; attached: number; missing: string[]; created: boolean }> {
   await lock(tx, `payout:${orgId}:${p.payoutId}`);
@@ -163,7 +197,7 @@ export async function recordPayoutBatch(
     const r = await tx.execute(sql`
       insert into batches (org_id, batch_date, description, status, external_source, external_id, expected_total, expected_count, notes)
       select ${orgId}, (to_timestamp(${p.arrivalDate}) at time zone o.timezone)::date, ${"Stripe deposit"}, 'open', 'stripe', ${p.payoutId},
-             ${cents(gross)}, ${p.charges.length}, ${`Deposit to the bank: $${cents(p.netCents)}. Stripe fees: $${cents(fees)}. Gifts: $${cents(gross)}.`}
+             ${cents(gross)}, ${p.charges.length}, ${`Deposit to the bank: $${cents(p.netCents)}. Stripe fees: $${cents(fees)}. Gifts less refunds: $${cents(gross)}.`}
         from organizations o where o.id = ${orgId}
       returning id`);
     batchId = (r[0] as { id: string }).id;
@@ -203,10 +237,50 @@ export async function finishWebhookEvent(tx: Tx, id: string, result: { outcome: 
      where id = ${id}`);
 }
 
-/** Refunds are not undone automatically. A person decides whether to delete or adjust the gift. */
-export async function flagRefund(tx: Tx, orgId: string, chargeId: string): Promise<{ giftId: string | null }> {
-  const r = await tx.execute(sql`select id from gifts where org_id = ${orgId} and external_source = 'stripe' and external_id = ${chargeId} limit 1`);
-  return { giftId: r.length ? (r[0] as { id: string }).id : null };
+/**
+ * A refund or a lost dispute on an online gift (fundraising Phase 2). The gift itself never
+ * changes: a second, negative entry on the day of the refund points back at it, with the
+ * same donor, fund, campaign and animal. Totals net out, the books stay right for the month
+ * the gift came in, and the refund shows in the month it happened.
+ *
+ * `externalId` is Stripe's id for the refund (re_...) or the dispute (dp_...), so the same
+ * refund arriving twice makes one entry, and the deposit it comes out of can find it.
+ * Refund entries need no thank-you, so they are made already marked as done.
+ */
+export async function recordReversal(
+  tx: Tx,
+  orgId: string,
+  r: { chargeId: string; externalId: string; amountCents: number; at: number; kind: "refund" | "dispute" },
+): Promise<{ giftId: string | null; entryId: string | null; created: boolean }> {
+  await lock(tx, `gift:${orgId}:stripe:${r.chargeId}`);
+  const orig = await tx.execute(sql`
+    select id, amount::numeric as amount, coalesce(deductible_amount, amount)::numeric as deductible
+      from gifts where org_id = ${orgId} and external_source = 'stripe' and external_id = ${r.chargeId} and gift_type <> 'refund' limit 1`);
+  if (!orig.length) return { giftId: null, entryId: null, created: false };
+  const g = orig[0] as { id: string; amount: string; deductible: string };
+  const existing = await tx.execute(sql`select id from gifts where org_id = ${orgId} and external_source = 'stripe' and external_id = ${r.externalId} limit 1`);
+  if (existing.length) return { giftId: g.id, entryId: (existing[0] as { id: string }).id, created: false };
+
+  // Never reverse more than is left of the gift, whatever order refunds and disputes arrive in.
+  const done = await tx.execute(sql`select coalesce(-sum(amount), 0)::numeric as done from gifts where org_id = ${orgId} and reverses_gift_id = ${g.id}`);
+  const giftCents = Math.round(Number(g.amount) * 100);
+  const leftCents = giftCents - Math.round(Number((done[0] as { done: string }).done) * 100);
+  const amountCents = Math.min(r.amountCents, leftCents);
+  if (amountCents <= 0) return { giftId: g.id, entryId: null, created: false };
+  // The deductible part comes back in proportion: a full refund takes all of it back.
+  const deductibleCents = Math.round((Number(g.deductible) * 100 * amountCents) / giftCents);
+  const note = r.kind === "dispute" ? "The donor's bank took this back after a dispute." : "Refunded in Stripe.";
+
+  const ins = await tx.execute(sql`
+    insert into gifts (org_id, constituent_id, amount, gift_date, fund_id, campaign_id, appeal_id, sponsor_animal_id, payment_method, gift_type,
+                       reference, external_source, external_id, deductible_amount, net_amount, source_platform, recurring_plan_id,
+                       reverses_gift_id, acknowledged_at, acknowledgment_method, notes)
+    select g.org_id, g.constituent_id, ${cents(-amountCents)}, (to_timestamp(${r.at}) at time zone o.timezone)::date, g.fund_id, g.campaign_id, g.appeal_id,
+           g.sponsor_animal_id, g.payment_method, 'refund', ${r.externalId}, 'stripe', ${r.externalId}, ${cents(-deductibleCents)},
+           ${cents(-amountCents)}, g.source_platform, g.recurring_plan_id, g.id, now(), 'Not needed (refund)', ${note}
+      from gifts g join organizations o on o.id = g.org_id where g.id = ${g.id}
+    returning id`);
+  return { giftId: g.id, entryId: (ins[0] as { id: string }).id, created: true };
 }
 
 /** Records the error and leaves the event unprocessed, so the platform's retry runs it again. */

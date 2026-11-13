@@ -11,12 +11,16 @@ import { type CheckoutInput, type InvoiceInfo, type PaymentInfo, type StripeGate
 type SimCharge = PaymentInfo & { accountId: string; paidOut: boolean; invoiceId?: string; subscriptionId?: string };
 type SimSession = { id: string; accountId: string; input: CheckoutInput; done: boolean };
 
-type SimState = { charges: Map<string, SimCharge>; sessions: Map<string, SimSession>; codes: Map<string, string>; needsInfo?: Set<string>; subs: Map<string, { accountId: string; metadata: Record<string, string>; amount: number; email: string | null }>; sent: Stripe.Event[] };
+type SimRefund = { id: string; accountId: string; chargeId: string; amount: number; created: number; payoutId?: string };
+type SimDispute = { id: string; accountId: string; chargeId: string; amount: number; lost?: boolean; payoutId?: string };
+type SimState = { refunds?: Map<string, SimRefund>; disputes?: Map<string, SimDispute>; charges: Map<string, SimCharge>; sessions: Map<string, SimSession>; codes: Map<string, string>; needsInfo?: Set<string>; subs: Map<string, { accountId: string; metadata: Record<string, string>; amount: number; email: string | null }>; sent: Stripe.Event[] };
 const g = globalThis as unknown as { __mapleStripeSim?: SimState };
 const state: SimState = (g.__mapleStripeSim ??= { charges: new Map(), sessions: new Map(), codes: new Map(), subs: new Map(), sent: [] });
 
 const id = (p: string) => `${p}_sim_${randomBytes(9).toString("base64url")}`;
 const signer = new Stripe("sk_test_simulator");
+/** Stripe's US dispute fee, in cents. */
+const SIM_DISPUTE_FEE = 1500;
 
 export class SimulatedStripeGateway implements StripeGateway {
   readonly mode = "simulated" as const;
@@ -85,7 +89,23 @@ export class SimulatedStripeGateway implements StripeGateway {
     return { ...c, invoiceId, subscriptionId: c.subscriptionId, customerId: null };
   }
   async payoutCharges(accountId: string, payoutId: string) {
-    return [...state.charges.values()].filter((c) => c.accountId === accountId && (c as SimCharge & { payoutId?: string }).payoutId === payoutId).map((c) => ({ chargeId: c.chargeId, fee: c.fee, amount: c.amount }));
+    const charges = [...state.charges.values()].filter((c) => c.accountId === accountId && (c as SimCharge & { payoutId?: string }).payoutId === payoutId).map((c) => ({ chargeId: c.chargeId, fee: c.fee, amount: c.amount }));
+    const refunds = [...(state.refunds?.values() ?? [])].filter((r) => r.accountId === accountId && r.payoutId === payoutId).map((r) => ({ chargeId: r.id, fee: 0, amount: -r.amount }));
+    const disputes = [...(state.disputes?.values() ?? [])].filter((d) => d.accountId === accountId && d.payoutId === payoutId).map((d) => ({ chargeId: d.id, fee: SIM_DISPUTE_FEE, amount: -d.amount }));
+    return [...charges, ...refunds, ...disputes];
+  }
+  /** The stand-in's "customer portal": a page on our own stripe-sim routes. */
+  async manageSubscriptionUrl(accountId: string, subscriptionId: string, returnUrl: string) {
+    const sub = state.subs.get(subscriptionId);
+    if (!sub || sub.accountId !== accountId) throw new Error("No such subscription");
+    return `${this.baseUrl()}/api/v1/stripe-sim/portal/${subscriptionId}?${new URLSearchParams({ return_url: returnUrl }).toString()}`;
+  }
+  /** For the stand-in's portal page. */
+  hasSubscription(subscriptionId: string) {
+    return state.subs.has(subscriptionId);
+  }
+  async chargeRefunds(accountId: string, chargeId: string) {
+    return [...(state.refunds?.values() ?? [])].filter((r) => r.accountId === accountId && r.chargeId === chargeId).map(({ id, amount, created }) => ({ id, amount, created }));
   }
 
   // ---- what a donor or Stripe would do
@@ -127,14 +147,54 @@ export class SimulatedStripeGateway implements StripeGateway {
         amount += c.net;
       }
     }
+    // Refunds and lost disputes come out of the same payout, as they do in Stripe.
+    for (const r of state.refunds?.values() ?? []) {
+      if (r.accountId === accountId && !r.payoutId) {
+        r.payoutId = payoutId;
+        amount -= r.amount;
+      }
+    }
+    for (const d of state.disputes?.values() ?? []) {
+      if (d.accountId === accountId && d.lost && !d.payoutId) {
+        d.payoutId = payoutId;
+        amount -= d.amount + SIM_DISPUTE_FEE;
+      }
+    }
     await this.emit(accountId, "payout.paid", { id: payoutId, object: "payout", amount, arrival_date: Math.floor(Date.now() / 1000), status: "paid" });
     return { payoutId, amount };
   }
 
-  async refund(accountId: string, chargeId: string) {
+  /** The organization refunds all of a charge, or part of it, in Stripe. */
+  async refund(accountId: string, chargeId: string, amountCents?: number) {
     const c = state.charges.get(chargeId);
     if (!c) throw new Error("No such charge");
-    await this.emit(accountId, "charge.refunded", { id: chargeId, object: "charge", amount: c.amount, amount_refunded: c.amount, payment_intent: c.paymentIntentId, billing_details: { name: c.name, email: c.email } });
+    const refunds = (state.refunds ??= new Map());
+    const already = [...refunds.values()].filter((r) => r.chargeId === chargeId).reduce((s, r) => s + r.amount, 0);
+    const amount = Math.min(amountCents ?? c.amount - already, c.amount - already);
+    if (amount <= 0) throw new Error("Nothing left to refund");
+    const r: SimRefund = { id: id("re"), accountId, chargeId, amount, created: Math.floor(Date.now() / 1000) };
+    refunds.set(r.id, r);
+    await this.emit(accountId, "charge.refunded", { id: chargeId, object: "charge", amount: c.amount, amount_refunded: already + amount, refunded: already + amount === c.amount, payment_intent: c.paymentIntentId, billing_details: { name: c.name, email: c.email } });
+    return r.id;
+  }
+
+  /** The donor's bank disputes a charge. */
+  async dispute(accountId: string, chargeId: string): Promise<string> {
+    const c = state.charges.get(chargeId);
+    if (!c) throw new Error("No such charge");
+    const d: SimDispute = { id: id("dp"), accountId, chargeId, amount: c.amount };
+    (state.disputes ??= new Map()).set(d.id, d);
+    const due = Math.floor(Date.now() / 1000) + 7 * 86400;
+    await this.emit(accountId, "charge.dispute.created", { id: d.id, object: "dispute", charge: chargeId, amount: d.amount, status: "needs_response", reason: "fraudulent", evidence_details: { due_by: due } });
+    return d.id;
+  }
+
+  /** The bank decides. A lost dispute takes the money back, plus Stripe's fee. */
+  async closeDispute(disputeId: string, won: boolean) {
+    const d = state.disputes?.get(disputeId);
+    if (!d) throw new Error("No such dispute");
+    d.lost = !won;
+    await this.emit(d.accountId, "charge.dispute.closed", { id: d.id, object: "dispute", charge: d.chargeId, amount: d.amount, status: won ? "won" : "lost" });
   }
 
   async cancelSubscription(subscriptionId: string) {
