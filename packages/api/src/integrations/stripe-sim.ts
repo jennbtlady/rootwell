@@ -94,6 +94,16 @@ export class SimulatedStripeGateway implements StripeGateway {
     const disputes = [...(state.disputes?.values() ?? [])].filter((d) => d.accountId === accountId && d.payoutId === payoutId).map((d) => ({ chargeId: d.id, fee: SIM_DISPUTE_FEE, amount: -d.amount }));
     return [...charges, ...refunds, ...disputes];
   }
+  /** The stand-in's "customer portal": a page on our own stripe-sim routes. */
+  async manageSubscriptionUrl(accountId: string, subscriptionId: string, returnUrl: string) {
+    const sub = state.subs.get(subscriptionId);
+    if (!sub || sub.accountId !== accountId) throw new Error("No such subscription");
+    return `${this.baseUrl()}/api/v1/stripe-sim/portal/${subscriptionId}?${new URLSearchParams({ return_url: returnUrl }).toString()}`;
+  }
+  /** For the stand-in's portal page. */
+  hasSubscription(subscriptionId: string) {
+    return state.subs.has(subscriptionId);
+  }
   async chargeRefunds(accountId: string, chargeId: string) {
     return [...(state.refunds?.values() ?? [])].filter((r) => r.accountId === accountId && r.chargeId === chargeId).map(({ id, amount, created }) => ({ id, amount, created }));
   }

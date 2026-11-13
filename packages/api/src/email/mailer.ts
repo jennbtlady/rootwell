@@ -5,10 +5,26 @@ export type Mail = {
   subject: string;
   text: string;
   html?: string;
+  /** Send as this name (an organization's), from Rootwell's own address. */
+  fromName?: string;
+  /** Where replies go, such as the organization's office email. */
+  replyTo?: string;
   attachments?: { filename: string; content: Buffer; contentType: string }[];
 };
 
 export type Mailer = { send: (m: Mail) => Promise<void>; from: string };
+
+/**
+ * "Kennebec Valley Humane Society <receipts@rootwell.app>": the organization's name on
+ * Rootwell's sending address, so mail passes SPF and DKIM without the organization setting up
+ * its domain. Characters that could break the header are dropped.
+ */
+export function fromHeader(defaultFrom: string, name?: string): string {
+  if (!name) return defaultFrom;
+  const address = /<([^>]+)>/.exec(defaultFrom)?.[1] ?? defaultFrom.trim();
+  const clean = name.replace(/[\r\n"<>\\]/g, " ").replace(/\s+/g, " ").trim().slice(0, 80);
+  return clean ? `"${clean}" <${address}>` : defaultFrom;
+}
 
 let override: Mailer | undefined;
 /** For tests. */
@@ -32,7 +48,8 @@ export function getMailer(): Mailer {
           method: "POST",
           headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
           body: JSON.stringify({
-            from, to: [m.to], subject: m.subject, text: m.text, html: m.html,
+            from: fromHeader(from, m.fromName), to: [m.to], subject: m.subject, text: m.text, html: m.html,
+            ...(m.replyTo ? { reply_to: m.replyTo } : {}),
             attachments: m.attachments?.map((a) => ({ filename: a.filename, content: a.content.toString("base64") })),
           }),
         });
@@ -46,7 +63,7 @@ export function getMailer(): Mailer {
     return {
       from,
       async send(m) {
-        await transport.sendMail({ from, to: m.to, subject: m.subject, text: m.text, html: m.html, attachments: m.attachments });
+        await transport.sendMail({ from: fromHeader(from, m.fromName), replyTo: m.replyTo, to: m.to, subject: m.subject, text: m.text, html: m.html, attachments: m.attachments });
       },
     };
   }

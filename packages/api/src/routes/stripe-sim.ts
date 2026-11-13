@@ -115,4 +115,46 @@ export const stripeSim = new Hono<ApiEnv>()
     const v = (k: string) => String(f.get(k) ?? "").trim();
     await g.pay(s.id, { name: v("name"), email: v("email"), address: { line1: v("line1"), line2: null, city: v("city"), state: v("state").toUpperCase(), postal_code: v("postal"), country: "US" } });
     return c.redirect(s.input.successUrl.replace("{CHECKOUT_SESSION_ID}", s.id), 303);
+  })
+  // Stands in for Stripe's customer portal: a monthly donor changes their card or stops.
+  .get("/portal/:sub", (c) => {
+    const sub = c.req.param("sub");
+    if (!sim()!.hasSubscription(sub)) return c.html(page("Not found", "<h1>This monthly gift was not found</h1>"), 404);
+    const back = safeReturn(c.req.query("return_url"), c.req.url);
+    return c.html(
+      page(
+        "Your monthly gift",
+        `<h1>Your monthly gift</h1>
+<form method="post" action="/api/v1/stripe-sim/portal/${esc(sub)}?return_url=${encodeURIComponent(back)}">
+  <input type="hidden" name="action" value="card">
+  <button type="submit">Update card</button>
+</form>
+<form method="post" action="/api/v1/stripe-sim/portal/${esc(sub)}?return_url=${encodeURIComponent(back)}">
+  <input type="hidden" name="action" value="cancel">
+  <button type="submit" style="background:#d61f1f">Stop my monthly gift</button>
+</form>
+<p><a href="${esc(back)}">Go back</a></p>`,
+      ),
+    );
+  })
+  .post("/portal/:sub", async (c) => {
+    const sub = c.req.param("sub");
+    if (!sim()!.hasSubscription(sub)) return c.html(page("Not found", "<h1>This monthly gift was not found</h1>"), 404);
+    const f = await c.req.formData();
+    const back = safeReturn(c.req.query("return_url"), c.req.url);
+    if (f.get("action") === "cancel") {
+      await sim()!.cancelSubscription(sub);
+      return c.html(page("Stopped", `<h1>Your monthly gift is stopped</h1><p>You will not be charged again.</p><p><a href="${esc(back)}">Go back</a></p>`));
+    }
+    return c.html(page("Card updated", `<h1>Your card is updated</h1><p>The next monthly gift uses the new card.</p><p><a href="${esc(back)}">Go back</a></p>`));
   });
+
+/** Only ever send people back to Rootwell itself, never to another site. */
+function safeReturn(url: string | undefined, here: string): string {
+  const origin = new URL(process.env.NEXT_PUBLIC_APP_URL ?? here).origin;
+  try {
+    return url && new URL(url).origin === origin ? url : origin;
+  } catch {
+    return origin;
+  }
+}

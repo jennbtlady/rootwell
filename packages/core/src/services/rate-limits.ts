@@ -11,6 +11,10 @@ export const RATE_LIMITS = {
   boardVisitor: { limit: 60, windowSeconds: 60 },
   /** One organization sending thank-you or statement emails in bulk. */
   bulkEmailOrg: { limit: 10, windowSeconds: 3600 },
+  /** One visitor opening a monthly donor's "manage" link. Stops guessing at links. */
+  manageVisitor: { limit: 20, windowSeconds: 600 },
+  /** How often a giving page may warn its organization about a burst of checkouts: once in six hours. */
+  spikeAlertPage: { limit: 1, windowSeconds: 6 * 3600 },
 } as const;
 
 export type RateLimitName = keyof typeof RATE_LIMITS;

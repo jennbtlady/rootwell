@@ -48,6 +48,11 @@ export interface StripeGateway {
    * negative amount, with Stripe's dispute fee as `fee`).
    */
   payoutCharges(accountId: string, payoutId: string): Promise<{ chargeId: string; fee: number; amount: number }[]>;
+  /**
+   * A page on Stripe where a monthly donor changes their card or stops their gift, for one
+   * subscription on a connected account (fundraising Phase 2). Comes back to `returnUrl`.
+   */
+  manageSubscriptionUrl(accountId: string, subscriptionId: string, returnUrl: string): Promise<string>;
   /** Refunds on a charge that went through, in cents, oldest first. */
   chargeRefunds(accountId: string, chargeId: string): Promise<{ id: string; amount: number; created: number }[]>;
 }
@@ -159,6 +164,30 @@ export class LiveStripeGateway implements StripeGateway {
       }
     }
     return out;
+  }
+  async manageSubscriptionUrl(accountId: string, subscriptionId: string, returnUrl: string) {
+    const sub = await this.stripe.subscriptions.retrieve(subscriptionId, {}, { stripeAccount: accountId });
+    const customer = typeof sub.customer === "string" ? sub.customer : sub.customer.id;
+    // The nonprofit's own Stripe account may have no customer portal set up. Use one made
+    // for donors: change the card, or stop the gift. Nothing else.
+    let configuration: string | undefined;
+    for await (const c of this.stripe.billingPortal.configurations.list({ active: true, limit: 100 }, { stripeAccount: accountId })) {
+      if (c.metadata?.rootwell === "monthly-donors") configuration = c.id;
+    }
+    if (!configuration) {
+      configuration = (
+        await this.stripe.billingPortal.configurations.create(
+          {
+            business_profile: { headline: "Change your card or stop your monthly gift." },
+            features: { payment_method_update: { enabled: true }, subscription_cancel: { enabled: true, mode: "immediately" }, invoice_history: { enabled: true } },
+            metadata: { rootwell: "monthly-donors" },
+          },
+          { stripeAccount: accountId },
+        )
+      ).id;
+    }
+    const s = await this.stripe.billingPortal.sessions.create({ customer, configuration, return_url: returnUrl }, { stripeAccount: accountId });
+    return s.url;
   }
   async chargeRefunds(accountId: string, chargeId: string) {
     const out: { id: string; amount: number; created: number }[] = [];

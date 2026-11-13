@@ -41,11 +41,11 @@ describe.skipIf(!DATABASE_URL)("refunds and disputes", () => {
     ) as Promise<Row[]>;
   const attention = async () => ((await (await call("GET", "/integrations/health")).json()) as { needsAttention: { type: string; outcome: string }[] }).needsAttention;
 
-  async function give(amount: number, name: string, email: string) {
+  async function give(amount: number, name: string, email: string, postal = "04330") {
     const r = await app.request(`/api/v1/public/give/${slug}/checkout`, { method: "POST", headers: { ...json, "x-forwarded-for": `198.51.100.${randomUUID()}` }, body: JSON.stringify({ amount, fundId }) });
     expect(r.status).toBe(200);
     const path = new URL(((await r.json()) as { url: string }).url).pathname;
-    const pay = await app.request(path, { method: "POST", headers: form, body: new URLSearchParams({ name, email, line1: "1 Main St", city: "Augusta", state: "ME", postal: "04330" }).toString() });
+    const pay = await app.request(path, { method: "POST", headers: form, body: new URLSearchParams({ name, email, line1: "1 Main St", city: "Augusta", state: "ME", postal }).toString() });
     expect(pay.status).toBe(303);
   }
 
@@ -158,6 +158,17 @@ describe.skipIf(!DATABASE_URL)("refunds and disputes", () => {
     await call("POST", "/integrations/stripe/simulate-payout");
     const batch = ((await (await call("GET", "/batches?status=open")).json()) as { items: { id: string; expectedTotal: string }[] }).items[0]!;
     expect(batch.expectedTotal).toBe("40.00");
+  });
+
+  it("an unsure donor match makes a new record and flags it for review", async () => {
+    // Same name and address: a confident match, so no new record.
+    await give(10, "Avery Moss", "avery.m@example.org");
+    // Same name, but a new email and another town: maybe the same person, maybe not.
+    await give(25, "Avery Moss", "a.moss.home@example.org", "04901");
+    const people = (await as((tx) => tx.execute(sql`select id from constituents where org_id = ${orgId} and last_name = 'Moss'`))) as { id: string }[];
+    expect(people).toHaveLength(2);
+    const review = await as((tx) => tx.execute(sql`select status from duplicate_candidates where org_id = ${orgId} and a_id = any(${sql.raw(`array['${people[0]!.id}','${people[1]!.id}']::uuid[]`)}) and b_id = any(${sql.raw(`array['${people[0]!.id}','${people[1]!.id}']::uuid[]`)})`));
+    expect(review).toEqual([{ status: "open" }]);
   });
 
   it("refund entries cannot be edited, and a refunded gift cannot be deleted", async () => {

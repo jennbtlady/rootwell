@@ -196,3 +196,18 @@ begin
   return v;
 end $$;
 revoke all on function app.compute_dashboard(uuid, date) from public;
+
+-- Who gets a warning about a burst of checkouts on a giving page (fundraising Phase 2):
+-- the organization's active owners and admins. Only the system actor for that organization
+-- can ask, from the public giving route after it trips the per-page limit.
+create or replace function app.alert_recipients(p_org uuid) returns table (email text, full_name text)
+language sql stable security definer set search_path = public as $$
+  select coalesce(p.email, u.email), p.full_name
+    from org_memberships m
+    join auth.users u on u.id = m.user_id
+    left join profiles p on p.id = m.user_id
+   where m.org_id = p_org and m.status = 'active' and m.role in ('owner', 'admin')
+     and app.is_system() and app.system_org_id() = p_org
+$$;
+revoke all on function app.alert_recipients(uuid) from public;
+grant execute on function app.alert_recipients(uuid) to authenticated;

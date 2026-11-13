@@ -24,6 +24,12 @@ export const donationPageInput = z.object({
     .default([25, 50, 100, 250]),
   allowMonthly: z.boolean().default(true),
   offerCoverFees: z.boolean().default(true),
+  /** Fundraising Phase 2: in honor or memory of someone. */
+  allowTribute: z.boolean().default(false),
+  /** Fundraising Phase 2: an optional message from the donor. */
+  allowMessage: z.boolean().default(false),
+  /** Fundraising Phase 2: animals donors can sponsor on this page, in order. */
+  animalIds: z.array(z.string().uuid()).max(30).default([]),
   active: z.boolean().default(true),
 });
 export type DonationPageInput = z.infer<typeof donationPageInput>;
@@ -38,10 +44,38 @@ export const checkoutRequest = z.object({
   monthly: z.boolean().default(false),
   fundId: z.string().uuid().nullish(),
   coverFee: z.boolean().default(false),
+  /** Fundraising Phase 2: the animal this gift sponsors, from the page's list. */
+  animalId: z.string().uuid().nullish(),
+  /** Fundraising Phase 2: in honor or memory of someone, and who to tell. */
+  tribute: z
+    .object({
+      kind: z.enum(["honor", "memory"]),
+      honoreeName: z.string().trim().min(1, "Type the name of the person or pet").max(120),
+      notifyName: z.string().trim().max(120).nullish(),
+      notifyEmail: z.string().trim().toLowerCase().email("Type an email address like name@example.org").max(200).nullish().or(z.literal("").transform(() => null)),
+    })
+    .nullish(),
+  /** Fundraising Phase 2: a short note to the organization. Travels in Stripe's metadata, so 500 characters at most. */
+  message: z.string().trim().max(500, "Keep the message under 500 characters").nullish(),
   /** The Turnstile bot check token from the giving form. Checked on the server. */
   botCheck: z.string().max(4096).optional(),
 });
 export type CheckoutRequest = z.infer<typeof checkoutRequest>;
+
+/** One animal a donor can sponsor (fundraising Phase 2). */
+export const sponsorAnimalInput = z.object({
+  name: shortText(80).min(1, "Type the animal's name"),
+  description: optionalText(500),
+  /** In the public "branding" bucket, in the organization's own folder. */
+  photoPath: z
+    .string()
+    .regex(/^[0-9a-f-]{36}\/[a-z0-9-]+\.(png|jpe?g|webp)$/, "Upload the photo again")
+    .nullish(),
+  fundId: z.string().uuid().nullish(),
+  active: z.boolean().default(true),
+  sortOrder: z.number().int().min(0).max(10_000).default(0),
+});
+export type SponsorAnimalInput = z.infer<typeof sponsorAnimalInput>;
 
 export const accountingSettings = z.object({
   depositAccount: optionalText(100),

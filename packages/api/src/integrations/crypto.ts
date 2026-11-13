@@ -29,6 +29,34 @@ export function decryptSecret(box: string): string {
   return Buffer.concat([d.update(Buffer.from(data, "base64url")), d.final()]).toString("utf8");
 }
 
+/**
+ * The private link in a monthly donor's receipt (fundraising Phase 2): which organization and
+ * which Stripe subscription, signed so it cannot be guessed or changed. "manage." is part of
+ * what is signed, so a link can never pass for an OAuth state or the other way round. It lasts
+ * 13 months; every monthly receipt carries a fresh one.
+ */
+const MANAGE_TTL = 400 * 86400;
+export function signManageLink(payload: { orgId: string; subscriptionId: string }): string {
+  const body = Buffer.from(JSON.stringify({ o: payload.orgId, s: payload.subscriptionId, exp: Math.floor(Date.now() / 1000) + MANAGE_TTL })).toString("base64url");
+  const sig = createHmac("sha256", key()).update(`manage.${body}`).digest("base64url");
+  return `${body}.${sig}`;
+}
+
+export function verifyManageLink(token: string): { orgId: string; subscriptionId: string } | null {
+  const [body, sig] = token.split(".");
+  if (!body || !sig) return null;
+  const want = createHmac("sha256", key()).update(`manage.${body}`).digest();
+  const got = Buffer.from(sig, "base64url");
+  if (got.length !== want.length || !timingSafeEqual(got, want)) return null;
+  try {
+    const p = JSON.parse(Buffer.from(body, "base64url").toString("utf8")) as { o?: unknown; s?: unknown; exp?: unknown };
+    if (typeof p.o !== "string" || typeof p.s !== "string" || typeof p.exp !== "number" || p.exp < Date.now() / 1000) return null;
+    return { orgId: p.o, subscriptionId: p.s };
+  } catch {
+    return null;
+  }
+}
+
 /** Signed, expiring state for OAuth redirects: who started it, for which org. */
 export function signState(payload: { orgId: string; userId: string }, ttlSeconds = 600): string {
   const body = Buffer.from(JSON.stringify({ ...payload, exp: Math.floor(Date.now() / 1000) + ttlSeconds })).toString("base64url");

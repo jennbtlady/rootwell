@@ -12,10 +12,13 @@ import {
   recordPayoutBatch,
   recordReversal,
   recordWebhookEvent,
+  isFirstPayment,
+  tributeFromMetadata,
   type OnlineDonor,
 } from "@maple/core/services";
 import { getDb } from "../db";
 import type { PaymentInfo, StripeGateway } from "./stripe-gateway";
+import { sendGiftEmails } from "../email/receipts";
 
 type Outcome = { outcome: string; needsAttention?: boolean };
 
@@ -30,6 +33,10 @@ const meta = (m: Record<string, string> | null | undefined) => ({
   fundId: m?.fundId || null,
   campaignId: m?.campaignId || null,
   coverFeeCents: Number(m?.coverFeeCents ?? 0) || 0,
+  // Fundraising Phase 2: what the donor added on the giving form.
+  animalId: /^[0-9a-f-]{36}$/.test(m?.animalId ?? "") ? m!.animalId! : null,
+  donorMessage: m?.message?.trim() || null,
+  tribute: tributeFromMetadata(m),
 });
 
 /**
@@ -79,6 +86,7 @@ async function handle(gw: StripeGateway, orgId: string, account: string, event: 
             donor: donorFrom({ name: cd.name ?? null, email: cd.email ?? null, address: cd.address ?? null }),
             fundId: m.fundId,
             campaignId: m.campaignId,
+            animalId: m.animalId,
           }),
         );
         return { outcome: "monthly gift set up" };
@@ -90,9 +98,12 @@ async function handle(gw: StripeGateway, orgId: string, account: string, event: 
         recordOnlineGift(tx, orgId, {
           externalId: p.chargeId, platform: "stripe", amountCents: p.amount, feeCents: p.fee, netCents: p.net, feeCoveredCents: m.coverFeeCents,
           paidAt: p.created, donor: donorFrom(p), fundId: m.fundId, campaignId: m.campaignId,
+          animalId: m.animalId, donorMessage: m.donorMessage, tribute: m.tribute,
         }),
       );
-      return { outcome: r.created ? (r.matched ? "gift added to an existing donor" : "gift added with a new donor") : "gift already recorded" };
+      if (!r.created) return { outcome: "gift already recorded" };
+      const sent = await sendGiftEmails(orgId, r.giftId);
+      return { outcome: `${r.matched ? "gift added to an existing donor" : "gift added with a new donor"}${emailNote(sent)}`, needsAttention: sent.receipt === "failed" || sent.tribute === "failed" };
     }
 
     case "invoice.paid": {
@@ -102,14 +113,19 @@ async function handle(gw: StripeGateway, orgId: string, account: string, event: 
       if (m.orgId && m.orgId !== orgId) return { outcome: "metadata names a different organization", needsAttention: true };
       const r = await withRls(db, claims, async (tx) => {
         const plan = await ensureRecurringPlan(tx, orgId, {
-          subscriptionId: inv.subscriptionId, amountCents: inv.amount, startedAt: inv.created, donor: donorFrom(inv), fundId: m.fundId, campaignId: m.campaignId,
+          subscriptionId: inv.subscriptionId, amountCents: inv.amount, startedAt: inv.created, donor: donorFrom(inv), fundId: m.fundId, campaignId: m.campaignId, animalId: m.animalId,
         });
+        // A tribute and a message belong to the gift the donor made on the form: the first month.
+        const first = await isFirstPayment(tx, orgId, plan.planId);
         return recordOnlineGift(tx, orgId, {
           externalId: inv.chargeId, platform: "stripe", amountCents: inv.amount, feeCents: inv.fee, netCents: inv.net, feeCoveredCents: m.coverFeeCents,
           paidAt: inv.created, donor: donorFrom(inv), fundId: m.fundId, campaignId: m.campaignId, recurringPlanId: plan.planId, constituentId: plan.constituentId,
+          animalId: m.animalId, donorMessage: first ? m.donorMessage : null, tribute: first ? m.tribute : null,
         });
       });
-      return { outcome: r.created ? "monthly gift added" : "gift already recorded" };
+      if (!r.created) return { outcome: "gift already recorded" };
+      const sent = await sendGiftEmails(orgId, r.giftId);
+      return { outcome: `monthly gift added${emailNote(sent)}`, needsAttention: sent.receipt === "failed" || sent.tribute === "failed" };
     }
 
     case "customer.subscription.deleted": {
@@ -179,6 +195,15 @@ async function handle(gw: StripeGateway, orgId: string, account: string, event: 
     default:
       return { outcome: "ignored" };
   }
+}
+
+/** A few words for Data Health about the receipt and tribute emails. No donor details. */
+function emailNote(s: Awaited<ReturnType<typeof sendGiftEmails>>): string {
+  const parts = [
+    s.receipt === "sent" ? "receipt sent" : s.receipt === "failed" ? "the receipt email did not send: thank this donor by hand" : s.receipt === "skipped" ? "no receipt email (no address, or the donor asked for no email)" : null,
+    s.tribute === "sent" ? "tribute notice sent" : s.tribute === "failed" ? "the tribute notice did not send" : null,
+  ].filter(Boolean);
+  return parts.length ? `; ${parts.join("; ")}` : "";
 }
 
 /** Store the event without donor contact details. The ids are enough to look it up in Stripe. */
