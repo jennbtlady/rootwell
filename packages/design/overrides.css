@@ -10,7 +10,8 @@
  *   Air Force Blue #638494   decoration only (chart "last year"); #567280 when it carries text
  *   Lime Cream     #CBEC89   light highlight backgrounds only, with dark text
  *   Cherry Blossom #FFA6B5   light highlight backgrounds only, with dark text
- *   Old Lace       #F8F1E2   page background; cards stay white with a border
+ *   Lime Mist      #F8FCE6   page background (Jenn, 2026-11-13; was Old Lace #F8F1E2);
+ *                            cards stay white with a border
  * Every text pair here meets WCAG AA (4.5:1), and field borders and the focus ring meet
  * 3:1. The checks are listed in docs/design-system.md, "Brand colors".
  */
@@ -44,15 +45,15 @@
   --paste-shadow-focus-inset: inset 0 0 0 2px rgba(80, 0, 48, 0.7);
   --paste-shadow-focus-shadow-border: 0 0 0 4px rgba(80, 0, 48, 0.7), 0 0 0 1px #8f7f86;
 
-  /* Surfaces: Old Lace page, white cards, warm greys in between. */
-  --paste-color-background-body: #f8f1e2;
+  /* Surfaces: Lime Mist page, white cards, warm greys in between. */
+  --paste-color-background-body: #f8fce6;
   --paste-color-background-weakest: #ffffff;
   --paste-color-background-weak: #fcf8f0;
   --paste-color-background: #f2eada;
   --paste-color-background-strong: #e6dccb;
   --paste-color-background-stronger: #638494;
 
-  /* Text: a warm near-black, and a warm grey for secondary text (5.9:1 on Old Lace). */
+  /* Text: a warm near-black, and a warm grey for secondary text (6.3:1 on the page). */
   --paste-color-text: #2a1a22;
   --paste-color-text-weak: #645a5e;
   --paste-color-text-weaker: #9c8f95;
@@ -81,7 +82,7 @@
   --paste-color-border-new-weaker: #cbec89;
   --paste-shadow-border-new-weaker: 0 0 0 1px #cbec89;
 
-  /* Errors: a deeper red so it passes on Old Lace (5.6:1). Status colors keep their
+  /* Errors: a deeper red so it passes on the page (6.0:1). Status colors keep their
      icons and words, so they are never told apart by color alone. */
   --paste-color-text-error: #c2001f;
   --paste-color-text-icon-error: #c2001f;

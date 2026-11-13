@@ -8,7 +8,7 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "A simple donor database for small nonprofits.",
     start_url: "/",
     display: "standalone",
-    background_color: "#f8f1e2",
+    background_color: "#f8fce6",
     theme_color: "#500030",
     icons: [
       { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
